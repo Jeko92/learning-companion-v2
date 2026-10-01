@@ -8,7 +8,7 @@
 - A paused ticket keeps its branch. When `refine-ticket` resumes it, it switches to that branch and merges the latest `develop` into it (`chore(<ticket-id>): merge develop into paused ticket branch`); it never recreates or rebases the branch.
 - Ticket branches are never deleted, locally or on GitHub. `develop` only gets one squash commit per ticket, so the ticket branch is where its per-step commit history stays visible.
 
-All of the above is enforced by `.claude/hooks/guard-bash.sh`.
+All of the above is enforced by `.claude/hooks/guard-bash.sh`, as a guardrail against mistakes while following the skills. It matches command text, so it is not a sandbox; its header lists the known gaps. The real control against bypassing the gitflow is GitHub branch protection on `main` and `develop`, which is configured on GitHub, outside this repository.
 
 ## Commits
 

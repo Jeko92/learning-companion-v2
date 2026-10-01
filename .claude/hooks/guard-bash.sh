@@ -8,6 +8,15 @@
 # strategy per target, ticket branches are never deleted, and no new ticket
 # branch is created while develop has commits that main lacks.
 # Exit 2 blocks the command; stderr is fed back to Claude.
+#
+# Scope: this is a guardrail against mistakes made while following the skills,
+# not a sandbox. It pattern-matches the command text, so a deliberately evasive
+# command can get past it. Known gaps: global options before the subcommand
+# (git -C <dir>, git -c k=v), 'env git' and subshells '( git ... )', quote tricks
+# around the branch gate, heredoc bodies, history rewrites other than the ones
+# checked (cherry-pick, reset), 'gh api' calls, and the time between the suite run
+# and 'gh pr merge'. The real control is GitHub branch protection on main and
+# develop (required PR reviews and, once CI exists, required checks).
 source "$(dirname "$0")/lib.sh"
 
 input="$(cat)"

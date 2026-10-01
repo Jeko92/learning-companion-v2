@@ -150,7 +150,7 @@ Verification is still review-only, plus the scratchpad hook scripts, extended wi
   - In `done`, the PR's base must be `develop`, looked up like the release PR's.
   - A failed PR lookup blocks.
   - `REQUIRE_CHECKS` is treated as true for any value other than `"false"`. When it's true, `gh pr checks` must exit 0.
-- [ ] 23. Paused-ticket resume instructions (finding 7), plus the documented hook limits (accepted security finding D):
+- [x] 23. Paused-ticket resume instructions (finding 7), plus the documented hook limits (accepted security finding D):
   - `refine-ticket`: run the resume commands one at a time, and set `refined` before the merge into the ticket branch, so a conflict can be committed.
   - `guard-bash.sh` header: the hooks are a guardrail against mistakes while following the skills, not against deliberately evasive commands. List the known gaps (`git -C`, `git -c`, `env git`, subshells, quote tricks, the PR-head timing gap). The real control is GitHub branch protection, which is the user's call.
   - Impl: `refine-ticket/SKILL.md`, `guard-bash.sh` (comment), `git.md`.
