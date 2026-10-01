@@ -137,6 +137,15 @@ if is_gh "pr\s+merge"; then
     pr_refs="$(gh pr view "$pr_num" -R "$GH_REPO" --json baseRefName,headRefName --jq '.headRefName + ">" + .baseRefName' 2>/dev/null)"
     [ "$pr_refs" = "$DEVELOP_BRANCH>$MAIN_BRANCH" ] \
       || block "while releasing, only the release PR ($DEVELOP_BRANCH -> $MAIN_BRANCH) may be merged; PR #$pr_num is '${pr_refs:-unknown}'."
+    # The release gate: main only gets what passes the suite and lint here.
+    if [ -f "$TEST_GUARD_FILE" ]; then
+      $TEST_CMD >/dev/null 2>&1 || block "the test suite is red; the release PR is not merged ($TEST_CMD)."
+    fi
+    $LINT_CMD >/dev/null 2>&1 || block "lint fails; the release PR is not merged ($LINT_CMD)."
+    if [ "$REQUIRE_CHECKS" = "true" ] \
+       && gh pr checks "$pr_num" -R "$GH_REPO" 2>&1 | grep -q "no checks reported"; then
+      block "REQUIRE_CHECKS is on and release PR #$pr_num has no checks; it is not merged without CI."
+    fi
   else
     block "PRs are merged only by factory-manager after a passed review (phase 'done') or by the release skill (phase 'releasing'); current phase: $phase."
   fi

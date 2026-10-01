@@ -76,7 +76,7 @@ Leave an open release PR open. Report the reason and the way out:
    ```
 
 7. **Checks.** `gh pr checks <pr>`. Decide by exit code and output, not by success or failure alone: exit `0` means all checks passed, exit `8` means checks are still pending, and exit `1` means either a check failed or there are no checks at all (output contains "no checks reported").
-   - "no checks reported": nothing can fail yet (CI arrives with ticket `ci-tests`); the local suite from step 5 was the gate. Continue.
+   - "no checks reported": if `REQUIRE_CHECKS` in `.claude/hooks/config.sh` is `"true"`, **block** (CI is expected but did not run). Otherwise nothing can fail yet (CI arrives with ticket `ci-tests`); the local suite and lint are the gate, and `guard-bash.sh` re-runs both right before `gh pr merge`. Continue.
    - All checks passed (exit `0`): continue.
    - Checks still running (exit `8`): `bash .claude/hooks/set-state.sh release_status waiting-checks`, report "waiting for checks on release PR #<pr>", and stop. Leave the PR open; a later call resumes at step 1.
    - Any check failed: **block** with the failed checks as the reason. The PR stays open.
