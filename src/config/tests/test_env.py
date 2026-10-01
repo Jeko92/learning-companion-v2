@@ -39,3 +39,8 @@ class ResolveSettingsTests(SimpleTestCase):
                 settings = self.resolve({"SECRET_KEY": "x", "DEBUG": raw})
 
                 self.assertIs(settings.debug, expected)
+
+    def test_debug_defaults_to_false(self):
+        settings = self.resolve({"SECRET_KEY": "x"})
+
+        self.assertIs(settings.debug, False)
