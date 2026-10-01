@@ -51,7 +51,7 @@
       - Still blocked: `commit --no-verify`, `push origin main`, `push origin develop` in `done`, pushing in `implementing`, `pr merge --merge` in `done`, `pr merge --squash` in `releasing`, `pr merge` in `implementing`, `--delete-branch`, `branch -D feature/…`, and committing on `develop` in `idle`.
       - Still allowed: pushing the ticket branch and `pr merge --squash` in `done`; and in `releasing` on `develop`, `merge --no-ff origin/main`, `pull --ff-only`, `push origin develop`, `pr merge --merge` and `commit --no-edit`.
     - The scripts are in the session scratchpad (`gate-check.sh`, `regress-check.sh`).
-- [ ] 2. Update the `release` skill. Covers: AC3, AC4, AC5. Impl: `.claude/skills/release/SKILL.md`.
+- [x] 2. Update the `release` skill. Covers: AC3, AC4, AC5. Impl: `.claude/skills/release/SKILL.md`.
   - Remove `disable-model-invocation` and change the description.
   - Preconditions: `done` with the ticket PR merged, or `idle` with the count above 0. Run `git fetch origin` first.
   - Add a resume step for an open release PR.
