@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # PreToolUse hook for Write|Edit|MultiEdit.
 # Gate: production and test code may only change during the implementing phase.
-# Workflow artifacts (work/, .claude/, markdown) are always allowed.
+# Workflow artifacts (work/, .claude/, markdown) are always allowed, except the
+# state file under .claude/state/, which only set-state.sh may change.
 # Exit 2 blocks the tool call; stderr is fed back to Claude.
 source "$(dirname "$0")/lib.sh"
 
@@ -10,6 +11,13 @@ file="$(jq -r '.tool_input.file_path // empty' <<<"$input")"
 [ -z "$file" ] && exit 0
 
 rel="${file#"$PWD"/}"
+
+# The workflow state only changes through set-state.sh (whose transitions guard-bash.sh checks).
+case "$rel" in
+  .claude/state/*)
+    echo "BLOCKED by workflow: '$rel' is the workflow state; change it only with 'bash .claude/hooks/set-state.sh', exactly where a skill says so." >&2
+    exit 2 ;;
+esac
 
 case "$rel" in
   work/*|.claude/*|*.md) exit 0 ;;
