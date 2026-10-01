@@ -130,6 +130,17 @@ Verification for these steps is review-only too, plus re-running `gate-check.sh`
 - [x] 16. Docs. `CLAUDE.md`, `README.md`, `git.md` and `workflow.md` describe the blocked-release recovery (fix tickets only), resuming a paused ticket, and `REQUIRE_CHECKS`. Impl: those files.
 
 ## Review findings, second pass (review.md, commit 7c95711)
+Verification results after steps 17–23 (2026-10-01): the suite is green (21 tests) and lint is clean.
+- `gate-check.sh`: 23 cases, 14 blocked and 9 allowed.
+- `blocked-check.sh`: 9 cases, all as expected.
+- `regress-check.sh`: 79 cases, 0 mismatches. They add, among others:
+  - chained, octopus and double-push commands in `releasing`
+  - quoted `set-state`, quoted refspecs, `--mirror` and `--all`
+  - one PR merge per command, PR base checks, failed lookups, and `REQUIRE_CHECKS` with pending or failed checks
+  - `git merge --abort` on `develop` outside `releasing`
+- `guard-write.sh` blocks Write/Edit on `.claude/state/` and still allows `.claude/rules` and `work/`.
+- The SHA-based provenance check passes on the real history (`bf2b362` is PR #22's merge commit).
+
 Verification is still review-only, plus the scratchpad hook scripts, extended with every case reported in the review.
 
 - [x] 17. Amend AC5 and AC7 and the ticket Notes for the step 7 recovery design, the same way AC6 was. AC5: a blocked release returns to `idle` with `release_status: blocked`. AC7: `fix/` creation is allowed while blocked. Finding: 1. Impl: `work/release-per-ticket/ticket.md`.
