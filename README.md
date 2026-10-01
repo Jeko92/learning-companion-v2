@@ -20,9 +20,9 @@ Settings come from the environment via `django-environ`, read in `src/config/env
 |---|---|---|
 | `SECRET_KEY` | none, so startup fails | Required and must not be empty |
 | `DEBUG` | `False` | `.env.example` sets `True` for local development |
-| `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Comma-separated |
+| `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Comma-separated. If it's set but empty, every host is rejected when `DEBUG` is off |
 
-Values are read from the process environment first. `.env` at the repo root only fills in variables that aren't already set. `.env` is git-ignored, and `.env.example` documents every variable. The test suite needs `SECRET_KEY` too, so set up `.env` before running the tests.
+Values are read from the process environment first. `.env` at the repo root only fills in variables that aren't already set. `.env` is git-ignored, and `.env.example` documents every variable. Write one `NAME=value` per line with no spaces around `=`. `DEBUG=True` is for local development only. The test suite needs `SECRET_KEY` too, so set up `.env` before running the tests.
 
 ## Tests and lint
 
