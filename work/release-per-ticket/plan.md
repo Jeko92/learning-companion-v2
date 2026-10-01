@@ -69,7 +69,7 @@
   - Hard limits: remove "only when the user asks". Releases come only from `release`, and still at most one phase skill per call.
   - Verify: read it against AC6.
 - [x] 4. Update `refine-ticket`'s precondition. Covers: AC9. Impl: `.claude/skills/refine-ticket/SKILL.md`. It runs `git fetch origin`. If `origin/develop` has commits `origin/main` lacks, it stops and points to `factory-manager`, which runs the release.
-- [ ] 5. Update the rules. Covers: AC1, AC2. Impl: `.claude/rules/git.md` (branch descriptions, plus the Releases section rewritten for per-ticket releases, merge commits and "next ticket only after main") and `.claude/rules/workflow.md` (the `done`/`releasing` rows in the table, plus the new rule line).
+- [x] 5. Update the rules. Covers: AC1, AC2. Impl: `.claude/rules/git.md` (branch descriptions, plus the Releases section rewritten for per-ticket releases, merge commits and "next ticket only after main") and `.claude/rules/workflow.md` (the `done`/`releasing` rows in the table, plus the new rule line).
 - [ ] 6. Update the docs. Covers: AC10. Impl: `CLAUDE.md` (Workflow bullets), `README.md` (gitflow paragraph) and the `.claude/hooks/config.sh` comment. Verify: `grep -rn -i "only when\|when asked\|when the user asks" CLAUDE.md README.md .claude/rules .claude/skills .claude/hooks/config.sh` returns no release-related hits.
 
 ## Coverage

@@ -2,9 +2,9 @@
 
 ## Branches
 
-- `main` is the release branch. It is protected and only changes through a PR from `develop`, created and merged by the `release` skill. Never commit, merge or push to `main` directly.
+- `main` is the release branch. It is protected and only changes through a PR from `develop`, created and merged by the `release` skill after every ticket. Never commit, merge or push to `main` directly.
 - `develop` is the integration branch. It only receives squash-merged PRs from ticket branches, plus the main-into-develop merge commit made by the `release` skill. Never commit to it directly.
-- Every ticket gets its own branch cut from the latest `develop`: `feature/<ticket-id>` for features, `fix/<ticket-id>` for bug tickets (issue labelled `type:fix`). The `refine-ticket` skill creates it; the branch name is recorded as `branch` in the state file.
+- Every ticket gets its own branch cut from the latest `develop`: `feature/<ticket-id>` for features, `fix/<ticket-id>` for bug tickets (issue labelled `type:fix`). The `refine-ticket` skill creates it; the branch name is recorded as `branch` in the state file. A new ticket branch can only be cut once `main` contains the previous ticket (`origin/develop` has no commits that `origin/main` lacks).
 - Ticket branches are never deleted, locally or on GitHub. `develop` only gets one squash commit per ticket, so the ticket branch is where its per-step commit history stays visible.
 
 All of the above is enforced by `.claude/hooks/guard-bash.sh`.
@@ -23,13 +23,15 @@ All of the above is enforced by `.claude/hooks/guard-bash.sh`.
 
 - Pushing the ticket branch is only possible once the final review has passed (phase `done`).
 - `final-review` opens the PR with `gh pr create --base develop`, title `<type>(<ticket-id>): <issue title>`, body with the story, the acceptance criteria, `Closes #<issue>` and a reference to `work/<ticket-id>/review.md`.
-- `factory-manager` squash-merges it (`gh pr merge <n> --squash`, never `--delete-branch`) once checks are green, closes the issue, moves the card to Done, then fast-forwards local `develop` (`git pull --ff-only`). The next ticket branch is cut from that updated `develop`.
+- `factory-manager` squash-merges it (`gh pr merge <n> --squash`, never `--delete-branch`) once checks are green, closes the issue, moves the card to Done, then fast-forwards local `develop` (`git pull --ff-only`) and starts the release.
 
-## Releases (develop -> main)
+## Releases (develop -> main), after every ticket
 
-Run by the `release` skill, only when the user asks for a release:
+Every ticket is released on its own. Once a ticket PR (`feature/` or `fix/`) is squash-merged into `develop`, `factory-manager` triggers the `release` skill, which promotes `develop` to `main`:
 
-1. On `develop`, merge `origin/main` into it with a merge commit, `chore(release): merge main into develop`. Resolve conflicts there, run the suite, push `develop`.
-2. Open a PR `develop -> main` titled `chore(release): <yyyy-mm-dd>` and merge it with a merge commit (`gh pr merge <n> --merge`).
+1. On `develop`, merge `origin/main` into it with a merge commit, `chore(release): merge main into develop`. All conflicts between `develop` and `main` are resolved there, in that merge commit, never on `main`. Run the suite and lint, then push `develop`.
+2. Open a PR `develop -> main` titled `chore(release): <yyyy-mm-dd> <ticket-id>` and merge it with a merge commit (`gh pr merge <n> --merge`). Without CI, no checks are reported and the local suite from step 1 is the gate; running checks are waited for, failed checks stop the release.
+
+The next ticket only starts once `main` contains the merged ticket. `factory-manager` selects nothing while `origin/develop` has commits `origin/main` lacks (it runs a catch-up release instead), and `guard-bash.sh` blocks creating a new `feature/` or `fix/` branch in that state. A release that cannot finish (red suite, failed checks, a conflict that needs a human) leaves the phase at `releasing` and blocks the factory until a human resolves it.
 
 Never rewrite history on `main` or `develop`.
