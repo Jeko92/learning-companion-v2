@@ -112,7 +112,7 @@ Verification for these steps is review-only too, plus re-running `gate-check.sh`
   - reports that the next step is `plan-ticket`, without re-interviewing.
 
   The gate allows this, because it's a switch and not a creation. Impl: `refine-ticket/SKILL.md`, plus a note in `git.md`.
-- [ ] 11. Tighten the hook for `releasing` (finding 5). In `releasing`:
+- [x] 11. Tighten the hook for `releasing` (finding 5). In `releasing`:
   - `git merge` on `develop` is allowed only for `origin/main` (with or without `--no-ff`).
   - `git push` is allowed only as `git push origin develop`.
   - `gh pr merge <n>` is allowed only when `gh pr view <n> --json baseRefName,headRefName` shows `develop` → `main`.

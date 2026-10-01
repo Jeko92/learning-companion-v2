@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # PreToolUse hook for Bash.
 # Gates around git and gh, following the gitflow in .claude/rules/git.md:
-# no commits or merges on protected branches (except develop while
-# releasing), no commits with red tests, no --no-verify, no push before the
+# no commits or merges on protected branches (while releasing, develop only
+# takes the main-into-develop merge and its push), the releasing phase can
+# only be entered from done/idle, no commits with red tests, no --no-verify, no push before the
 # review has passed, main only changes through a PR from develop, PR merge
 # strategy per target, ticket branches are never deleted, and no new ticket
 # branch is created while develop has commits that main lacks.
@@ -33,12 +34,22 @@ echo "$branch" | grep -qE "^($PROTECTED_BRANCHES)$" && on_protected=true
 releasing_on_develop=false
 [ "$phase" = "releasing" ] && [ "$branch" = "$DEVELOP_BRANCH" ] && releasing_on_develop=true
 
+if echo "$cmd" | grep -qE "set-state\.sh(\s.*)?\sphase\s+releasing(\s|$)"; then
+  case "$phase" in
+    done|idle|releasing) ;;
+    *) block "a release can only start after a ticket's close-out (phase 'done'), as a catch-up from 'idle', or resume from 'releasing'; current phase: $phase." ;;
+  esac
+fi
+
 if is_git "commit"; then
   if echo "$cmd" | grep -qE -- "--no-verify|-n\b"; then
     block "'git commit --no-verify' is not allowed. Commit hooks are part of the quality gate."
   fi
   if $on_protected && ! $releasing_on_develop; then
     block "direct commits to '$branch' are not allowed. The refine-ticket skill creates a feature/ or fix/ branch from $DEVELOP_BRANCH; work there. Only the release skill may commit on $DEVELOP_BRANCH (the main-into-develop merge)."
+  fi
+  if $releasing_on_develop && ! git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+    block "while releasing, the only commit allowed on $DEVELOP_BRANCH is the main-into-develop merge, and no merge is in progress."
   fi
   if [ "$phase" = "idle" ]; then
     block "no ticket is in progress (phase: idle). Start with the refine-ticket skill before committing."
@@ -56,9 +67,13 @@ if is_git "merge"; then
   if $on_protected && ! $releasing_on_develop; then
     block "merging into '$branch' locally is not allowed. Ticket branches reach $DEVELOP_BRANCH through a squash-merged PR, $DEVELOP_BRANCH reaches $MAIN_BRANCH through the release skill."
   fi
+  if $releasing_on_develop \
+     && ! echo "$cmd" | grep -qE "(^|[;&|]\s*)git\s+merge\s+((--no-ff|--no-commit)\s+)*origin/$MAIN_BRANCH(\s|$)|(^|[;&|]\s*)git\s+merge\s+--abort(\s|$)"; then
+    block "while releasing, $DEVELOP_BRANCH only takes the merge of origin/$MAIN_BRANCH ('git merge --no-ff --no-commit origin/$MAIN_BRANCH') or 'git merge --abort'."
+  fi
 fi
 
-if is_git "pull" && $on_protected && ! $releasing_on_develop; then
+if is_git "pull" && $on_protected; then
   if ! echo "$cmd" | grep -qE -- "--ff-only"; then
     block "pull on '$branch' must use --ff-only so no local merge commits land on a protected branch."
   fi
@@ -75,7 +90,8 @@ if is_git "push"; then
     block "'$MAIN_BRANCH' only changes through a PR from $DEVELOP_BRANCH (release skill). Never push to it."
   fi
   if [ "$phase" = "releasing" ]; then
-    :
+    echo "$cmd" | grep -qE "(^|[;&|]\s*)git\s+push\s+origin\s+$DEVELOP_BRANCH(\s*$|\s*[;&|])" \
+      || block "while releasing, the only push allowed is 'git push origin $DEVELOP_BRANCH'."
   elif [ "$phase" != "done" ]; then
     block "pushing requires a passed final review (current phase: $phase). Run the final-review skill; it sets the phase to 'done' on a PASS verdict."
   elif $on_protected || echo "$cmd" | grep -qE "(\s|:)$DEVELOP_BRANCH(\s|$)"; then
@@ -114,6 +130,11 @@ if is_gh "pr\s+merge"; then
   elif [ "$phase" = "releasing" ]; then
     echo "$cmd" | grep -qE -- "--merge|-m\b" \
       || block "the release PR from $DEVELOP_BRANCH into $MAIN_BRANCH is merged with a merge commit: use 'gh pr merge <n> --merge'."
+    pr_num="$(echo "$cmd" | sed -nE 's/.*gh[[:space:]]+pr[[:space:]]+merge[[:space:]]+([0-9]+).*/\1/p')"
+    [ -n "$pr_num" ] || block "while releasing, name the release PR explicitly: 'gh pr merge <n> --merge'."
+    pr_refs="$(gh pr view "$pr_num" -R "$GH_REPO" --json baseRefName,headRefName --jq '.headRefName + ">" + .baseRefName' 2>/dev/null)"
+    [ "$pr_refs" = "$DEVELOP_BRANCH>$MAIN_BRANCH" ] \
+      || block "while releasing, only the release PR ($DEVELOP_BRANCH -> $MAIN_BRANCH) may be merged; PR #$pr_num is '${pr_refs:-unknown}'."
   else
     block "PRs are merged only by factory-manager after a passed review (phase 'done') or by the release skill (phase 'releasing'); current phase: $phase."
   fi
