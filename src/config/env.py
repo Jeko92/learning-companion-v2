@@ -26,5 +26,5 @@ def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
     return EnvSettings(
         secret_key=secret_key,
         debug=env.bool("DEBUG", default=False),
-        allowed_hosts=[],
+        allowed_hosts=[host.strip() for host in env.list("ALLOWED_HOSTS", default=[])],
     )

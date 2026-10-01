@@ -32,7 +32,7 @@ Tests use `django.test.SimpleTestCase`. Steps 1–8 test `resolve_settings` dire
 - [x] 3. `DEBUG` parses as a boolean. `True`/`1`/`yes` give `True`, and `False`/`0`/`no` give `False`. Test: `test_env.py`. Impl: `env.py`. Covers: AC3.
 - [x] 4. If `DEBUG` is unset, `debug` is `False`. Test: `test_env.py`. Impl: none. Covers: AC4.
   - Changed during implementation (approved 2026-10-01): step 3 couldn't stay green without `default=False`, because step 1's test doesn't set `DEBUG`. So this is a guard test that passes on arrival, not a red–green cycle.
-- [ ] 5. `ALLOWED_HOSTS="example.com, www.example.com"` gives `["example.com", "www.example.com"]`. Test: `test_env.py`. Impl: `env.py`, with an unset default of `[]` (today's value), so that step 6 is a real red–green cycle. Covers: AC5.
+- [x] 5. `ALLOWED_HOSTS="example.com, www.example.com"` gives `["example.com", "www.example.com"]`. Test: `test_env.py`. Impl: `env.py`, with an unset default of `[]` (today's value), so that step 6 is a real red–green cycle. Covers: AC5.
 - [ ] 6. If `ALLOWED_HOSTS` is unset, `allowed_hosts` is `["localhost", "127.0.0.1"]`. Test: `test_env.py`. Impl: `env.py`. Covers: AC6.
 - [ ] 7. Values from the `env_file` are used when the mapping doesn't contain them. Test: `test_env.py`, with a temp `.env` holding `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` and an empty mapping. Impl: `env.py`. Covers: AC7.
   - AC9 gets a guard test in this step's refactor phase: a nonexistent `env_file` plus a mapping with `SECRET_KEY` resolves without error. It is expected to pass straight away, because `read_env` skips missing files. It's a regression guard, so the step records it as green-on-arrival rather than a red–green cycle.

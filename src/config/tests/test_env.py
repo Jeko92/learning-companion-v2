@@ -44,3 +44,10 @@ class ResolveSettingsTests(SimpleTestCase):
         settings = self.resolve({"SECRET_KEY": "x"})
 
         self.assertIs(settings.debug, False)
+
+    def test_allowed_hosts_is_a_trimmed_comma_separated_list(self):
+        settings = self.resolve(
+            {"SECRET_KEY": "x", "ALLOWED_HOSTS": "example.com, www.example.com"}
+        )
+
+        self.assertEqual(settings.allowed_hosts, ["example.com", "www.example.com"])
