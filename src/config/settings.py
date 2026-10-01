@@ -10,22 +10,25 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from config.env import resolve_settings
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
+# Environment-specific settings come from the process environment and the
+# repo-root .env (see .env.example); the process environment wins.
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
+_env = resolve_settings(os.environ, BASE_DIR.parent / ".env")
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-x-!@20ahoi23nfm2)lufj+roh!+t73j28*$ovmevtp(poq5n%s"
+SECRET_KEY = _env.secret_key
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = _env.debug
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = _env.allowed_hosts
 
 
 # Application definition
