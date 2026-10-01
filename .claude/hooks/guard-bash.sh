@@ -49,7 +49,11 @@ echo "$branch" | grep -qE "^($PROTECTED_BRANCHES)$" && on_protected=true
 releasing_on_develop=false
 [ "$phase" = "releasing" ] && [ "$branch" = "$DEVELOP_BRANCH" ] && releasing_on_develop=true
 
-if echo "$cmd" | grep -qE "set-state\.sh(\s.*)?\sphase\s+releasing(\s|$)"; then
+# The command with quote characters removed (their text kept), so quoting can't hide
+# a value from the checks below that use it.
+cmd_nq="$(tr -d "\"'" <<<"$cmd")"
+
+if echo "$cmd_nq" | grep -qE "set-state\.sh(\s.*)?\sphase\s+releasing(\s|$)"; then
   case "$phase" in
     done|idle|releasing) ;;
     *) block "a release can only start after a ticket's close-out (phase 'done'), as a catch-up from 'idle', or resume from 'releasing'; current phase: $phase." ;;
@@ -98,15 +102,18 @@ if is_git "pull" && $on_protected; then
 fi
 
 if is_git "push"; then
+  if echo "$cmd_nq" | grep -qE -- "--mirror|--all\b"; then
+    block "'git push --mirror' and 'git push --all' push every branch, including protected ones; push one named branch."
+  fi
   # A "+<ref>" refspec is a force push too.
-  if echo "$cmd" | grep -qE -- "--force|-f\b|\s\+[^[:space:]]" \
-     && { echo "$cmd" | grep -qE "($PROTECTED_BRANCHES)" || $on_protected; }; then
+  if echo "$cmd_nq" | grep -qE -- "--force|-f\b|\s\+[^[:space:]]" \
+     && { echo "$cmd_nq" | grep -qE "($PROTECTED_BRANCHES)" || $on_protected; }; then
     block "force-pushing to a protected branch is not allowed."
   fi
-  if echo "$cmd" | grep -qE -- "--delete|\s:[A-Za-z]"; then
+  if echo "$cmd_nq" | grep -qE -- "--delete|\s:[A-Za-z]"; then
     block "deleting remote branches is not allowed. feature/ and fix/ branches are kept so their per-step commit history stays visible."
   fi
-  if echo "$cmd" | grep -qE "(\s|:|\+)(refs/heads/)?$MAIN_BRANCH(\s|$|[;&|)])" || [ "$branch" = "$MAIN_BRANCH" ]; then
+  if echo "$cmd_nq" | grep -qE "(\s|:|\+)(refs/heads/)?$MAIN_BRANCH(\s|$|[;&|)])" || [ "$branch" = "$MAIN_BRANCH" ]; then
     block "'$MAIN_BRANCH' only changes through a PR from $DEVELOP_BRANCH (release skill). Never push to it."
   fi
   if [ "$phase" = "releasing" ]; then
@@ -114,7 +121,7 @@ if is_git "push"; then
       || block "while releasing, every push must be exactly 'git push origin $DEVELOP_BRANCH'."
   elif [ "$phase" != "done" ]; then
     block "pushing requires a passed final review (current phase: $phase). Run the final-review skill; it sets the phase to 'done' on a PASS verdict."
-  elif $on_protected || echo "$cmd" | grep -qE "(\s|:)$DEVELOP_BRANCH(\s|$)"; then
+  elif $on_protected || echo "$cmd_nq" | grep -qE "(\s|:|\+)(refs/heads/)?$DEVELOP_BRANCH(\s|$|[;&|)])"; then
     block "in phase 'done' only the ticket branch may be pushed. $DEVELOP_BRANCH is pushed only by the release skill."
   fi
 fi
