@@ -41,6 +41,10 @@ class ResolveSettingsTests(SimpleTestCase):
         with self.assertRaisesMessage(ImproperlyConfigured, "SECRET_KEY"):
             self.resolve({"SECRET_KEY": ""})
 
+    def test_whitespace_only_secret_key_raises_improperly_configured(self):
+        with self.assertRaisesMessage(ImproperlyConfigured, "SECRET_KEY"):
+            self.resolve({"SECRET_KEY": "  \t "})
+
     def test_debug_is_parsed_as_boolean(self):
         cases = {
             "True": True,

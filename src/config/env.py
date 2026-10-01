@@ -29,7 +29,7 @@ def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
     # Read the raw value: env.str() would expand a leading "$" as a reference
     # to another variable, and generated keys can start with "$".
     secret_key = Env.ENVIRON.get("SECRET_KEY", "")
-    if not secret_key:
+    if not secret_key.strip():
         raise ImproperlyConfigured(
             "The SECRET_KEY environment variable must be set and not empty"
         )
