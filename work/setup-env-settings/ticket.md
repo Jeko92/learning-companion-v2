@@ -5,16 +5,16 @@ Issue: #1 · Branch: feature/setup-env-settings
 As a developer deploying or running the Learning Companion, I want secrets and environment-specific settings to come from the environment or a `.env` file, so that no secret is committed and each environment can be configured without code changes.
 
 ## Acceptance criteria
-- [ ] AC1 `SECRET_KEY` is read from the `SECRET_KEY` variable, and the generated `django-insecure-...` key no longer appears anywhere in `src/config/settings.py`.
-- [ ] AC2 If `SECRET_KEY` is unset or empty, loading the settings raises `ImproperlyConfigured`, and the message names `SECRET_KEY`.
-- [ ] AC3 `DEBUG` is read from the `DEBUG` variable as a boolean (`True`/`False`, `1`/`0`, `yes`/`no` are understood). `DEBUG=False` gives `False`.
-- [ ] AC4 If `DEBUG` is unset, `DEBUG` is `False`.
-- [ ] AC5 `ALLOWED_HOSTS` is read from the `ALLOWED_HOSTS` variable as a comma-separated list, with whitespace around entries trimmed. `"example.com, www.example.com"` gives `["example.com", "www.example.com"]`.
-- [ ] AC6 If `ALLOWED_HOSTS` is unset, it is `["localhost", "127.0.0.1"]`.
-- [ ] AC7 Variables defined in a `.env` file at the repo root are loaded into the settings.
-- [ ] AC8 If a variable is set in both the process environment and `.env`, the process environment value wins.
-- [ ] AC9 A missing `.env` file is not an error. The settings load from the process environment alone, as long as `SECRET_KEY` is set there.
-- [ ] AC10 A committed `.env.example` lists every variable the settings read (`SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`), each with an explanatory comment, and sets `DEBUG=True` as the local-dev value.
+- [x] AC1 `SECRET_KEY` is read from the `SECRET_KEY` variable, and the generated `django-insecure-...` key no longer appears anywhere in `src/config/settings.py`.
+- [x] AC2 If `SECRET_KEY` is unset or empty, loading the settings raises `ImproperlyConfigured`, and the message names `SECRET_KEY`.
+- [x] AC3 `DEBUG` is read from the `DEBUG` variable as a boolean (`True`/`False`, `1`/`0`, `yes`/`no` are understood). `DEBUG=False` gives `False`.
+- [x] AC4 If `DEBUG` is unset, `DEBUG` is `False`.
+- [x] AC5 `ALLOWED_HOSTS` is read from the `ALLOWED_HOSTS` variable as a comma-separated list, with whitespace around entries trimmed. `"example.com, www.example.com"` gives `["example.com", "www.example.com"]`.
+- [x] AC6 If `ALLOWED_HOSTS` is unset, it is `["localhost", "127.0.0.1"]`.
+- [x] AC7 Variables defined in a `.env` file at the repo root are loaded into the settings.
+- [x] AC8 If a variable is set in both the process environment and `.env`, the process environment value wins.
+- [x] AC9 A missing `.env` file is not an error. The settings load from the process environment alone, as long as `SECRET_KEY` is set there.
+- [x] AC10 A committed `.env.example` lists every variable the settings read (`SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`), each with an explanatory comment, and sets `DEBUG=True` as the local-dev value.
 
 ## Out of scope
 - Database configuration (SQLite stays as generated).
