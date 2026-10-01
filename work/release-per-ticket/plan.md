@@ -133,7 +133,7 @@ Verification for these steps is review-only too, plus re-running `gate-check.sh`
 Verification is still review-only, plus the scratchpad hook scripts, extended with every case reported in the review.
 
 - [x] 17. Amend AC5 and AC7 and the ticket Notes for the step 7 recovery design, the same way AC6 was. AC5: a blocked release returns to `idle` with `release_status: blocked`. AC7: `fix/` creation is allowed while blocked. Finding: 1. Impl: `work/release-per-ticket/ticket.md`.
-- [ ] 18. The blocked-release command works in every phase (finding 2), and resumes are safe (finding 9). Impl: `release/SKILL.md`, `guard-bash.sh`.
+- [x] 18. The blocked-release command works in every phase (finding 2), and resumes are safe (finding 9). Impl: `release/SKILL.md`, `guard-bash.sh`.
   - The block runs `git merge --abort` only when `MERGE_HEAD` exists, and each command runs on its own, so `set-state` always runs.
   - The hook allows `git merge --abort` on any branch.
   - On resume in `releasing`, a leftover merge is aborted first.

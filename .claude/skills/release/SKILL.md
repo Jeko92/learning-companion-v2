@@ -11,12 +11,11 @@ The skill is resumable. It records its progress as `release_status` in `.claude/
 
 ## Blocked releases
 
-Whenever a step below says **block**, do this and stop:
+Whenever a step below says **block**, run these as separate commands (one Bash call each, so the state update always runs) and stop:
 
-```bash
-git merge --abort 2>/dev/null; git switch develop
-bash .claude/hooks/set-state.sh phase idle ticket "" issue "" branch "" pr "" current_step "" release_status blocked release_reason "<one line: what failed>"
-```
+1. Only if a merge is in progress (`git rev-parse -q --verify MERGE_HEAD` prints a hash): `git merge --abort`.
+2. `git switch develop`
+3. `bash .claude/hooks/set-state.sh phase idle ticket "" issue "" branch "" pr "" current_step "" release_status blocked release_reason "<one line: what failed>"`
 
 Leave an open release PR open. Report the reason and the way out:
 
@@ -34,7 +33,8 @@ Leave an open release PR open. Report the reason and the way out:
    - `releasing`: resume an earlier run (see step 1).
 
    Any other phase means a ticket is in progress: stop and tell the user to finish it first.
-3. `git status --porcelain` must show nothing except untracked files under `work/`.
+3. If the phase is `releasing` and a merge is still in progress from an interrupted run (`git rev-parse -q --verify MERGE_HEAD` prints a hash), run `git merge --abort` first; step 4 redoes the merge.
+4. `git status --porcelain` must show nothing except untracked files under `work/`.
 
 ## Steps
 
@@ -104,7 +104,12 @@ Leave an open release PR open. Report the reason and the way out:
 
    ```bash
    git fetch origin
-   git rev-list --count origin/main..origin/develop   # must be 0
+   git rev-list --count origin/main..origin/develop
+   ```
+
+   The count must be `0`. If it isn't (something landed on `develop` after the PR was merged), **block** with "develop moved during the release"; a later release picks it up once a human has looked at it. Otherwise:
+
+   ```bash
    bash .claude/hooks/set-state.sh phase idle ticket "" issue "" branch "" pr "" current_step "" release_status "" release_reason ""
    ```
 

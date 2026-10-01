@@ -63,7 +63,10 @@ if is_git "commit"; then
   fi
 fi
 
-if is_git "merge"; then
+merge_abort_only=false
+echo "$cmd" | grep -qE "^\s*git\s+merge\s+--abort\s*$" && merge_abort_only=true
+
+if is_git "merge" && ! $merge_abort_only; then
   if $on_protected && ! $releasing_on_develop; then
     block "merging into '$branch' locally is not allowed. Ticket branches reach $DEVELOP_BRANCH through a squash-merged PR, $DEVELOP_BRANCH reaches $MAIN_BRANCH through the release skill."
   fi
