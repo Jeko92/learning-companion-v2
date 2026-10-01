@@ -40,9 +40,10 @@ python3 .claude/scripts/board.py sync                                        # m
 
 ## Workflow
 
-Every change goes through the pipeline in `.claude/rules/workflow.md`: `refine-ticket` → `plan-ticket` → `tdd-implement` → `final-review`, driven one step per call by `factory-manager` (e.g. `/loop /factory-manager`). TDD rules: `.claude/rules/tdd.md`. Gitflow and commit conventions: `.claude/rules/git.md`.
+Every change goes through the pipeline in `.claude/rules/workflow.md`: `refine-ticket` → `plan-ticket` → `tdd-implement` → `final-review` → `release`, driven one step per call by `factory-manager` (e.g. `/loop /factory-manager`). TDD rules: `.claude/rules/tdd.md`. Gitflow and commit conventions: `.claude/rules/git.md`.
 
 - Tickets are GitHub issues on the project board (repo and board number in `.claude/hooks/config.sh`).
 - Ticket branches `feature/<id>` / `fix/<id>` are cut from `develop` and squash-merged back into it; the branches are kept.
-- `main` only changes through the `release` skill (PR from `develop`, merge commit).
+- After every ticket, `factory-manager` runs the `release` skill: `main` is merged into `develop` with a merge commit (conflicts are resolved there), then a PR from `develop` is merged into `main` with a merge commit. `main` only changes this way.
+- The next ticket starts only once `main` has the previous one; a hook blocks new ticket branches while `develop` is ahead of `main`.
 - Source under `src/` is write-protected outside the `implementing` phase; hooks also gate commits, pushes and merges.

@@ -13,8 +13,9 @@ TEST_GUARD_FILE="src/manage.py"
 RUN_TESTS_ON_WRITE="true"
 
 # Gitflow branches (see .claude/rules/git.md). Ticket branches are cut from
-# DEVELOP_BRANCH and squash-merged back into it; MAIN_BRANCH only receives
-# PRs from DEVELOP_BRANCH via the release skill.
+# DEVELOP_BRANCH and squash-merged back into it; after every ticket the
+# release skill promotes DEVELOP_BRANCH to MAIN_BRANCH through a PR merged
+# with a merge commit. MAIN_BRANCH changes no other way.
 MAIN_BRANCH="main"
 DEVELOP_BRANCH="develop"
 
