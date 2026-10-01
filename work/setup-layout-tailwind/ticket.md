@@ -33,3 +33,5 @@ Answers from refinement (2026-10-01; first given earlier the same day while #1 w
   - git-ignore the built CSS output
   - update `README.md` and `CLAUDE.md` (setup, the build step, the dev command, and the `core` app and `src/templates/` in the Layout section)
 - Constraint: the suite needs `SECRET_KEY` (from ticket #1). Tests run with the local `.env`.
+
+Status: the user approved these acceptance criteria on 2026-10-01. The ticket was then paused (card back to Todo, phase reset to idle) so a workflow ticket, "release develop to main after every ticket", could run first. When #2 resumes, bring this branch up to date with `develop` and continue at `plan-ticket`. Don't refine again.
