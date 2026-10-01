@@ -80,13 +80,15 @@ if is_git "pull" && $on_protected; then
 fi
 
 if is_git "push"; then
-  if echo "$cmd" | grep -qE -- "--force|-f\b" && echo "$cmd" | grep -qE "($PROTECTED_BRANCHES)"; then
+  # A "+<ref>" refspec is a force push too.
+  if echo "$cmd" | grep -qE -- "--force|-f\b|\s\+[^[:space:]]" \
+     && { echo "$cmd" | grep -qE "($PROTECTED_BRANCHES)" || $on_protected; }; then
     block "force-pushing to a protected branch is not allowed."
   fi
   if echo "$cmd" | grep -qE -- "--delete|\s:[A-Za-z]"; then
     block "deleting remote branches is not allowed. feature/ and fix/ branches are kept so their per-step commit history stays visible."
   fi
-  if echo "$cmd" | grep -qE "(\s|:)$MAIN_BRANCH(\s|$)" || [ "$branch" = "$MAIN_BRANCH" ]; then
+  if echo "$cmd" | grep -qE "(\s|:|\+)(refs/heads/)?$MAIN_BRANCH(\s|$|[;&|)])" || [ "$branch" = "$MAIN_BRANCH" ]; then
     block "'$MAIN_BRANCH' only changes through a PR from $DEVELOP_BRANCH (release skill). Never push to it."
   fi
   if [ "$phase" = "releasing" ]; then
