@@ -59,7 +59,7 @@
   - Check handling: none means merge. Running means record `release_status waiting-checks`, report, stop. Failed, red, or a conflict needing a human means `release_status blocked`, report, stop. Success clears `release_status`.
   - Keep the hard limits.
   - Verify: read it against AC3–AC5.
-- [ ] 3. Update `factory-manager`. Covers: AC6. Impl: `.claude/skills/factory-manager/SKILL.md`.
+- [x] 3. Update `factory-manager`. Covers: AC6. Impl: `.claude/skills/factory-manager/SKILL.md`.
   - Dispatch table:
     - `done`: close-out, then invoke `release`.
     - `releasing`: if `release_status` is `blocked`, park and report. Otherwise invoke `release`.
