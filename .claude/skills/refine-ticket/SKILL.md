@@ -11,7 +11,9 @@ Input (`$ARGUMENTS` if provided): normally a board issue handed over by `factory
 
 Read `.claude/state/workflow.json` (if it exists). If a ticket is already in progress (phase is not `idle` or `done`), stop and ask the user whether to abandon it or finish it first. Do not silently start a second ticket.
 
-If the phase is `done`, the previous ticket must be closed out first: its PR must be merged (`gh pr view <branch> --json state` shows `MERGED`). If it isn't, stop and point to `factory-manager`, which does the close-out.
+If the phase is `done`, the previous ticket has not been closed out and released yet: stop and point to `factory-manager`, which squash-merges its PR and then runs the `release` skill.
+
+The previous ticket must also be on `main` before a new one starts: run `git fetch origin`, then `git rev-list --count origin/main..origin/develop`. If it is greater than 0, `develop` has work `main` lacks: stop and point to `factory-manager`, which runs the release first. (`guard-bash.sh` blocks creating the ticket branch in that state anyway.)
 
 ## Steps
 
