@@ -46,4 +46,7 @@ Every change goes through the pipeline in `.claude/rules/workflow.md`: `refine-t
 - Ticket branches `feature/<id>` / `fix/<id>` are cut from `develop` and squash-merged back into it; the branches are kept.
 - After every ticket, `factory-manager` runs the `release` skill: `main` is merged into `develop` with a merge commit (conflicts are resolved there), then a PR from `develop` is merged into `main` with a merge commit. `main` only changes this way.
 - The next ticket starts only once `main` has the previous one; a hook blocks new ticket branches while `develop` is ahead of `main`.
+- A release that can't finish (red suite, failed checks, a conflict, unreviewed commits on `develop`) sets `release_status: blocked` in `.claude/state/workflow.json` and returns to `idle`; then only a `type:fix` ticket can start, and its release clears the flag. A human can also fix an outside cause and run `/release`.
+- `REQUIRE_CHECKS` in `.claude/hooks/config.sh` is `"false"` until CI exists: release PRs without checks merge on the local suite + lint, which the hook re-runs before `gh pr merge`. Flip it to `"true"` with the `ci-tests` ticket.
+- A paused ticket (approval recorded in its `ticket.md`) resumes on its existing branch: `refine-ticket` merges the latest `develop` into it and continues at `plan-ticket`.
 - Source under `src/` is write-protected outside the `implementing` phase; hooks also gate commits, pushes and merges.

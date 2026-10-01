@@ -52,6 +52,8 @@ Branching follows gitflow (`.claude/rules/git.md`): `feature/<ticket-id>` and
 it. After every ticket, `develop` is promoted to `main`: `main` is merged into
 `develop` with a merge commit (resolving any conflicts there), then a release
 PR from `develop` is merged into `main` with a merge commit. The next ticket
-starts only once `main` has the previous one. Commits follow
+starts only once `main` has the previous one. If a release can't finish, the
+factory only accepts a `type:fix` ticket until that fix is released (see
+`.claude/rules/git.md`). Commits follow
 Conventional Commits with the ticket id as scope, e.g. `feat(<ticket-id>): ...`
 (see `.conventionalcommit.json`).
