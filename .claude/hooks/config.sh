@@ -15,7 +15,8 @@ RUN_TESTS_ON_WRITE="true"
 # Release PRs (develop -> main): with "false", a PR with no checks reported
 # is merged on the strength of the local suite + lint (run by guard-bash.sh
 # right before 'gh pr merge'). Flip to "true" once CI exists (ticket ci-tests):
-# then a release PR without checks is blocked instead of merged.
+# then every check must have passed, and a release PR with no, pending or
+# failed checks is blocked. Any value other than "false" counts as on.
 REQUIRE_CHECKS="false"
 
 # Gitflow branches (see .claude/rules/git.md). Ticket branches are cut from

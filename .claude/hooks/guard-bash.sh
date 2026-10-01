@@ -157,31 +157,38 @@ if is_git "branch" && echo "$cmd" | grep -qE -- "\s-(d|D)\b|--delete" \
 fi
 
 if is_gh "pr\s+merge"; then
+  [ "$(grep -oE "(^|[;&|]\s*)gh\s+pr\s+merge" <<<"$cmd" | wc -l)" -le 1 ] \
+    || block "one 'gh pr merge' per command, so every merge gets its own checks."
   if echo "$cmd" | grep -qE -- "--delete-branch|-d\b"; then
     block "do not delete the branch on merge; feature/ and fix/ branches are kept for their commit history."
   fi
   if echo "$cmd" | grep -qE -- "--admin"; then
     block "'gh pr merge --admin' bypasses branch protection and is not allowed."
   fi
+  if [ "$phase" = "done" ] || [ "$phase" = "releasing" ]; then
+    pr_num="$(echo "$cmd" | sed -nE 's/.*gh[[:space:]]+pr[[:space:]]+merge[[:space:]]+([0-9]+).*/\1/p')"
+    [ -n "$pr_num" ] || block "name the PR explicitly: 'gh pr merge <n> ...'."
+    pr_refs="$(gh pr view "$pr_num" -R "$GH_REPO" --json baseRefName,headRefName --jq '.headRefName + ">" + .baseRefName' 2>/dev/null)"
+    [ -n "$pr_refs" ] || block "could not look up PR #$pr_num, so it is not merged."
+  fi
   if [ "$phase" = "done" ]; then
     echo "$cmd" | grep -qE -- "--squash|-s\b" \
       || block "ticket PRs into $DEVELOP_BRANCH are squash-merged: use 'gh pr merge <n> --squash'."
+    [ "${pr_refs#*>}" = "$DEVELOP_BRANCH" ] \
+      || block "in phase 'done' only a ticket PR into $DEVELOP_BRANCH may be merged; PR #$pr_num is '$pr_refs'."
   elif [ "$phase" = "releasing" ]; then
     echo "$cmd" | grep -qE -- "--merge|-m\b" \
       || block "the release PR from $DEVELOP_BRANCH into $MAIN_BRANCH is merged with a merge commit: use 'gh pr merge <n> --merge'."
-    pr_num="$(echo "$cmd" | sed -nE 's/.*gh[[:space:]]+pr[[:space:]]+merge[[:space:]]+([0-9]+).*/\1/p')"
-    [ -n "$pr_num" ] || block "while releasing, name the release PR explicitly: 'gh pr merge <n> --merge'."
-    pr_refs="$(gh pr view "$pr_num" -R "$GH_REPO" --json baseRefName,headRefName --jq '.headRefName + ">" + .baseRefName' 2>/dev/null)"
     [ "$pr_refs" = "$DEVELOP_BRANCH>$MAIN_BRANCH" ] \
-      || block "while releasing, only the release PR ($DEVELOP_BRANCH -> $MAIN_BRANCH) may be merged; PR #$pr_num is '${pr_refs:-unknown}'."
+      || block "while releasing, only the release PR ($DEVELOP_BRANCH -> $MAIN_BRANCH) may be merged; PR #$pr_num is '$pr_refs'."
     # The release gate: main only gets what passes the suite and lint here.
     if [ -f "$TEST_GUARD_FILE" ]; then
       $TEST_CMD >/dev/null 2>&1 || block "the test suite is red; the release PR is not merged ($TEST_CMD)."
     fi
     $LINT_CMD >/dev/null 2>&1 || block "lint fails; the release PR is not merged ($LINT_CMD)."
-    if [ "$REQUIRE_CHECKS" = "true" ] \
-       && gh pr checks "$pr_num" -R "$GH_REPO" 2>&1 | grep -q "no checks reported"; then
-      block "REQUIRE_CHECKS is on and release PR #$pr_num has no checks; it is not merged without CI."
+    # Anything but an explicit "false" counts as on; then every check must have passed.
+    if [ "$REQUIRE_CHECKS" != "false" ] && ! gh pr checks "$pr_num" -R "$GH_REPO" >/dev/null 2>&1; then
+      block "REQUIRE_CHECKS is on and release PR #$pr_num has no passing checks (none, pending or failed); it is not merged."
     fi
   else
     block "PRs are merged only by factory-manager after a passed review (phase 'done') or by the release skill (phase 'releasing'); current phase: $phase."

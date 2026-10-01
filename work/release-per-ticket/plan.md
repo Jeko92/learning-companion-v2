@@ -145,7 +145,7 @@ Verification is still review-only, plus the scratchpad hook scripts, extended wi
   - `git push --mirror` and `git push --all` are blocked.
   - `guard-write.sh` blocks Write/Edit on `.claude/state/`.
   - Verify: `regress-check.sh` with `phase "releasing"`, `'HEAD:main'`, `"+HEAD:develop"`, `--mirror` and `--all`, all blocked.
-- [ ] 22. A tighter PR merge gate (finding 6). Impl: `guard-bash.sh`. Verify: `regress-check.sh` with the fake `gh`.
+- [x] 22. A tighter PR merge gate (finding 6). Impl: `guard-bash.sh`. Verify: `regress-check.sh` with the fake `gh`.
   - Only one `gh pr merge` per command.
   - In `done`, the PR's base must be `develop`, looked up like the release PR's.
   - A failed PR lookup blocks.
