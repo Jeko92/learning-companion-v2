@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import environ as django_environ
+from django.core.exceptions import ImproperlyConfigured
 
 
 @dataclass(frozen=True)
@@ -17,4 +18,9 @@ class EnvSettings:
 def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
     env = django_environ.Env()
     env.ENVIRON = dict(environ)
-    return EnvSettings(secret_key=env.str("SECRET_KEY"), debug=False, allowed_hosts=[])
+    secret_key = env.str("SECRET_KEY")
+    if not secret_key:
+        raise ImproperlyConfigured(
+            "The SECRET_KEY environment variable must not be empty"
+        )
+    return EnvSettings(secret_key=secret_key, debug=False, allowed_hosts=[])

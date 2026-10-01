@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
 
 from config.env import resolve_settings
@@ -15,3 +16,11 @@ class ResolveSettingsTests(SimpleTestCase):
         settings = self.resolve({"SECRET_KEY": "from-env"})
 
         self.assertEqual(settings.secret_key, "from-env")
+
+    def test_missing_secret_key_raises_improperly_configured(self):
+        with self.assertRaisesMessage(ImproperlyConfigured, "SECRET_KEY"):
+            self.resolve({})
+
+    def test_empty_secret_key_raises_improperly_configured(self):
+        with self.assertRaisesMessage(ImproperlyConfigured, "SECRET_KEY"):
+            self.resolve({"SECRET_KEY": ""})
