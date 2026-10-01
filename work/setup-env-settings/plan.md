@@ -62,7 +62,7 @@ Tests use `django.test.SimpleTestCase`. Steps 1–8 test `resolve_settings` dire
 | Docs (ticket notes) | 12 |
 
 ## Review findings (review.md, 2026-10-01)
-- [ ] 13. A `SECRET_KEY` that starts with `$` is used literally. `{"SECRET_KEY": "$abc"}` resolves to `"$abc"`, with no proxy expansion and no error that echoes the value. Test: `test_env.py`. Impl: `env.py` reads the raw value from the resolved mapping. Finding: 1 (high).
+- [x] 13. A `SECRET_KEY` that starts with `$` is used literally. `{"SECRET_KEY": "$abc"}` resolves to `"$abc"`, with no proxy expansion and no error that echoes the value. Test: `test_env.py`. Impl: `env.py` reads the raw value from the resolved mapping. Finding: 1 (high).
 - [ ] 14. A whitespace-only `SECRET_KEY` raises `ImproperlyConfigured` naming `SECRET_KEY`. Test: `test_env.py`. Impl: `env.py`. Finding: 4.
 - [ ] 15. Empty `ALLOWED_HOSTS` entries are dropped: `"a.com, "` gives `["a.com"]`. A set-but-empty value gives `[]`, which fails closed. Test: `test_env.py`. Impl: `env.py`. Finding: 3.
 - [ ] 16. Wiring tests use distinctive values. `os.environ` is patched with `SECRET_KEY`, `DEBUG` and `ALLOWED_HOSTS` values that differ from the defaults and from `.env.example`, `config.settings` is reloaded, and the module's values must equal them. Cleanup restores `os.environ` and reloads the module. This deliberately replaces the comparisons against `resolve_settings` in `test_settings.py`, so it's a test fix step. Test: `src/config/tests/test_settings.py`. Impl: none expected. Finding: 2.

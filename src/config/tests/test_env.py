@@ -26,6 +26,13 @@ class ResolveSettingsTests(SimpleTestCase):
 
         self.assertEqual(settings.secret_key, "from-env")
 
+    def test_secret_key_starting_with_dollar_is_used_literally(self):
+        # Generated keys can start with "$"; it must not be expanded as a
+        # reference to another variable.
+        settings = self.resolve({"SECRET_KEY": "$abc", "abc": "other"})
+
+        self.assertEqual(settings.secret_key, "$abc")
+
     def test_missing_secret_key_raises_improperly_configured(self):
         with self.assertRaisesMessage(ImproperlyConfigured, "SECRET_KEY"):
             self.resolve({})
