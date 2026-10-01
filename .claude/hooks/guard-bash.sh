@@ -101,12 +101,24 @@ if is_git "push"; then
   fi
 fi
 
-if echo "$cmd" | grep -qE "(^|[;&|]\s*)git\s+(switch\s+(-c|-C|--create)|checkout\s+(-b|-B)|branch)\s+(feature|fix)/"; then
+# Ticket-branch creation: switch -c/-C/--create[=], checkout -b/-B, worktree add -b/-B,
+# branch [<opts>] [-c|-m <old>] <name>, each optionally after 'git -C <dir>' and with
+# options before the flag. Quoted text is ignored (messages, --grep patterns), so a
+# quoted branch name is not caught; heredoc bodies are not parsed either.
+cmd_unquoted="$(echo "$cmd" | sed -E "s/\"[^\"]*\"//g; s/'[^']*'//g")"
+opts='(-[^[:space:]]+\s+)*'
+create_re="(^|[;&|]\s*)git\s+(-C\s+[^[:space:]]+\s+)?("
+create_re+="switch\s+${opts}(-c|-C|--create|--force-create)(\s+|=)"
+create_re+="|checkout\s+${opts}(-b|-B)\s+"
+create_re+="|worktree\s+add\s+${opts}(-b|-B)\s+"
+create_re+="|branch\s+((--no-track|--track(=[^[:space:]]+)?|-t|-f|--force|-q|--quiet)\s+)*((-c|-C|-m|-M|--copy|--move)\s+([^-[:space:]][^[:space:]]*\s+)?)?"
+create_re+=")(feature|fix)/"
+if echo "$cmd_unquoted" | grep -qE "$create_re"; then
   # Uses the remote-tracking refs from the last fetch; a missing ref counts as 0.
   ahead="$(git rev-list --count "origin/$MAIN_BRANCH..origin/$DEVELOP_BRANCH" 2>/dev/null)" || ahead=0
   # A blocked release is repaired by a fix ticket, so fix/ branches stay allowed then.
   if [ "$(get_state release_status)" = "blocked" ] \
-     && echo "$cmd" | grep -qE "\s(fix)/" && ! echo "$cmd" | grep -qE "\s(feature)/"; then
+     && echo "$cmd_unquoted" | grep -qE "[[:space:]=]fix/" && ! echo "$cmd_unquoted" | grep -qE "[[:space:]=]feature/"; then
     ahead=0
   fi
   if [ "${ahead:-0}" -gt 0 ]; then
