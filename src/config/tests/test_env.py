@@ -1,3 +1,4 @@
+import os
 import tempfile
 from pathlib import Path
 
@@ -83,6 +84,16 @@ class ResolveSettingsTests(SimpleTestCase):
 
         self.assertEqual(settings.secret_key, "from-env")
         self.assertIs(settings.debug, False)
+
+    def test_does_not_mutate_the_given_mapping_or_os_environ(self):
+        env_file = self.write_env_file("SECRET_KEY=x\nLC_TEST_ONLY_IN_FILE=1\n")
+        environ = {"DEBUG": "False"}
+        os_environ_before = dict(os.environ)
+
+        self.resolve(environ, env_file)
+
+        self.assertEqual(environ, {"DEBUG": "False"})
+        self.assertEqual(dict(os.environ), os_environ_before)
 
     def test_missing_env_file_is_not_an_error(self):
         self.assertFalse(MISSING_ENV_FILE.exists())
