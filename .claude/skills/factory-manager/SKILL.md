@@ -21,7 +21,7 @@ The board is the source of truth for tickets; `work/backlog.md` is its local mir
 
 Do exactly one of the following, then stop and report (step 6). Never chain two phase skills in one call — one call is one observable pipeline step.
 
-1. **Waiting check.** If a line in `work/backlog.md` carries `[[parked: <skill> @ <phase>]]` and `<phase>` equals the *current* phase, the last call already triggered `<skill>` at this phase and it stopped to ask a human something (interview, ticket-id confirmation, plan approval), and nothing has moved since. Do not re-invoke it — go straight to step 6 and report that it is still waiting for the user. A parked `release` waits for a human to fix the cause (red suite, failed checks, conflict) and then run `/release`, which resumes and clears `release_status`. Remove every `[[parked: ...]]` tag whose phase no longer matches; that means progress happened since.
+1. **Waiting check.** If a line in `work/backlog.md` carries `[[parked: <skill> @ <phase>]]` and `<phase>` equals the *current* phase, the last call already triggered `<skill>` at this phase and it stopped to ask a human something (interview, ticket-id confirmation, plan approval), and nothing has moved since. Do not re-invoke it — go straight to step 6 and report that it is still waiting for the user. Remove every `[[parked: ...]]` tag whose phase no longer matches; that means progress happened since. `release` is never parked: its waiting states live in `release_status` (see the dispatch table), so remove any `[[parked: release @ ...]]` tag you find.
 
 2. **Dispatch on phase:**
 
@@ -33,7 +33,7 @@ Do exactly one of the following, then stop and report (step 6). Never chain two 
    | `implementing` | Invoke `tdd-implement` (it resumes from the plan itself). |
    | `reviewing` | Invoke `final-review`. |
    | `done` | Close-out (step 3), then invoke `release`. Never select the next ticket in the same call. |
-   | `releasing` | If `release_status` is `blocked`, do not invoke anything: park it (step 5) and report that the release needs a human. Otherwise (`waiting-checks` or empty) invoke `release`; it resumes where it stopped. |
+   | `releasing` | Invoke `release`; it resumes where it stopped (`waiting-checks`: checks were still running; empty: an interrupted run). A release that cannot finish never stays here: it returns to `idle` with `release_status: blocked`. |
 
 3. **`done` — close-out.** Idempotent: skip any sub-step that is already true.
    1. Find the PR: `pr` from the state file, else `gh pr list --head <branch> --state all --json number,state`.
@@ -54,7 +54,7 @@ Do exactly one of the following, then stop and report (step 6). Never chain two 
 
 5. **Park if waiting.** After the invoked skill returns, re-read `.claude/state/workflow.json`. If the phase did not advance because the skill stopped to ask the user something, append `[[parked: <skill> @ <phase>]]` to that ticket's line in `work/backlog.md` (the candidate's line for `refine-ticket`), so the next call doesn't restart the interview or regenerate the plan.
 
-   For `release`: if the phase is still `releasing` and `release_status` is `blocked` (red suite after the main-into-develop merge, failed checks, or a conflict that needs a human), append `[[parked: release @ releasing]]` to the line of the newest ticket in that release (`ticket` from the state file; for a catch-up release, the last ticket id in the release PR title). `waiting-checks` is not parked: a later call resumes it.
+   `release` is not parked. `waiting-checks` is resumed by a later call; `blocked` is handled by the `idle` row and selection (step 4), which report the reason and only let a `type:fix` ticket start.
 
 6. **Report.** One short summary: phase before → phase after, the ticket id and issue number, and what changed (artifact, PR merged, card moved, ticket picked). If the invoked skill stopped to ask the user something — ticket interview, ticket-id confirmation, plan approval — say exactly that instead of answering on its behalf; a human needs to be present for that turn, and this skill does not fabricate approval to keep a loop moving.
 

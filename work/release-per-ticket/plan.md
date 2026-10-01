@@ -97,7 +97,7 @@ Verification for these steps is review-only too, plus re-running `gate-check.sh`
   The fix ticket's close-out runs `release` as usual, and a successful release clears the flag. A human can also fix the cause outside the repo (for example CI) and run `/release` to retry.
 
   Impl: `release/SKILL.md`, `factory-manager/SKILL.md`, `refine-ticket/SKILL.md`, `guard-bash.sh`, `git.md`, `workflow.md`. Commits on `develop` stay limited to the main-into-develop merge.
-- [ ] 8. Parked release tags (finding 2). The waiting check keeps a `[[parked: release @ ...]]` tag only while `release_status` is `blocked`. Otherwise it removes the tag and resumes. With step 7, a blocked release leaves the phase `idle`, so the tag is matched on the flag rather than the phase. Impl: `factory-manager/SKILL.md`.
+- [x] 8. Parked release tags (finding 2). The waiting check keeps a `[[parked: release @ ...]]` tag only while `release_status` is `blocked`. Otherwise it removes the tag and resumes. With step 7, a blocked release leaves the phase `idle`, so the tag is matched on the flag rather than the phase. Impl: `factory-manager/SKILL.md`.
 - [ ] 9. `release` resume and robustness (findings 3, 9, 10). Impl: `release/SKILL.md`.
   - In phase `releasing`, with no open release PR and a count of 0, go straight to the finish step.
   - On resume, take the ticket ids from the open PR's title.

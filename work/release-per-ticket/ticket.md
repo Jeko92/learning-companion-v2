@@ -15,8 +15,10 @@ As the person running the AI factory, I want `develop` promoted to `main` after 
   - **A check fails, the suite or lint is red after the main-into-develop merge, or a conflict needs a human:** stop and report it, leaving the phase at `releasing`.
 - [x] AC6 `factory-manager`'s dispatch:
   - **`done`:** close-out (squash-merge, close the issue, card to Done, fast-forward `develop`), then invoke `release`. It no longer goes straight to selection.
-  - **`releasing`:** invoke `release` to resume. If `release` stopped on a failure that needs a human, park it as `[[parked: release @ releasing]]` so a loop reports "waiting" instead of retrying.
-  - **`idle`:** if `origin/develop` has commits that `origin/main` lacks, invoke `release` (catch-up) instead of selecting a ticket.
+  - **`releasing`:** invoke `release` to resume.
+  - **A release that needs a human** ends in `idle` with `release_status: blocked`. factory-manager then never re-invokes `release`; it reports the reason and only selects `type:fix` tickets, so a loop waits instead of retrying.
+    - Amended during the review-fix round (2026-10-01): the original wording, park as `[[parked: release @ releasing]]`, was replaced by the recovery path the user approved for review finding 1 (plan step 7) and finding 2 (step 8).
+  - **`idle`:** if `origin/develop` has commits that `origin/main` lacks and no release is blocked, invoke `release` (catch-up) instead of selecting a ticket.
   - Its hard limits no longer say releases happen "only when the user asks". Each call still invokes at most one phase skill, where `release` counts as one.
 - [x] AC7 `.claude/hooks/guard-bash.sh` blocks creating a `feature/` or `fix/` branch (`git switch -c`, `git checkout -b`, `git branch <name>`) while `git rev-list --count origin/main..origin/develop` is greater than 0. The message points to the `release` skill. Creation is allowed when the count is 0, and switching to an existing ticket branch is never blocked.
 - [x] AC8 `guard-bash.sh` still allows the release flow in phase `releasing`: the main-into-develop merge and commit on `develop`, `git push origin develop`, and `gh pr merge <n> --merge`. Everything it blocked before is still blocked.
