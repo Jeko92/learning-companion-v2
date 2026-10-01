@@ -39,5 +39,6 @@ def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
         allowed_hosts=[
             host.strip()
             for host in env.list("ALLOWED_HOSTS", default=DEFAULT_ALLOWED_HOSTS)
+            if host.strip()
         ],
     )

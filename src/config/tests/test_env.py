@@ -72,6 +72,14 @@ class ResolveSettingsTests(SimpleTestCase):
 
         self.assertEqual(settings.allowed_hosts, ["example.com", "www.example.com"])
 
+    def test_allowed_hosts_drops_empty_entries(self):
+        cases = {"a.com, ": ["a.com"], " , a.com,,": ["a.com"], "": []}
+        for raw, expected in cases.items():
+            with self.subTest(ALLOWED_HOSTS=raw):
+                settings = self.resolve({"SECRET_KEY": "x", "ALLOWED_HOSTS": raw})
+
+                self.assertEqual(settings.allowed_hosts, expected)
+
     def test_allowed_hosts_defaults_to_localhost(self):
         settings = self.resolve({"SECRET_KEY": "x"})
 
