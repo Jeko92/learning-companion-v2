@@ -7,6 +7,7 @@ A learning companion for tracking goals and learning sessions, attaching resourc
 - Python 3.14, Django 6.1, SQLite (dev, tests and container)
 - Server-rendered Django templates, Tailwind via `django-tailwind-cli` (standalone binary, no Node)
 - Django's built-in test runner (`django.test`), ruff for lint and formatting
+- Settings from the environment via `django-environ` (`src/config/env.py`). `SECRET_KEY` is required, `DEBUG` defaults to `False` and `ALLOWED_HOSTS` to `localhost,127.0.0.1`. The process environment beats `.env`, and `.env.example` documents every variable.
 - OpenAI Chat Completions for the AI features; API key from `.env`, never hardcoded
 
 Decisions above that aren't implemented yet are delivered by the tickets on the board; keep this file in step as they land.
@@ -17,6 +18,8 @@ Run from the repo root.
 
 ```bash
 python3 -m venv .venv && ./.venv/bin/pip install -r requirements-dev.txt   # setup
+cp .env.example .env   # then set SECRET_KEY; required by runserver and the test suite
+./.venv/bin/python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"   # generate a SECRET_KEY
 ./.venv/bin/python src/manage.py runserver                                   # dev server
 ./.venv/bin/python src/manage.py test src                                    # full suite (what the hooks run)
 ./.venv/bin/python src/manage.py test <app>.tests.test_<x> --verbosity 2     # one test module

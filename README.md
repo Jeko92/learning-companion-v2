@@ -7,9 +7,22 @@ Django 6.1 project on Python 3.14.
 ```bash
 python3 -m venv .venv
 ./.venv/bin/pip install -r requirements-dev.txt
+cp .env.example .env
+./.venv/bin/python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+# paste the printed key into .env as SECRET_KEY=...
 ./.venv/bin/python src/manage.py migrate
 ./.venv/bin/python src/manage.py runserver
 ```
+
+Settings come from the environment via `django-environ`, read in `src/config/env.py`:
+
+| Variable | Default when unset | Notes |
+|---|---|---|
+| `SECRET_KEY` | none, so startup fails | Required and must not be empty |
+| `DEBUG` | `False` | `.env.example` sets `True` for local development |
+| `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Comma-separated |
+
+Values are read from the process environment first. `.env` at the repo root only fills in variables that aren't already set. `.env` is git-ignored, and `.env.example` documents every variable. The test suite needs `SECRET_KEY` too, so set up `.env` before running the tests.
 
 ## Tests and lint
 

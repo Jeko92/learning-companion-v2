@@ -44,7 +44,7 @@ Tests use `django.test.SimpleTestCase`. Steps 1–8 test `resolve_settings` dire
   - After this step, and before step 11: copy `.env.example` to `.env` locally, put in a generated key, and don't commit it. Generate the key with `./.venv/bin/python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`.
 - [x] 11. `settings.py` takes its values from `resolve_settings`. `settings.SECRET_KEY`, `settings.DEBUG` and `settings.ALLOWED_HOSTS` equal `resolve_settings(os.environ, BASE_DIR.parent / ".env")`, and `src/config/settings.py` no longer contains the string `django-insecure`. Test: `src/config/tests/test_settings.py`. Impl: `src/config/settings.py`. Covers: AC1 (wiring and removal of the hardcoded key).
   - The test compares `SECRET_KEY` and `ALLOWED_HOSTS` on `django.conf.settings`. Django's test runner forces `DEBUG=False` at run time, so `DEBUG` is checked by reading the `config.settings` module attribute, not `django.conf.settings`.
-- [ ] 12. Docs. `README.md` `## Setup` gains "copy `.env.example` to `.env`, set `SECRET_KEY`" with the key-generation command, placed before `migrate`. `CLAUDE.md` gets the same in the setup command block, and its Stack section notes that settings come from `.env` via `django-environ`. No test, as the ticket notes. Commit as `docs(setup-env-settings): ...`.
+- [x] 12. Docs. `README.md` `## Setup` gains "copy `.env.example` to `.env`, set `SECRET_KEY`" with the key-generation command, placed before `migrate`. `CLAUDE.md` gets the same in the setup command block, and its Stack section notes that settings come from `.env` via `django-environ`. No test, as the ticket notes. Commit as `docs(setup-env-settings): ...`.
 
 ## Coverage
 | AC | Steps |
