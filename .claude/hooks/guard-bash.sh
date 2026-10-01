@@ -27,6 +27,21 @@ block() {
   exit 2
 }
 
+# Every "git <sub> ..." segment of a chained command (split on ; && || | &), trimmed.
+git_segments() {
+  awk '{ gsub(/&&|\|\||;|\||&/, "\n"); print }' <<<"$cmd" \
+    | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' | grep -E "^git\s+$1(\s|$)"
+}
+
+# True only if every "git <sub>" segment matches the regex (an allowlist for all of them).
+all_git_segments_match() {
+  local seg
+  while IFS= read -r seg; do
+    echo "$seg" | grep -qE "$2" || return 1
+  done < <(git_segments "$1")
+  return 0
+}
+
 phase="$(current_phase)"
 branch="$(current_branch)"
 on_protected=false
@@ -71,8 +86,8 @@ if is_git "merge" && ! $merge_abort_only; then
     block "merging into '$branch' locally is not allowed. Ticket branches reach $DEVELOP_BRANCH through a squash-merged PR, $DEVELOP_BRANCH reaches $MAIN_BRANCH through the release skill."
   fi
   if $releasing_on_develop \
-     && ! echo "$cmd" | grep -qE "(^|[;&|]\s*)git\s+merge\s+((--no-ff|--no-commit)\s+)*origin/$MAIN_BRANCH(\s|$)|(^|[;&|]\s*)git\s+merge\s+--abort(\s|$)"; then
-    block "while releasing, $DEVELOP_BRANCH only takes the merge of origin/$MAIN_BRANCH ('git merge --no-ff --no-commit origin/$MAIN_BRANCH') or 'git merge --abort'."
+     && ! all_git_segments_match merge "^git\s+merge\s+((--no-ff|--no-commit)\s+)*origin/$MAIN_BRANCH$|^git\s+merge\s+--abort$"; then
+    block "while releasing, every merge into $DEVELOP_BRANCH must be exactly 'git merge --no-ff --no-commit origin/$MAIN_BRANCH' (no other sources) or 'git merge --abort'."
   fi
 fi
 
@@ -95,8 +110,8 @@ if is_git "push"; then
     block "'$MAIN_BRANCH' only changes through a PR from $DEVELOP_BRANCH (release skill). Never push to it."
   fi
   if [ "$phase" = "releasing" ]; then
-    echo "$cmd" | grep -qE "(^|[;&|]\s*)git\s+push\s+origin\s+$DEVELOP_BRANCH(\s*$|\s*[;&|])" \
-      || block "while releasing, the only push allowed is 'git push origin $DEVELOP_BRANCH'."
+    all_git_segments_match push "^git\s+push\s+origin\s+$DEVELOP_BRANCH$" \
+      || block "while releasing, every push must be exactly 'git push origin $DEVELOP_BRANCH'."
   elif [ "$phase" != "done" ]; then
     block "pushing requires a passed final review (current phase: $phase). Run the final-review skill; it sets the phase to 'done' on a PASS verdict."
   elif $on_protected || echo "$cmd" | grep -qE "(\s|:)$DEVELOP_BRANCH(\s|$)"; then
