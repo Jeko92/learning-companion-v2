@@ -23,4 +23,8 @@ def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
         raise ImproperlyConfigured(
             "The SECRET_KEY environment variable must not be empty"
         )
-    return EnvSettings(secret_key=secret_key, debug=False, allowed_hosts=[])
+    return EnvSettings(
+        secret_key=secret_key,
+        debug=env.bool("DEBUG", default=False),
+        allowed_hosts=[],
+    )

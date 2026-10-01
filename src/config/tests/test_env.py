@@ -24,3 +24,18 @@ class ResolveSettingsTests(SimpleTestCase):
     def test_empty_secret_key_raises_improperly_configured(self):
         with self.assertRaisesMessage(ImproperlyConfigured, "SECRET_KEY"):
             self.resolve({"SECRET_KEY": ""})
+
+    def test_debug_is_parsed_as_boolean(self):
+        cases = {
+            "True": True,
+            "1": True,
+            "yes": True,
+            "False": False,
+            "0": False,
+            "no": False,
+        }
+        for raw, expected in cases.items():
+            with self.subTest(DEBUG=raw):
+                settings = self.resolve({"SECRET_KEY": "x", "DEBUG": raw})
+
+                self.assertIs(settings.debug, expected)

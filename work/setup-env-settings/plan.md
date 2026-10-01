@@ -29,7 +29,7 @@ Tests use `django.test.SimpleTestCase`. Steps 1–8 test `resolve_settings` dire
 
 - [x] 1. `resolve_settings` returns the `SECRET_KEY` from the mapping. Test: `src/config/tests/test_env.py` (plus `src/config/tests/__init__.py`). Impl: `src/config/env.py`, `requirements.txt` (add `django-environ`). Covers: AC1 (resolution part).
 - [x] 2. A missing **or empty** `SECRET_KEY` raises `ImproperlyConfigured`, and the message contains `SECRET_KEY`. Test: `test_env.py`, one test for missing and one for empty. The empty case is the one expected to be red, because the library returns `''`. Impl: `env.py`. Covers: AC2.
-- [ ] 3. `DEBUG` parses as a boolean. `True`/`1`/`yes` give `True`, and `False`/`0`/`no` give `False`. Test: `test_env.py`. Impl: `env.py`. Covers: AC3.
+- [x] 3. `DEBUG` parses as a boolean. `True`/`1`/`yes` give `True`, and `False`/`0`/`no` give `False`. Test: `test_env.py`. Impl: `env.py`. Covers: AC3.
 - [ ] 4. If `DEBUG` is unset, `debug` is `False`. Test: `test_env.py`. Impl: `env.py`. Covers: AC4.
 - [ ] 5. `ALLOWED_HOSTS="example.com, www.example.com"` gives `["example.com", "www.example.com"]`. Test: `test_env.py`. Impl: `env.py`. Covers: AC5.
 - [ ] 6. If `ALLOWED_HOSTS` is unset, `allowed_hosts` is `["localhost", "127.0.0.1"]`. Test: `test_env.py`. Impl: `env.py`. Covers: AC6.
