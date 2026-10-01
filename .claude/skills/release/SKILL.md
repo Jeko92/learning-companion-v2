@@ -48,6 +48,18 @@ Leave an open release PR open. Report the reason and the way out:
    ```
 
    One id for a normal per-ticket release; several for a catch-up release.
+
+   **Only reviewed work is released.** Every non-merge commit in the range must be the squash commit of a ticket PR merged into `develop` (which only happens after a passed final review):
+
+   ```bash
+   git log origin/main..origin/develop --no-merges --format='%h %s' | while read -r sha subj; do
+     n="$(echo "$subj" | sed -nE 's/.*\(#([0-9]+)\)$/\1/p')"
+     st="$([ -n "$n" ] && gh pr view "$n" -R <GH_REPO> --json state,baseRefName --jq '.state + " " + .baseRefName')"
+     [ "$st" = "MERGED develop" ] || echo "UNREVIEWED $sha: $subj"
+   done
+   ```
+
+   Any `UNREVIEWED` line (a direct push, a merge made outside the workflow): **block**, listing those commits. A human decides how they get reviewed; they are never promoted to `main` unreviewed.
 3. **Start the release and update `develop`:**
 
    ```bash
