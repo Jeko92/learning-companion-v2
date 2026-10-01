@@ -15,6 +15,8 @@ If the phase is `done`, the previous ticket has not been closed out and released
 
 The previous ticket must also be on `main` before a new one starts: run `git fetch origin`, then `git rev-list --count origin/main..origin/develop`. If it is greater than 0, `develop` has work `main` lacks: stop and point to `factory-manager`, which runs the release first. (`guard-bash.sh` blocks creating the ticket branch in that state anyway.)
 
+Exception: if `release_status` in the state file is `blocked`, a release could not finish and only a fix can unblock it. Then accept only issues labelled `type:fix` (their `fix/` branch is allowed by the hook); for any other issue, stop and report the blocked release and its `release_reason`.
+
 ## Steps
 
 1. **Resolve the issue.**

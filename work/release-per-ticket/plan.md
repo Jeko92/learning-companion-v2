@@ -89,7 +89,7 @@
 ## Review findings (review.md, 2026-10-01)
 Verification for these steps is review-only too, plus re-running `gate-check.sh` and `regress-check.sh` (extended with the new cases) after each hook change.
 
-- [ ] 7. Recovery path for a blocked release (finding 1, high). When a release ends in `blocked`, it stops with phase `idle` (ticket fields cleared) and keeps `release_status: blocked`. While that flag is set, only a fix ticket may start:
+- [x] 7. Recovery path for a blocked release (finding 1, high). When a release ends in `blocked`, it stops with phase `idle` (ticket fields cleared) and keeps `release_status: blocked`. While that flag is set, only a fix ticket may start:
   - `factory-manager` selects only issues labelled `type:fix`. If none exists, it reports that a human must open one.
   - `refine-ticket` accepts only `type:fix` issues.
   - `guard-bash.sh` allows creating `fix/` branches (not `feature/`) even though the count is above 0.

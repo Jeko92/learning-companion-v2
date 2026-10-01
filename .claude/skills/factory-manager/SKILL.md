@@ -27,7 +27,7 @@ Do exactly one of the following, then stop and report (step 6). Never chain two 
 
    | phase | action |
    |---|---|
-   | `idle` | If the release count is greater than 0, invoke `release` (catch-up release: `develop` has work `main` lacks). Otherwise selection (step 4). |
+   | `idle` | If `release_status` is `blocked`: a release could not finish (`release_reason` says why); do not invoke `release`, go to selection (step 4), which then only picks `type:fix` tickets. Else, if the release count is greater than 0, invoke `release` (catch-up release: `develop` has work `main` lacks). Otherwise selection (step 4). |
    | `refined` | Invoke `plan-ticket`. |
    | `planned` | Invoke `tdd-implement`. |
    | `implementing` | Invoke `tdd-implement` (it resumes from the plan itself). |
@@ -48,6 +48,8 @@ Do exactly one of the following, then stop and report (step 6). Never chain two 
 
 4. **Selection.** Run `python3 .claude/scripts/board.py next`. It returns the first `Todo` ticket in board order as JSON (`{}` if none). If its body lists `Depends on: #<n>` and any of those issues is not `[x]` in `work/backlog.md`, skip it and check the next Todo line in `backlog.md` order instead — log each skip rather than guessing an order, and ask the user only if two candidates are genuinely ambiguous in priority. If no eligible Todo ticket exists, report **"Backlog is empty — nothing to do"** and stop; that's the signal for a wrapping loop to stop too.
 
+   **While `release_status` is `blocked`**, only fix tickets may start, because only a fix can unblock the release: take the first Todo line in `backlog.md` order whose issue is labelled `type:fix` (`gh issue list -R <GH_REPO> --label type:fix --state open --json number`). If there is none, report **"Release blocked: <release_reason>. Open a `type:fix` issue, or fix the cause and run `/release`."** and stop.
+
    Invoke `refine-ticket` with `#<issue> <ticket-id>: <title>` as its argument. It reads the issue, creates the branch from `develop`, and moves the card to In Progress.
 
 5. **Park if waiting.** After the invoked skill returns, re-read `.claude/state/workflow.json`. If the phase did not advance because the skill stopped to ask the user something, append `[[parked: <skill> @ <phase>]]` to that ticket's line in `work/backlog.md` (the candidate's line for `refine-ticket`), so the next call doesn't restart the interview or regenerate the plan.
@@ -63,5 +65,5 @@ Do exactly one of the following, then stop and report (step 6). Never chain two 
 - Never fabricate or infer the user's approval of a ticket or plan.
 - Never write source code from this skill (the write-protection hook would block it outside `implementing` anyway); it only ever delegates.
 - Never merge a PR with failing checks, never merge into `main`, never delete a ticket branch. Releases to `main` are the `release` skill's job; this skill only triggers it (after every close-out, and as a catch-up when `develop` is ahead of `main`), and `release` counts as the one phase skill of that call.
-- Never select or refine a new ticket while the release count is greater than 0 or the phase is `releasing`.
+- Never select or refine a new ticket while the release count is greater than 0 or the phase is `releasing`. The one exception is a `type:fix` ticket while `release_status` is `blocked`.
 - Never reorder or delete backlog lines; order and status live on the board. The only hand edits to `backlog.md` are adding and removing `[[parked: ...]]` tags. `backlog.md` is git-ignored, so it is never committed.

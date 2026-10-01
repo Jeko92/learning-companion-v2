@@ -86,6 +86,11 @@ fi
 if echo "$cmd" | grep -qE "(^|[;&|]\s*)git\s+(switch\s+(-c|-C|--create)|checkout\s+(-b|-B)|branch)\s+(feature|fix)/"; then
   # Uses the remote-tracking refs from the last fetch; a missing ref counts as 0.
   ahead="$(git rev-list --count "origin/$MAIN_BRANCH..origin/$DEVELOP_BRANCH" 2>/dev/null)" || ahead=0
+  # A blocked release is repaired by a fix ticket, so fix/ branches stay allowed then.
+  if [ "$(get_state release_status)" = "blocked" ] \
+     && echo "$cmd" | grep -qE "\s(fix)/" && ! echo "$cmd" | grep -qE "\s(feature)/"; then
+    ahead=0
+  fi
   if [ "${ahead:-0}" -gt 0 ]; then
     block "origin/$DEVELOP_BRANCH has $ahead commit(s) that origin/$MAIN_BRANCH lacks. Release first: factory-manager runs the release skill, which promotes $DEVELOP_BRANCH to $MAIN_BRANCH. The next ticket starts only once $MAIN_BRANCH has the last one."
   fi

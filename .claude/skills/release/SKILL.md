@@ -7,14 +7,30 @@ description: Promote develop to main following the project's gitflow - merge mai
 
 Every ticket is released on its own: once its PR is squash-merged into `develop`, this skill promotes `develop` to `main`, and no new ticket branch can be cut until it has finished (`guard-bash.sh` blocks `feature/` and `fix/` branch creation while `origin/develop` is ahead of `origin/main`).
 
-The skill is resumable. It records its progress as `release_status` in `.claude/state/workflow.json`: `waiting-checks` (a later call resumes), `blocked` (a human must decide), or empty once finished. `factory-manager` reads that field to decide whether to resume or park.
+The skill is resumable. It records its progress as `release_status` in `.claude/state/workflow.json`: `waiting-checks` (a later call resumes), `blocked` (the release cannot finish; see "Blocked releases"), or empty once finished. `factory-manager` reads that field to decide what happens next.
+
+## Blocked releases
+
+Whenever a step below says **block**, do this and stop:
+
+```bash
+git merge --abort 2>/dev/null; git switch develop
+bash .claude/hooks/set-state.sh phase idle ticket "" issue "" branch "" pr "" current_step "" release_status blocked release_reason "<one line: what failed>"
+```
+
+Leave an open release PR open. Report the reason and the way out:
+
+- A **fix ticket** repairs `develop`. While `release_status` is `blocked`, `factory-manager` selects only `type:fix` issues, `refine-ticket` accepts only those, and `guard-bash.sh` allows creating `fix/` branches (never `feature/`) although `develop` is ahead of `main`. A human opens the `type:fix` issue if none exists. If the cause comes from `main`, the fix ticket may merge `origin/main` into its own branch. When the fix ticket closes out, its release runs as usual and clears the flag.
+- If the cause is outside the repository (for example a CI outage), a human fixes it and runs `/release` to retry.
+
+`develop` never receives commits beyond the main-into-develop merge, so the merge is only committed once the suite and lint are green (step 4).
 
 ## Preconditions
 
 1. `git fetch origin`, then count what needs releasing: `git rev-list --count origin/main..origin/develop`.
 2. Read `.claude/state/workflow.json`. The phase must be one of:
    - `done`: the ticket's PR must already be squash-merged into `develop` (close-out finished, `gh pr view <pr> --json state` is `MERGED`). Otherwise stop and point to `factory-manager`.
-   - `idle`: catch-up release. If the count is `0` there is nothing to release; report that and stop without changing state.
+   - `idle`: catch-up release. If the count is `0` there is nothing to release; report that and stop without changing state. If `release_status` is `blocked`, only run when a human explicitly asked for a retry (`/release`); `factory-manager` never triggers it in that state.
    - `releasing`: resume an earlier run (see step 1).
 
    Any other phase means a ticket is in progress: stop and tell the user to finish it first.
@@ -37,16 +53,20 @@ The skill is resumable. It records its progress as `release_status` in `.claude/
    git switch develop && git pull --ff-only
    ```
 
-4. **Merge `main` into `develop` with a merge commit**, so conflicts are resolved on `develop` and never on `main`:
+4. **Merge `main` into `develop` with a merge commit**, so conflicts are resolved on `develop` and never on `main`. Stage it first, and commit only on green:
 
    ```bash
-   git merge --no-ff origin/main -m "chore(release): merge main into develop"
+   git merge --no-ff --no-commit origin/main
    ```
 
-   - "Already up to date": nothing to do, continue.
-   - Conflicts: resolve each file, keeping `develop`'s version of feature work unless `main` carries a change `develop` lacks; explain each non-trivial resolution to the user. Then `git add <files> && git commit --no-edit` (the commit gate runs the suite).
-   - If a conflict can't be resolved with confidence: `git merge --abort`, `bash .claude/hooks/set-state.sh release_status blocked`, report the conflicting files and stop.
-5. **Run the full suite and lint** (`$TEST_CMD`, `$LINT_CMD` from `.claude/hooks/config.sh`). On red: `bash .claude/hooks/set-state.sh release_status blocked`, report, and stop. Do not push; the phase stays `releasing` so a human can decide (often a `fix/` ticket).
+   - "Already up to date": nothing to merge; skip to step 6.
+   - Conflicts: resolve each file, keeping `develop`'s version of feature work unless `main` carries a change `develop` lacks; explain each non-trivial resolution to the user, then `git add <files>`. If a conflict can't be resolved with confidence, **block** with the conflicting files as the reason.
+5. **Gate, then commit.** Run the full suite and lint (`$TEST_CMD`, `$LINT_CMD` from `.claude/hooks/config.sh`) on the staged merge. On red, **block** (the merge is aborted, so `develop` stays clean). On green:
+
+   ```bash
+   git commit -m "chore(release): merge main into develop"
+   ```
+
 6. `git push origin develop`, then open the release PR:
 
    ```bash
@@ -56,9 +76,9 @@ The skill is resumable. It records its progress as `release_status` in `.claude/
 7. **Checks.** `gh pr checks <pr>`:
    - "no checks reported": nothing can fail yet (CI arrives with ticket `ci-tests`); the local suite from step 5 was the gate. Continue.
    - Checks still running: `bash .claude/hooks/set-state.sh release_status waiting-checks`, report "waiting for checks on release PR #<pr>", and stop. Leave the PR open; a later call resumes at step 1.
-   - Any check failed: `bash .claude/hooks/set-state.sh release_status blocked`, report it, and stop. Leave the PR open.
+   - Any check failed: **block** with the failed checks as the reason. The PR stays open.
 
-   Also `gh pr view <pr> --json mergeable`: if `CONFLICTING`, set `release_status blocked`, report, and stop.
+   Also `gh pr view <pr> --json mergeable`: if `CONFLICTING`, **block**.
 8. **Merge with a merge commit:**
 
    ```bash
@@ -70,10 +90,10 @@ The skill is resumable. It records its progress as `release_status` in `.claude/
    ```bash
    git fetch origin
    git rev-list --count origin/main..origin/develop   # must be 0
-   bash .claude/hooks/set-state.sh phase idle ticket "" issue "" branch "" pr "" current_step "" release_status ""
+   bash .claude/hooks/set-state.sh phase idle ticket "" issue "" branch "" pr "" current_step "" release_status "" release_reason ""
    ```
 
-   Report the release PR URL and the tickets it contains. The next ticket can now start.
+   Report the release PR URL and the tickets it contains. The next ticket can now start; a `blocked` flag from an earlier attempt is now cleared.
 
 ## Hard limits
 
