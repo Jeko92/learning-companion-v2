@@ -38,11 +38,13 @@ Leave an open release PR open. Report the reason and the way out:
 
 ## Steps
 
-1. **Resume check.** `gh pr list --base main --head develop --state open --json number`. If a release PR is already open, make sure the phase is `releasing` (`bash .claude/hooks/set-state.sh phase releasing`) and go straight to step 7.
-2. **Collect the ticket ids** in this release from the conventional-commit scopes of the squash commits:
+1. **Resume check.** `gh pr list --base main --head develop --state open --json number,title`.
+   - A release PR is already open: make sure the phase is `releasing` (`bash .claude/hooks/set-state.sh phase releasing`), take the ticket ids from that PR's title (everything after the date in `chore(release): <yyyy-mm-dd> <ticket-ids>`), and go straight to step 7.
+   - No open PR, the phase is `releasing` and the count is `0`: an earlier run already merged the release PR but did not finish. Go straight to step 9; do not merge `main` into `develop` again.
+2. **Collect the ticket ids** in this release from the conventional-commit scopes of the squash commits, in the order they were merged (oldest first, each id once):
 
    ```bash
-   git log origin/main..origin/develop --no-merges --format=%s | sed -nE 's/^[a-z]+\(([^)]+)\).*/\1/p' | grep -vx release | sort -u
+   git log --reverse origin/main..origin/develop --no-merges --format=%s | sed -nE 's/^[a-z]+\(([^)]+)\).*/\1/p' | grep -vx release | awk '!seen[$0]++'
    ```
 
    One id for a normal per-ticket release; several for a catch-up release.
@@ -60,7 +62,7 @@ Leave an open release PR open. Report the reason and the way out:
    ```
 
    - "Already up to date": nothing to merge; skip to step 6.
-   - Conflicts: resolve each file, keeping `develop`'s version of feature work unless `main` carries a change `develop` lacks; explain each non-trivial resolution to the user, then `git add <files>`. If a conflict can't be resolved with confidence, **block** with the conflicting files as the reason.
+   - Conflicts: resolve each file, keeping `develop`'s version of feature work unless `main` carries a change `develop` lacks; explain each non-trivial resolution to the user, then `git add <files>`. If a conflict can't be resolved with confidence, **block** with the conflicting files as the reason. Conflicts in files under `src/` always **block**: `guard-write.sh` keeps source write-protected outside `implementing`, so they are resolved by a fix ticket, not here.
 5. **Gate, then commit.** Run the full suite and lint (`$TEST_CMD`, `$LINT_CMD` from `.claude/hooks/config.sh`) on the staged merge. On red, **block** (the merge is aborted, so `develop` stays clean). On green:
 
    ```bash
@@ -73,9 +75,10 @@ Leave an open release PR open. Report the reason and the way out:
    gh pr create --base main --head develop --title "chore(release): <yyyy-mm-dd> <ticket-ids>" --body "<ticket PRs merged into develop since the last release, one line each>"
    ```
 
-7. **Checks.** `gh pr checks <pr>`:
+7. **Checks.** `gh pr checks <pr>`. Decide by exit code and output, not by success or failure alone: exit `0` means all checks passed, exit `8` means checks are still pending, and exit `1` means either a check failed or there are no checks at all (output contains "no checks reported").
    - "no checks reported": nothing can fail yet (CI arrives with ticket `ci-tests`); the local suite from step 5 was the gate. Continue.
-   - Checks still running: `bash .claude/hooks/set-state.sh release_status waiting-checks`, report "waiting for checks on release PR #<pr>", and stop. Leave the PR open; a later call resumes at step 1.
+   - All checks passed (exit `0`): continue.
+   - Checks still running (exit `8`): `bash .claude/hooks/set-state.sh release_status waiting-checks`, report "waiting for checks on release PR #<pr>", and stop. Leave the PR open; a later call resumes at step 1.
    - Any check failed: **block** with the failed checks as the reason. The PR stays open.
 
    Also `gh pr view <pr> --json mergeable`: if `CONFLICTING`, **block**.
