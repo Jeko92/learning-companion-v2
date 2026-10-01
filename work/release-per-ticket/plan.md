@@ -34,7 +34,7 @@
 - **Commit types:** the hook change is `feat(release-per-ticket)` and the markdown changes are `docs(release-per-ticket)`. Each step is one commit. Per the ticket notes, there are no automated tests and no red–green cycle; each step's verification is listed below and repeated in final-review.
 
 ## Steps
-- [ ] 1. Add the branch-creation gate to `guard-bash.sh`, between the push checks and the branch-deletion check. Covers: AC7, AC8. Impl: `.claude/hooks/guard-bash.sh`, plus its header comment.
+- [x] 1. Add the branch-creation gate to `guard-bash.sh`, between the push checks and the branch-deletion check. Covers: AC7, AC8. Impl: `.claude/hooks/guard-bash.sh`, plus its header comment.
   - Verify by running the manual hook test for each case:
     - `git switch -c feature/x`, `git checkout -b fix/y`, `git branch feature/z` and `git switch develop && git switch -c feature/x` are **blocked** while the count is above 0.
     - `git switch feature/setup-layout-tailwind`, `git branch --show-current` and `git switch -c scratch` are **allowed**.
@@ -43,6 +43,14 @@
     - `git commit --no-verify` and `git push origin main` are still blocked.
     - `gh pr merge 1 --squash` in phase `done` is still allowed.
   - Record the outputs in this step's notes.
+  - Results (2026-10-01):
+    - **Count 1 (real refs):** blocked `switch -c`, `switch -C`, `switch --create`, `checkout -b`, `branch feature/…` and the chained `switch develop && switch -c feature/x`. Allowed `git switch feature/setup-layout-tailwind`, `git branch --show-current`, `git switch -c scratch` and `git branch -a`.
+    - **Count 0** (`origin/main` temporarily pointed at `origin/develop`, then restored to `eba71a4` and fetched): all 10 cases allowed.
+    - **No origin refs** (a throwaway repo): `git switch -c feature/new` allowed.
+    - **Regression** (throwaway repo with a fake state file):
+      - Still blocked: `commit --no-verify`, `push origin main`, `push origin develop` in `done`, pushing in `implementing`, `pr merge --merge` in `done`, `pr merge --squash` in `releasing`, `pr merge` in `implementing`, `--delete-branch`, `branch -D feature/…`, and committing on `develop` in `idle`.
+      - Still allowed: pushing the ticket branch and `pr merge --squash` in `done`; and in `releasing` on `develop`, `merge --no-ff origin/main`, `pull --ff-only`, `push origin develop`, `pr merge --merge` and `commit --no-edit`.
+    - The scripts are in the session scratchpad (`gate-check.sh`, `regress-check.sh`).
 - [ ] 2. Update the `release` skill. Covers: AC3, AC4, AC5. Impl: `.claude/skills/release/SKILL.md`.
   - Remove `disable-model-invocation` and change the description.
   - Preconditions: `done` with the ticket PR merged, or `idle` with the count above 0. Run `git fetch origin` first.

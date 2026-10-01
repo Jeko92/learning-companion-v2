@@ -4,7 +4,8 @@
 # no commits or merges on protected branches (except develop while
 # releasing), no commits with red tests, no --no-verify, no push before the
 # review has passed, main only changes through a PR from develop, PR merge
-# strategy per target, ticket branches are never deleted.
+# strategy per target, ticket branches are never deleted, and no new ticket
+# branch is created while develop has commits that main lacks.
 # Exit 2 blocks the command; stderr is fed back to Claude.
 source "$(dirname "$0")/lib.sh"
 
@@ -79,6 +80,14 @@ if is_git "push"; then
     block "pushing requires a passed final review (current phase: $phase). Run the final-review skill; it sets the phase to 'done' on a PASS verdict."
   elif $on_protected || echo "$cmd" | grep -qE "(\s|:)$DEVELOP_BRANCH(\s|$)"; then
     block "in phase 'done' only the ticket branch may be pushed. $DEVELOP_BRANCH is pushed only by the release skill."
+  fi
+fi
+
+if echo "$cmd" | grep -qE "(^|[;&|]\s*)git\s+(switch\s+(-c|-C|--create)|checkout\s+(-b|-B)|branch)\s+(feature|fix)/"; then
+  # Uses the remote-tracking refs from the last fetch; a missing ref counts as 0.
+  ahead="$(git rev-list --count "origin/$MAIN_BRANCH..origin/$DEVELOP_BRANCH" 2>/dev/null)" || ahead=0
+  if [ "${ahead:-0}" -gt 0 ]; then
+    block "origin/$DEVELOP_BRANCH has $ahead commit(s) that origin/$MAIN_BRANCH lacks. Release first: factory-manager runs the release skill, which promotes $DEVELOP_BRANCH to $MAIN_BRANCH. The next ticket starts only once $MAIN_BRANCH has the last one."
   fi
 fi
 
