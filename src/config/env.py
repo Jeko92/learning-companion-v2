@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from typing import ClassVar
 
 import environ as django_environ
 from django.core.exceptions import ImproperlyConfigured
@@ -18,8 +19,13 @@ class EnvSettings:
 
 
 def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
-    env = django_environ.Env()
-    env.ENVIRON = dict(environ)
+    # read_env is a classmethod that writes into cls.ENVIRON, so give it a
+    # private copy instead of the default os.environ.
+    class Env(django_environ.Env):
+        ENVIRON: ClassVar[dict[str, str]] = dict(environ)
+
+    Env.read_env(env_file)
+    env = Env()
     secret_key = env.str("SECRET_KEY")
     if not secret_key:
         raise ImproperlyConfigured(

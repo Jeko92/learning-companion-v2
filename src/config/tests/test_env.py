@@ -1,3 +1,4 @@
+import tempfile
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -11,6 +12,13 @@ MISSING_ENV_FILE = Path(__file__).parent / "no-such.env"
 class ResolveSettingsTests(SimpleTestCase):
     def resolve(self, environ, env_file=MISSING_ENV_FILE):
         return resolve_settings(environ, env_file)
+
+    def write_env_file(self, content):
+        tmp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp_dir.cleanup)
+        env_file = Path(tmp_dir.name) / ".env"
+        env_file.write_text(content)
+        return env_file
 
     def test_secret_key_comes_from_environment(self):
         settings = self.resolve({"SECRET_KEY": "from-env"})
@@ -56,3 +64,21 @@ class ResolveSettingsTests(SimpleTestCase):
         settings = self.resolve({"SECRET_KEY": "x"})
 
         self.assertEqual(settings.allowed_hosts, ["localhost", "127.0.0.1"])
+
+    def test_values_come_from_env_file(self):
+        env_file = self.write_env_file(
+            "SECRET_KEY=from-file\nDEBUG=True\nALLOWED_HOSTS=example.com\n"
+        )
+
+        settings = self.resolve({}, env_file)
+
+        self.assertEqual(settings.secret_key, "from-file")
+        self.assertIs(settings.debug, True)
+        self.assertEqual(settings.allowed_hosts, ["example.com"])
+
+    def test_missing_env_file_is_not_an_error(self):
+        self.assertFalse(MISSING_ENV_FILE.exists())
+
+        settings = self.resolve({"SECRET_KEY": "from-env"}, MISSING_ENV_FILE)
+
+        self.assertEqual(settings.secret_key, "from-env")
