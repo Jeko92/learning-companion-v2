@@ -7,6 +7,8 @@ from pathlib import Path
 import environ as django_environ
 from django.core.exceptions import ImproperlyConfigured
 
+DEFAULT_ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+
 
 @dataclass(frozen=True)
 class EnvSettings:
@@ -26,5 +28,8 @@ def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
     return EnvSettings(
         secret_key=secret_key,
         debug=env.bool("DEBUG", default=False),
-        allowed_hosts=[host.strip() for host in env.list("ALLOWED_HOSTS", default=[])],
+        allowed_hosts=[
+            host.strip()
+            for host in env.list("ALLOWED_HOSTS", default=DEFAULT_ALLOWED_HOSTS)
+        ],
     )

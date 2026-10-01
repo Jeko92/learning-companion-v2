@@ -51,3 +51,8 @@ class ResolveSettingsTests(SimpleTestCase):
         )
 
         self.assertEqual(settings.allowed_hosts, ["example.com", "www.example.com"])
+
+    def test_allowed_hosts_defaults_to_localhost(self):
+        settings = self.resolve({"SECRET_KEY": "x"})
+
+        self.assertEqual(settings.allowed_hosts, ["localhost", "127.0.0.1"])
