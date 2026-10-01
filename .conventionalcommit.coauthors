@@ -1,0 +1,8 @@
+# Co-authored-by trailers for pairing sessions.
+# Paste the relevant line(s) at the END of a commit message, after a blank line:
+#
+#   feat(comments-endpoint): list comments for a post
+#
+#   Co-authored-by: Name <email@example.com>
+#
+# Add entries below as you pair:

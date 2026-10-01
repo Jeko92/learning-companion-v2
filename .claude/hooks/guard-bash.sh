@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# PreToolUse hook for Bash.
+# Gates around git and gh, following the gitflow in .claude/rules/git.md:
+# no commits or merges on protected branches (except develop while
+# releasing), no commits with red tests, no --no-verify, no push before the
+# review has passed, main only changes through a PR from develop, PR merge
+# strategy per target, ticket branches are never deleted.
+# Exit 2 blocks the command; stderr is fed back to Claude.
+source "$(dirname "$0")/lib.sh"
+
+input="$(cat)"
+cmd="$(jq -r '.tool_input.command // empty' <<<"$input")"
+[ -z "$cmd" ] && exit 0
+
+is_git() {
+  echo "$cmd" | grep -qE "(^|[;&|]\s*)git\s+$1"
+}
+
+is_gh() {
+  echo "$cmd" | grep -qE "(^|[;&|]\s*)gh\s+$1"
+}
+
+block() {
+  echo "BLOCKED by workflow: $1" >&2
+  exit 2
+}
+
+phase="$(current_phase)"
+branch="$(current_branch)"
+on_protected=false
+echo "$branch" | grep -qE "^($PROTECTED_BRANCHES)$" && on_protected=true
+releasing_on_develop=false
+[ "$phase" = "releasing" ] && [ "$branch" = "$DEVELOP_BRANCH" ] && releasing_on_develop=true
+
+if is_git "commit"; then
+  if echo "$cmd" | grep -qE -- "--no-verify|-n\b"; then
+    block "'git commit --no-verify' is not allowed. Commit hooks are part of the quality gate."
+  fi
+  if $on_protected && ! $releasing_on_develop; then
+    block "direct commits to '$branch' are not allowed. The refine-ticket skill creates a feature/ or fix/ branch from $DEVELOP_BRANCH; work there. Only the release skill may commit on $DEVELOP_BRANCH (the main-into-develop merge)."
+  fi
+  if [ "$phase" = "idle" ]; then
+    block "no ticket is in progress (phase: idle). Start with the refine-ticket skill before committing."
+  fi
+  if [ "$phase" = "implementing" ] || [ "$phase" = "reviewing" ] || [ "$phase" = "releasing" ]; then
+    if [ -f "$TEST_GUARD_FILE" ]; then
+      if ! $TEST_CMD >/dev/null 2>&1; then
+        block "the test suite is red. Commits are only allowed on green. Finish the current TDD cycle first ($TEST_CMD)."
+      fi
+    fi
+  fi
+fi
+
+if is_git "merge"; then
+  if $on_protected && ! $releasing_on_develop; then
+    block "merging into '$branch' locally is not allowed. Ticket branches reach $DEVELOP_BRANCH through a squash-merged PR, $DEVELOP_BRANCH reaches $MAIN_BRANCH through the release skill."
+  fi
+fi
+
+if is_git "pull" && $on_protected && ! $releasing_on_develop; then
+  if ! echo "$cmd" | grep -qE -- "--ff-only"; then
+    block "pull on '$branch' must use --ff-only so no local merge commits land on a protected branch."
+  fi
+fi
+
+if is_git "push"; then
+  if echo "$cmd" | grep -qE -- "--force|-f\b" && echo "$cmd" | grep -qE "($PROTECTED_BRANCHES)"; then
+    block "force-pushing to a protected branch is not allowed."
+  fi
+  if echo "$cmd" | grep -qE -- "--delete|\s:[A-Za-z]"; then
+    block "deleting remote branches is not allowed. feature/ and fix/ branches are kept so their per-step commit history stays visible."
+  fi
+  if echo "$cmd" | grep -qE "(\s|:)$MAIN_BRANCH(\s|$)" || [ "$branch" = "$MAIN_BRANCH" ]; then
+    block "'$MAIN_BRANCH' only changes through a PR from $DEVELOP_BRANCH (release skill). Never push to it."
+  fi
+  if [ "$phase" = "releasing" ]; then
+    :
+  elif [ "$phase" != "done" ]; then
+    block "pushing requires a passed final review (current phase: $phase). Run the final-review skill; it sets the phase to 'done' on a PASS verdict."
+  elif $on_protected || echo "$cmd" | grep -qE "(\s|:)$DEVELOP_BRANCH(\s|$)"; then
+    block "in phase 'done' only the ticket branch may be pushed. $DEVELOP_BRANCH is pushed only by the release skill."
+  fi
+fi
+
+if is_git "branch" && echo "$cmd" | grep -qE -- "\s-(d|D)\b|--delete" \
+   && echo "$cmd" | grep -qE "(feature|fix)/"; then
+  block "feature/ and fix/ branches are kept after merging; do not delete them."
+fi
+
+if is_gh "pr\s+merge"; then
+  if echo "$cmd" | grep -qE -- "--delete-branch|-d\b"; then
+    block "do not delete the branch on merge; feature/ and fix/ branches are kept for their commit history."
+  fi
+  if echo "$cmd" | grep -qE -- "--admin"; then
+    block "'gh pr merge --admin' bypasses branch protection and is not allowed."
+  fi
+  if [ "$phase" = "done" ]; then
+    echo "$cmd" | grep -qE -- "--squash|-s\b" \
+      || block "ticket PRs into $DEVELOP_BRANCH are squash-merged: use 'gh pr merge <n> --squash'."
+  elif [ "$phase" = "releasing" ]; then
+    echo "$cmd" | grep -qE -- "--merge|-m\b" \
+      || block "the release PR from $DEVELOP_BRANCH into $MAIN_BRANCH is merged with a merge commit: use 'gh pr merge <n> --merge'."
+  else
+    block "PRs are merged only by factory-manager after a passed review (phase 'done') or by the release skill (phase 'releasing'); current phase: $phase."
+  fi
+fi
+
+exit 0

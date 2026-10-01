@@ -1,0 +1,35 @@
+{
+  "types": {
+    "feat": {
+      "description": "A plan step that delivers behaviour for a ticket"
+    },
+    "fix": { "description": "A bugfix" },
+    "refactor": {
+      "description": "Pure refactoring on green, no behaviour change"
+    },
+    "test": { "description": "Adding or correcting tests on their own" },
+    "docs": {
+      "description": "Workflow artifacts (ticket, plan, review) and documentation"
+    },
+    "chore": {
+      "description": "Repository maintenance, tooling, or dependency bumps"
+    },
+    "build": { "description": "Packaging, requirements, or build configuration" },
+    "ci": { "description": "CI workflows and automation" },
+    "revert": { "description": "Reverts a previous commit" }
+  },
+  "scopes": {
+    "<ticket-id>": "The ticket being worked on, matching the feature/<ticket-id> or fix/<ticket-id> branch",
+    "release": "Promoting develop to main (merge main into develop, release PR)",
+    "repo": "Root configuration, tooling, and workflow setup outside a ticket"
+  },
+  "footerTypes": {
+    "BREAKING CHANGE": {
+      "description": "The commit introduces a breaking change"
+    },
+    "Closes": { "description": "Closes a tracking issue or pull request" },
+    "Co-authored-by": {
+      "description": "Credits a pairing partner (see .conventionalcommit.coauthors)"
+    }
+  }
+}
