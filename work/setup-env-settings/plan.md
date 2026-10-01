@@ -60,3 +60,11 @@ Tests use `django.test.SimpleTestCase`. Steps 1–8 test `resolve_settings` dire
 | AC9 | 7 (guard test) |
 | AC10 | 10 |
 | Docs (ticket notes) | 12 |
+
+## Review findings (review.md, 2026-10-01)
+- [ ] 13. A `SECRET_KEY` that starts with `$` is used literally. `{"SECRET_KEY": "$abc"}` resolves to `"$abc"`, with no proxy expansion and no error that echoes the value. Test: `test_env.py`. Impl: `env.py` reads the raw value from the resolved mapping. Finding: 1 (high).
+- [ ] 14. A whitespace-only `SECRET_KEY` raises `ImproperlyConfigured` naming `SECRET_KEY`. Test: `test_env.py`. Impl: `env.py`. Finding: 4.
+- [ ] 15. Empty `ALLOWED_HOSTS` entries are dropped: `"a.com, "` gives `["a.com"]`. A set-but-empty value gives `[]`, which fails closed. Test: `test_env.py`. Impl: `env.py`. Finding: 3.
+- [ ] 16. Wiring tests use distinctive values. `os.environ` is patched with `SECRET_KEY`, `DEBUG` and `ALLOWED_HOSTS` values that differ from the defaults and from `.env.example`, `config.settings` is reloaded, and the module's values must equal them. Cleanup restores `os.environ` and reloads the module. This deliberately replaces the comparisons against `resolve_settings` in `test_settings.py`, so it's a test fix step. Test: `src/config/tests/test_settings.py`. Impl: none expected. Finding: 2.
+- [ ] 17. `test_env_example.py` reports a missing variable as an assertion failure, not a `StopIteration` error. It's a deliberate test fix. Test: `src/config/tests/test_env_example.py`. Finding: 5.
+- [ ] 18. Docs. `.env.example` says there must be no spaces around `=` and gives a stronger local-only warning for `DEBUG=True`. README notes that a set-but-empty `ALLOWED_HOSTS` rejects every host. Commit as `docs(setup-env-settings): ...`. Finding: 6, plus the docs part of 3.
