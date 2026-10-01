@@ -128,3 +128,29 @@ Verification for these steps is review-only too, plus re-running `gate-check.sh`
   - `regress-check.sh`: 49 cases, 0 mismatches. That covers the unchanged blocks and allows, the narrowed `releasing` phase (step 11), the release gate (step 13) and the refspec pushes (step 12).
   - Deviation: step 8 dropped park tags for `release` entirely rather than keeping them while blocked. With step 7 a blocked release is `idle`, and its state flag is the waiting signal. AC6 was amended to match.
 - [x] 16. Docs. `CLAUDE.md`, `README.md`, `git.md` and `workflow.md` describe the blocked-release recovery (fix tickets only), resuming a paused ticket, and `REQUIRE_CHECKS`. Impl: those files.
+
+## Review findings, second pass (review.md, commit 7c95711)
+Verification is still review-only, plus the scratchpad hook scripts, extended with every case reported in the review.
+
+- [ ] 17. Amend AC5 and AC7 and the ticket Notes for the step 7 recovery design, the same way AC6 was. AC5: a blocked release returns to `idle` with `release_status: blocked`. AC7: `fix/` creation is allowed while blocked. Finding: 1. Impl: `work/release-per-ticket/ticket.md`.
+- [ ] 18. The blocked-release command works in every phase (finding 2), and resumes are safe (finding 9). Impl: `release/SKILL.md`, `guard-bash.sh`.
+  - The block runs `git merge --abort` only when `MERGE_HEAD` exists, and each command runs on its own, so `set-state` always runs.
+  - The hook allows `git merge --abort` on any branch.
+  - On resume in `releasing`, a leftover merge is aborted first.
+  - If the count isn't 0 after the finish fetch, block.
+- [ ] 19. Provenance check before every merge (findings 3 and 8). On resume with an open PR, the skill runs the step 2 check and recomputes the ticket ids before step 7, and it updates the PR title if they changed. The check compares each commit's SHA with its PR's `mergeCommit.oid`, not just the `(#n)` subject. Impl: `release/SKILL.md`. Verify: dry-run on the real history (PR #22, `bf2b362`).
+- [ ] 20. In `releasing`, the hook checks every `git merge` and `git push` segment of the command (finding 4). Every merge segment must be `git merge [--no-ff] [--no-commit] origin/main` with no further sources, or `git merge --abort`. Every push segment must be `git push origin develop`. Impl: `guard-bash.sh`. Verify: `regress-check.sh` with the chained, octopus and double-push cases blocked.
+- [ ] 21. Quote-proof checks, more push forms, and a protected state file (finding 5). Impl: `guard-bash.sh`, `guard-write.sh`.
+  - The `set-state` phase guard and the push checks match on the quote-normalised command, with quote characters removed but their text kept.
+  - `git push --mirror` and `git push --all` are blocked.
+  - `guard-write.sh` blocks Write/Edit on `.claude/state/`.
+  - Verify: `regress-check.sh` with `phase "releasing"`, `'HEAD:main'`, `"+HEAD:develop"`, `--mirror` and `--all`, all blocked.
+- [ ] 22. A tighter PR merge gate (finding 6). Impl: `guard-bash.sh`. Verify: `regress-check.sh` with the fake `gh`.
+  - Only one `gh pr merge` per command.
+  - In `done`, the PR's base must be `develop`, looked up like the release PR's.
+  - A failed PR lookup blocks.
+  - `REQUIRE_CHECKS` is treated as true for any value other than `"false"`. When it's true, `gh pr checks` must exit 0.
+- [ ] 23. Paused-ticket resume instructions (finding 7), plus the documented hook limits (accepted security finding D):
+  - `refine-ticket`: run the resume commands one at a time, and set `refined` before the merge into the ticket branch, so a conflict can be committed.
+  - `guard-bash.sh` header: the hooks are a guardrail against mistakes while following the skills, not against deliberately evasive commands. List the known gaps (`git -C`, `git -c`, `env git`, subshells, quote tricks, the PR-head timing gap). The real control is GitHub branch protection, which is the user's call.
+  - Impl: `refine-ticket/SKILL.md`, `guard-bash.sh` (comment), `git.md`.
