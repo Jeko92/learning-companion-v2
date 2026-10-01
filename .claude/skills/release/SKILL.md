@@ -39,7 +39,7 @@ Leave an open release PR open. Report the reason and the way out:
 ## Steps
 
 1. **Resume check.** `gh pr list --base main --head develop --state open --json number,title`.
-   - A release PR is already open: make sure the phase is `releasing` (`bash .claude/hooks/set-state.sh phase releasing`), take the ticket ids from that PR's title (everything after the date in `chore(release): <yyyy-mm-dd> <ticket-ids>`), and go straight to step 7.
+   - A release PR is already open: make sure the phase is `releasing` (`bash .claude/hooks/set-state.sh phase releasing`). Its head is `develop`, so anything merged since it was opened is part of it: run step 2 again (ticket ids and the reviewed-work check) before going to step 7. If the ids differ from the PR title, update it: `gh pr edit <pr> --title "chore(release): <yyyy-mm-dd> <ticket-ids>"`.
    - No open PR, the phase is `releasing` and the count is `0`: an earlier run already merged the release PR but did not finish. Go straight to step 9; do not merge `main` into `develop` again.
 2. **Collect the ticket ids** in this release from the conventional-commit scopes of the squash commits, in the order they were merged (oldest first, each id once):
 
@@ -49,13 +49,13 @@ Leave an open release PR open. Report the reason and the way out:
 
    One id for a normal per-ticket release; several for a catch-up release.
 
-   **Only reviewed work is released.** Every non-merge commit in the range must be the squash commit of a ticket PR merged into `develop` (which only happens after a passed final review):
+   **Only reviewed work is released.** Every non-merge commit in the range must be *the* squash commit of a ticket PR merged into `develop` (which only happens after a passed final review). The PR number in the subject is only a pointer; the commit's full SHA must equal that PR's merge commit, so a commit cannot borrow another PR's number:
 
    ```bash
-   git log origin/main..origin/develop --no-merges --format='%h %s' | while read -r sha subj; do
+   git log origin/main..origin/develop --no-merges --format='%H %s' | while read -r sha subj; do
      n="$(echo "$subj" | sed -nE 's/.*\(#([0-9]+)\)$/\1/p')"
-     st="$([ -n "$n" ] && gh pr view "$n" -R <GH_REPO> --json state,baseRefName --jq '.state + " " + .baseRefName')"
-     [ "$st" = "MERGED develop" ] || echo "UNREVIEWED $sha: $subj"
+     st="$([ -n "$n" ] && gh pr view "$n" -R <GH_REPO> --json state,baseRefName,mergeCommit --jq '.state + " " + .baseRefName + " " + .mergeCommit.oid')"
+     [ "$st" = "MERGED develop $sha" ] || echo "UNREVIEWED ${sha:0:7}: $subj"
    done
    ```
 

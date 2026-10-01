@@ -138,7 +138,7 @@ Verification is still review-only, plus the scratchpad hook scripts, extended wi
   - The hook allows `git merge --abort` on any branch.
   - On resume in `releasing`, a leftover merge is aborted first.
   - If the count isn't 0 after the finish fetch, block.
-- [ ] 19. Provenance check before every merge (findings 3 and 8). On resume with an open PR, the skill runs the step 2 check and recomputes the ticket ids before step 7, and it updates the PR title if they changed. The check compares each commit's SHA with its PR's `mergeCommit.oid`, not just the `(#n)` subject. Impl: `release/SKILL.md`. Verify: dry-run on the real history (PR #22, `bf2b362`).
+- [x] 19. Provenance check before every merge (findings 3 and 8). On resume with an open PR, the skill runs the step 2 check and recomputes the ticket ids before step 7, and it updates the PR title if they changed. The check compares each commit's SHA with its PR's `mergeCommit.oid`, not just the `(#n)` subject. Impl: `release/SKILL.md`. Verify: dry-run on the real history (PR #22, `bf2b362`).
 - [ ] 20. In `releasing`, the hook checks every `git merge` and `git push` segment of the command (finding 4). Every merge segment must be `git merge [--no-ff] [--no-commit] origin/main` with no further sources, or `git merge --abort`. Every push segment must be `git push origin develop`. Impl: `guard-bash.sh`. Verify: `regress-check.sh` with the chained, octopus and double-push cases blocked.
 - [ ] 21. Quote-proof checks, more push forms, and a protected state file (finding 5). Impl: `guard-bash.sh`, `guard-write.sh`.
   - The `set-state` phase guard and the push checks match on the quote-normalised command, with quote characters removed but their text kept.
