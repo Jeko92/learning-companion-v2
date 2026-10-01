@@ -5,6 +5,7 @@
 - `main` is the release branch. It is protected and only changes through a PR from `develop`, created and merged by the `release` skill after every ticket. Never commit, merge or push to `main` directly.
 - `develop` is the integration branch. It only receives squash-merged PRs from ticket branches, plus the main-into-develop merge commit made by the `release` skill. Never commit to it directly.
 - Every ticket gets its own branch cut from the latest `develop`: `feature/<ticket-id>` for features, `fix/<ticket-id>` for bug tickets (issue labelled `type:fix`). The `refine-ticket` skill creates it; the branch name is recorded as `branch` in the state file. A new ticket branch can only be cut once `main` contains the previous ticket (`origin/develop` has no commits that `origin/main` lacks).
+- A paused ticket keeps its branch. When `refine-ticket` resumes it, it switches to that branch and merges the latest `develop` into it (`chore(<ticket-id>): merge develop into paused ticket branch`); it never recreates or rebases the branch.
 - Ticket branches are never deleted, locally or on GitHub. `develop` only gets one squash commit per ticket, so the ticket branch is where its per-step commit history stays visible.
 
 All of the above is enforced by `.claude/hooks/guard-bash.sh`.

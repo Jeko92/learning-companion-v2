@@ -104,7 +104,7 @@ Verification for these steps is review-only too, plus re-running `gate-check.sh`
   - Keep the ids in `git log` order, de-duplicated without sorting, so the newest is last.
   - Branch on `gh pr checks` output or exit code: no checks reported, 8 (pending), and other failures.
   - Treat merge conflicts in `src/` as `blocked`, because `guard-write.sh` prevents editing them in `releasing`.
-- [ ] 10. Resume a paused ticket (finding 4). `refine-ticket` detects a paused ticket: the `feature/<id>` or `fix/<id>` branch already exists, and its `work/<id>/ticket.md` records approval. In that case it:
+- [x] 10. Resume a paused ticket (finding 4). `refine-ticket` detects a paused ticket: the `feature/<id>` or `fix/<id>` branch already exists, and its `work/<id>/ticket.md` records approval. In that case it:
   - switches to the branch,
   - merges `develop` into it (a normal merge on the ticket branch, so its history stays intact),
   - sets the phase to `refined` with the ticket fields,

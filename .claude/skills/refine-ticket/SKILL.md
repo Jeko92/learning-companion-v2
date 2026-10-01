@@ -24,6 +24,18 @@ Exception: if `release_status` in the state file is `blocked`, a release could n
    - No issue yet (user brought a new idea): derive a short kebab-case ticket id (e.g. `comments-endpoint`), confirm it with the user if the task is ambiguous, then create the issue on the board: `python3 .claude/scripts/board.py add "<title>" --id <id> --body "<summary>"`.
 
    Branch: `fix/<id>` if the issue is labelled `type:fix`, otherwise `feature/<id>`.
+
+   **Paused ticket?** If that branch already exists (`git rev-parse --verify --quiet <branch>`, or on `origin`) and its `work/<id>/ticket.md` (`git show <branch>:work/<id>/ticket.md`) records that the user approved the acceptance criteria, the ticket was refined earlier and paused. Resume it instead of refining again — no interview, no new branch:
+
+   ```bash
+   git switch develop && git pull --ff-only
+   git switch <branch>
+   git merge --no-ff develop -m "chore(<id>): merge develop into paused ticket branch"
+   bash .claude/hooks/set-state.sh phase refined ticket <id> issue <issue> branch <branch> current_step "" last_test ""
+   python3 .claude/scripts/board.py status <issue> "In Progress"
+   ```
+
+   The merge brings the branch up to date with everything released since it was paused, keeping its own commit history (resolve conflicts on the ticket branch; it is not protected). Then show the user the approved acceptance criteria from `ticket.md`, say the ticket has resumed, and that the next step is `plan-ticket`. Skip steps 2–6. If `ticket.md` records no approval, continue with step 2 on the existing branch (switch to it instead of `git switch -c`).
 2. Investigate context cheaply: use one `Explore` sub-agent to find the parts of the codebase the ticket touches. Do not read whole modules into the main context — you only need enough to ask informed questions.
 3. Interview the user. Ask about anything that changes scope or design, typically: expected behaviour and edge cases, validation and error responses, auth requirements, out-of-scope items, and the open questions listed in the issue. Ask in one batch, not one question per turn.
 4. Write `work/<id>/ticket.md`:
