@@ -25,8 +25,10 @@ class EnvExampleTests(SimpleTestCase):
         for name in VARIABLES:
             with self.subTest(variable=name):
                 index = next(
-                    i for i, line in enumerate(lines) if line.startswith(f"{name}=")
+                    (i for i, line in enumerate(lines) if line.startswith(f"{name}=")),
+                    None,
                 )
+                self.assertIsNotNone(index, f"{name} is not defined")
                 self.assertTrue(index > 0 and lines[index - 1].startswith("#"))
 
     def test_debug_is_on_for_local_development(self):
