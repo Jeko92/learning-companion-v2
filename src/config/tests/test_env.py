@@ -76,6 +76,14 @@ class ResolveSettingsTests(SimpleTestCase):
         self.assertIs(settings.debug, True)
         self.assertEqual(settings.allowed_hosts, ["example.com"])
 
+    def test_environment_wins_over_env_file(self):
+        env_file = self.write_env_file("SECRET_KEY=from-file\nDEBUG=True\n")
+
+        settings = self.resolve({"SECRET_KEY": "from-env", "DEBUG": "False"}, env_file)
+
+        self.assertEqual(settings.secret_key, "from-env")
+        self.assertIs(settings.debug, False)
+
     def test_missing_env_file_is_not_an_error(self):
         self.assertFalse(MISSING_ENV_FILE.exists())
 
