@@ -1,15 +1,55 @@
 # Review: release-per-ticket
 
-## Verdict: FAIL
+## Verdict: PASS
+
+This is the third review pass, on commit 0810cd7.
+- Both reviewers confirm that all second-pass findings (1–9) are resolved.
+- All acceptance criteria are met as written, including the amended AC5, AC6 and AC7.
+- Neither reviewer found a high-severity issue.
+- The suite is green (21 tests) and lint is clean.
+- The code reviewer exercised every command the skills prescribe through the hooks, in their intended phase and branch, in a throwaway repo. All behaved as intended.
+
+The remaining findings are medium and low guardrail gaps within the agreed threat model: the hooks guard against mistakes, not deliberate evasion. They are recorded below for a follow-up ticket rather than another round on this one.
+
+## Acceptance criteria
+- AC1: `.claude/rules/git.md`, the Releases section. PASS.
+- AC2: `.claude/rules/workflow.md`, the phase table and rules. PASS.
+- AC3: `release/SKILL.md`, the frontmatter and preconditions (model-invocable). PASS.
+- AC4: `release/SKILL.md`, the PR title `chore(release): <yyyy-mm-dd> <ticket-ids>`. PASS.
+- AC5 (amended): `release/SKILL.md`, the "Blocked releases" section and step 7. PASS.
+- AC6 (amended): `factory-manager/SKILL.md`, the dispatch table and selection. PASS.
+- AC7 (amended): `guard-bash.sh`, the branch gate including the `fix/` exception. Verified by hand (`gate-check.sh`, `blocked-check.sh`) and by the reviewer. PASS.
+- AC8: verified with `regress-check.sh` (79 cases, 0 mismatches) and the reviewer's regression runs. PASS.
+- AC9: `refine-ticket/SKILL.md`, the preconditions. PASS.
+- AC10: `CLAUDE.md`, `README.md` and `config.sh`; the "only when asked" grep is clean. PASS.
+
+## Findings (follow-up, not blocking)
+1. **[medium]** `guard-bash.sh` (the `merge_abort_only` check). The check is line-based, so a multi-line command with `git merge --abort` on one line and another `git merge …` on the next sets the flag and skips the merge checks. Recommendation: match the whole command string, for example a bash `[[ =~ ]]` anchored to the entire command, or check every merge segment against the allowlist.
+2. **[medium]** `guard-bash.sh`, `gh pr merge` in phase `done`. Only the PR's base (`develop`) is checked. A wrong PR number into `develop` could be squash-merged, and since it is then a merged PR, it passes the provenance check. Recommendation: also require the PR number to equal `pr` in the state file, or its head to equal the state's `branch`.
+3. **[low]** `guard-bash.sh`, `--mirror`/`--all`. This is matched against the whole command, so `git log --all; git push -u origin feature/x` is blocked. It's a false positive introduced in step 21. Recommendation: match only within the `git push` segments.
+4. **[low]** `guard-bash.sh`, the `set-state` phase guard. With quotes stripped, quoted text such as `grep "set-state.sh phase releasing"` trips it outside `done`, `idle` and `releasing`. Recommendation: match only where `set-state.sh` starts a segment.
+5. **[low]** `release/SKILL.md`, resuming with an open PR. The skill goes to step 7 without `git switch develop && git pull --ff-only`, so the hook's suite and lint gate tests whatever is checked out. A human `/release` retry also keeps `release_status: blocked` while it runs. Recommendation: switch, pull and clear the status at the top of the resume path.
+6. **[low]** `guard-write.sh`. `./.claude/state/…`, `<root>/./.claude/state/…`, doubled slashes and case variants (on case-insensitive APFS) all get past the state-file block. Recommendation: normalise the path (strip `./`, collapse slashes, lowercase) before matching.
+7. **[low]** `guard-bash.sh`, `REQUIRE_CHECKS=false`. The hook also lets a release PR with failed checks merge; only the skill stops that. Recommendation: block when the `gh pr checks` output shows failures, regardless of the flag.
+8. **[low]** Pre-existing, outside this branch's changes. The `-n\b` check blocks any command that contains both `git commit` and `jq -n`/`grep -n`/`bash -n`, which happened several times in this session. A commit message containing "main", chained with a push, is also blocked. Recommendation: scope these checks to the `git commit`/`git push` segments.
+
+Accepted by design and documented in the `guard-bash.sh` header: `git -C`/`-c`, `env git`, subshells, quote tricks around the branch gate, heredocs, `cherry-pick`/`reset`, `gh api`, and the time between gate and merge. GitHub branch protection and the `set-state.sh` auto-approval are the user's call.
+
+## Reviewed
+commit 0810cd7, 2026-10-01. Reviewers: `code-reviewer` (0 high, 0 medium, 4 low; ran the hooks in a throwaway repo) and `security-reviewer` (0 high, 2 medium, 2 low). Main session: suite and lint.
+
+## Previous reviews
+
+### Verdict: FAIL
 
 This is the second review pass, on commit 7c95711. No reviewer found a high-severity issue. All first-pass findings are resolved except 5 and 8, which are only partly closed (findings 4–6 below). The FAIL comes from an acceptance criterion that's no longer met as written: AC5 still says a blocked release "leaves the phase at `releasing`", but the user-approved recovery design (plan step 7) returns it to `idle`. AC7 lacks the `fix/` exception. There are also functional gaps in the new paths, which the code reviewer verified in a throwaway repo (findings 2, 3 and 7). The suite is green (21 tests) and lint is clean.
 
-## Acceptance criteria
+### Acceptance criteria
 - AC1–AC4, AC6 (amended), AC8–AC10: PASS. The code reviewer re-checked each against the files.
 - AC5: **not met as written**. The text says a blocked release stays in `releasing`; the implementation returns to `idle` with `release_status: blocked` (finding 1).
 - AC7: **not met as written**. The text has no `fix/` exception while the release is blocked (finding 1).
 
-## Findings
+### Findings
 1. **[medium]** `ticket.md` AC5, AC7 and the Notes weren't amended for the step 7 recovery design, so they no longer describe the implementation. Recommendation: amend them the way AC6 was, citing the user-approved step 7.
 2. **[medium]** `release/SKILL.md:17`. The blocked-release command (`git merge --abort; git switch develop; set-state …`) is rejected by the hook when it runs in `done` or `idle` on `develop` (verified: "merging into 'develop' locally is not allowed"). That's the case for the step 2 provenance check, which runs before `releasing` is entered. Because the commands are chained, the `set-state` call never runs and the flag is never set. It fails closed, but recovery depends on improvisation. Recommendation: abort only when `MERGE_HEAD` exists, and let the hook allow `git merge --abort` on any branch.
 3. **[medium]** `release/SKILL.md:42`. A resume with an open release PR jumps to step 7 and skips the provenance check and the ticket-id collection. Anything merged into `develop` afterwards would be promoted unchecked, and a fix ticket's id would be missing from the title. Recommendation: run the provenance check and recompute the ids before every merge, and update the PR title if they changed.
@@ -35,18 +75,18 @@ This is the second review pass, on commit 7c95711. No reviewer found a high-seve
 Not adopted (recorded):
 - **[medium → accepted limit]** Security finding D: `is_git` misses `git -C`, `git -c k=v`, `env git` and `( git …`, and in `releasing` `cherry-pick` and `reset --hard` aren't gated. The same goes for code low 8 and security low H (quote-stripping tricks) and the PR-head timing gap between the gate and the merge. A regex guard on shell text can't be made airtight against a deliberately evasive command. These hooks guard against mistakes made while following the skills. The real control against bypass is GitHub branch protection on `main` and `develop` (required PR, required checks once CI exists). That's out of scope here and the user's call. The hook's header will state this limit.
 
-## Reviewed
+### Reviewed
 commit 7c95711, 2026-10-01. Reviewers: `code-reviewer` (0 high, 4 medium, 6 low; exercised the hook in a throwaway repo) and `security-reviewer` (0 high, 6 medium, 2 low). Main session: suite and lint.
 
-## Previous review (first pass, commit aa295ed)
+### Previous review (first pass, commit aa295ed)
 
-### Verdict: FAIL
+#### Verdict: FAIL
 
 All 10 acceptance criteria are met as written. Verification was review-only, at the user's choice. The hook was also exercised by hand: 10 gate cases and 18 regression cases, all as expected. The suite is green (21 tests) and lint is clean.
 
 The FAIL comes from a high-severity design gap: a blocked release can't be recovered through the documented route. There are also several medium gaps in the resume logic and in how tightly the hooks hold the now-automatic release flow.
 
-### Acceptance criteria
+#### Acceptance criteria
 - AC1: `.claude/rules/git.md:5,7,26,28-35`. PASS.
 - AC2: `.claude/rules/workflow.md:9,14-15,22`. PASS.
 - AC3: `.claude/skills/release/SKILL.md:1-3,15-18`. PASS.
@@ -58,7 +98,7 @@ The FAIL comes from a high-severity design gap: a blocked release can't be recov
 - AC9: `refine-ticket/SKILL.md:16`. PASS.
 - AC10: `CLAUDE.md:43-47`, `README.md:50-56`, `config.sh:15-18`, and the "only when asked" grep is clean. PASS.
 
-### Findings
+#### Findings
 1. **[high]** `release/SKILL.md:49`, `git.md:35`. The recovery route for a blocked release ("often a `fix/` ticket") can't be taken. While the phase is `releasing` with the count above 0, `refine-ticket` refuses (it needs a phase of `idle`/`done`, and the count must be 0), and `guard-bash.sh` blocks `git switch -c fix/...`. The only escapes are a manual state reset or committing straight onto `develop`, which the hook allows in `releasing` but `git.md:6` forbids. Recommendation: define an explicit recovery path that the skills, rules and hook all agree on.
 2. **[medium]** `factory-manager/SKILL.md:24,36`. A `[[parked: release @ releasing]]` tag stays put as long as the phase is `releasing`. If a human then runs `/release` and it stops at `waiting-checks`, every later call reports "waiting" and never resumes. Recommendation: keep the tag on a release only while `release_status` is `blocked`.
 3. **[medium]** `release/SKILL.md:18,25,68-73`. If the release PR is merged but the finish step fails, the phase stays `releasing` with an empty status and a count of 0. On resume, no PR is open, so steps 2–8 run again: `merge --no-ff origin/main` creates a new merge commit and a spurious, empty release follows. Recommendation: in `releasing`, with no open PR and a count of 0, go straight to the finish step.
@@ -85,5 +125,5 @@ Not adopted. These are recorded, and follow-up tickets can pick them up:
 - **[low]** The gate uses tracking refs from the last fetch and fails open when refs are missing. Both are accepted by design (plan Design decisions). `refine-ticket` already fetches first.
 - Changing the `set-state.sh` auto-approval in `.claude/settings.json` is the user's decision about permissions. It's mentioned in finding 5 and not changed here.
 
-### Reviewed
+#### Reviewed
 commit aa295ed, 2026-10-01. Reviewers: `code-reviewer` (1 high, 3 medium, 6 low) and `security-reviewer` (0 high, 4 medium, 2 low). The security reviewer had no shell and read the current files instead of the diff. Main session: suite and lint, and a re-run of `gate-check.sh` and `regress-check.sh` on HEAD.
