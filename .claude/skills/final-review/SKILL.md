@@ -11,10 +11,16 @@ Read `.claude/state/workflow.json`. The phase must be `reviewing`. All plan step
 
 ## Steps
 
-1. Collect the diff under review: `git diff develop...HEAD` (paths only in the main context; the reviewers read the contents themselves).
-2. **Verification fan-out.** Spawn both reviewers in parallel, each with its own lens and a clean context:
-   - `code-reviewer` agent: correctness, plan conformance, test quality of the changed files.
-   - `security-reviewer` agent: OWASP Top 10, authn/authz, secrets in the changed files.
+1. **Fix the review base and collect the diff under review** (paths only in the main context; the reviewers read the contents themselves). The code reviewer reviews only new code, never earlier tickets or already-reviewed steps.
+   - **First review of the ticket:** base = `git merge-base origin/develop HEAD`.
+   - **Re-review after a FAIL:** base = the ticket's latest `docs(<id>): review findings` commit (`git log --format=%h --grep="docs(<id>): review findings" -1`). The scope is then only the fix steps.
+
+   Then run `git diff --stat <base>..HEAD`.
+
+   Also write the full diff to a temporary file **outside the repo**, so it never lands in a `work/` commit: `git diff <base>..HEAD > <scratchpad>/review-<id>.diff`. The security reviewer has no shell and reads that file.
+2. **Verification fan-out.** Spawn both reviewers in parallel, each with its own lens and a clean context. Both review only new code: their agent definitions limit them to `<base>..HEAD`. Don't ask either to review the whole branch again.
+   - `code-reviewer` agent: correctness, plan conformance, test quality of the changed files. Pass it the ticket id, the review base and the changed files. On a re-review, also tell it to confirm the previous `review.md` findings are resolved.
+   - `security-reviewer` agent: OWASP Top 10, authn/authz, secrets in the changed files. Pass it the ticket id, the review base, the changed files and the diff file's path. On a re-review, also tell it to confirm the previous `review.md` security findings are resolved.
 
    The reviewers are read-only by design. They report findings; they do not fix anything.
 3. **Acceptance check** (main session): for each acceptance criterion in `work/<id>/ticket.md`, name the test that proves it and confirm the test passes. Run the full suite and lint once more.

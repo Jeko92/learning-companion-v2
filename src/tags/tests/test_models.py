@@ -97,3 +97,52 @@ class GetOrCreateByNameTests(TestCase):
             Tag.objects.get_or_create_by_name(None)
 
         self.assertEqual(Tag.objects.count(), 1)
+
+
+class NameNormalisationTests(TestCase):
+    def setUp(self):
+        self.python = Tag.objects.create(name="Python")
+
+    def test_full_width_letters_find_the_existing_tag(self):
+        tag, created = Tag.objects.get_or_create_by_name("ＰＹＴＨＯＮ")
+
+        self.assertEqual((tag, created), (self.python, False))
+
+    def test_composed_and_decomposed_spellings_are_one_tag(self):
+        first, _ = Tag.objects.get_or_create_by_name("cafe\u0301")
+        second, created = Tag.objects.get_or_create_by_name("café")
+
+        self.assertEqual((second, created), (first, False))
+
+    def test_inner_whitespace_collapses_to_one_space(self):
+        tag, _ = Tag.objects.get_or_create_by_name("Machine \t  Learning")
+        saved = Tag.objects.create(name=" Data\u00a0 Science ")
+
+        self.assertEqual(Tag.objects.get(pk=tag.pk).name, "Machine Learning")
+        self.assertEqual(Tag.objects.get(pk=saved.pk).name, "Data Science")
+
+    def test_control_and_invisible_characters_are_rejected(self):
+        message = "Tag names can't contain control or invisible characters."
+        for name in ("Py\x00thon", "Python\u200b", "\ufeffPython"):
+            with self.subTest(name=repr(name)):
+                with self.assertRaises(ValidationError) as caught:
+                    Tag.objects.get_or_create_by_name(name)
+
+                self.assertIn(message, caught.exception.messages)
+                self.assertEqual(Tag.objects.count(), 1)
+
+    def test_a_huge_name_is_a_validation_error_not_a_database_error(self):
+        # SQLite rejects LIKE patterns over 50,000 bytes, so the name must be
+        # validated before the iexact lookup ever runs.
+        with self.assertRaises(ValidationError):
+            Tag.objects.get_or_create_by_name("x" * 50_001)
+
+        self.assertEqual(Tag.objects.count(), 1)
+
+    def test_tag_names_cannot_contain_commas(self):
+        # The comma separates typed focus areas, so it can't be in a name.
+        with self.assertRaises(ValidationError) as caught:
+            Tag.objects.get_or_create_by_name("a,b")
+
+        self.assertIn("Tag names can't contain commas.", caught.exception.messages)
+        self.assertEqual(Tag.objects.count(), 1)
