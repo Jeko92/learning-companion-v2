@@ -107,7 +107,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-model):
 
   Covers: AC11.
   - Done 2026-10-02. None of the goals migrations was applied to the dev DB, so no rollback was needed. The single regenerated `0001_initial` holds the choices, the default, the ordering and the check constraint. `makemigrations --check` and the suite are green, and `migrate` applied `goals.0001_initial` (and the pending `tags.0004`).
-- [ ] 11. Docs. No test. Commit `docs(goal-model): document the goals app`.
+- [x] 11. Docs. No test. Commit `docs(goal-model): document the goals app`.
   - `CLAUDE.md`:
     - A Stack bullet on goals: owned by a user (`user.goals`, deleted with the user), `Goal.Status` values `planned`/`in-progress`/`done` (the hyphen matches the planned `?status=` filter, and a database check constraint enforces them), newest first, and the title stored trimmed. Goal views should scope through a `Goal.objects.owned_by(user)` helper, which #8 introduces.
     - A Layout line for `src/goals/`.
@@ -115,6 +115,10 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-model):
   - Manual check:
     - `migrate` on the dev DB applies `goals.0001_initial`, plus `tags.0004` if still pending.
     - In `manage.py shell`, create and save a goal; check its default status and timestamps, then delete it.
+
+  - Done 2026-10-02. In a `manage.py shell` check against the dev DB:
+    - The title was stored as 'Manual check goal' (trimmed), the status defaulted to `planned`, `str()` showed the title and `user.goals` counted 1. Deleting the user removed the goal.
+    - **Observation:** on create, `created_at` and `updated_at` differ by microseconds, because Django calls `timezone.now()` once per field. AC6 doesn't require equality, and step 5 pins the clock. But later code must not use `created_at == updated_at` to mean "never edited".
 
 ## Coverage
 | AC | Steps |
