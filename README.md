@@ -11,8 +11,11 @@ cp .env.example .env
 ./.venv/bin/python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 # paste the printed key into .env as SECRET_KEY=...
 ./.venv/bin/python src/manage.py migrate
+./.venv/bin/python src/manage.py tailwind build
 ./.venv/bin/python src/manage.py runserver
 ```
+
+Styling uses Tailwind through `django-tailwind-cli`, a standalone binary with no Node. `tailwind build` downloads the Tailwind version pinned in `settings.py` (`TAILWIND_CLI_VERSION`) into `src/.django_tailwind_cli/` and builds `src/assets/css/tailwind.css`. Both are git-ignored, so run the build after every checkout. For everyday development, `./.venv/bin/python src/manage.py tailwind runserver` runs the dev server and rebuilds the CSS as templates change.
 
 Settings come from the environment via `django-environ`, read in `src/config/env.py`:
 
@@ -36,6 +39,9 @@ Values are read from the process environment first. `.env` at the repo root only
 
 - `src/manage.py`, `src/config/`: Django project (settings, URLs, ASGI/WSGI)
 - `src/<app>/`: Django apps, each with its own tests
+- `src/core/`: the home page and other site-wide views
+- `src/templates/`: project-wide templates (`base.html` layout, pages that extend it)
+- `src/assets/`: static source files; the built `css/tailwind.css` is git-ignored
 - `work/`: workflow artifacts per ticket (`ticket.md`, `plan.md`, `review.md`)
 - `.claude/`: workflow rules, skills, and hooks
 
