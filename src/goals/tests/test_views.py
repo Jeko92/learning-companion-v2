@@ -154,3 +154,38 @@ class GoalCreateTests(TestCase):
                     fetch_redirect_response=False,
                 )
                 self.assertFalse(Goal.objects.exists())
+
+    def test_invalid_input_rerenders_the_form_and_creates_nothing(self):
+        cases = (
+            ("blank title", {"title": ""}, "title", "This field is required."),
+            ("whitespace title", {"title": "   "}, "title", "This field is required."),
+            (
+                "long title",
+                {"title": "t" * 201},
+                "title",
+                "Ensure this value has at most 200 characters (it has 201).",
+            ),
+            (
+                "long description",
+                {"description": "d" * 2001},
+                "description",
+                "Ensure this value has at most 2000 characters (it has 2001).",
+            ),
+            (
+                "unknown status",
+                {"status": "bogus"},
+                "status",
+                "Select a valid choice. bogus is not one of the available choices.",
+            ),
+        )
+        for case, changes, field, message in cases:
+            with self.subTest(case=case):
+                response = self.client.post("/goals/new/", {**self.data, **changes})
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "goals/goal_form.html")
+                self.assertFormError(response.context["form"], field, message)
+                page = PageParser()
+                page.feed(response.content.decode())
+                self.assertIn(message, page.text("main"))
+                self.assertFalse(Goal.objects.exists())

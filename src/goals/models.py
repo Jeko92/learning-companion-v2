@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import MaxLengthValidator
 from django.db import models
 from django.db.models import Q
 
@@ -27,7 +28,9 @@ class Goal(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="goals"
     )
     title = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
+    # One limit for forms, full_clean() and the admin (TextField's own
+    # max_length would only shape the form widget).
+    description = models.TextField(blank=True, validators=[MaxLengthValidator(2000)])
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PLANNED
     )

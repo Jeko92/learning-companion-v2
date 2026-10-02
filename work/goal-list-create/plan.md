@@ -96,7 +96,7 @@ Guard steps (7, 8, 10, 12) name their mutation.
 - [x] 8. Create requires login. An anonymous `GET` and `POST` (with valid data) to `/goals/new/` both redirect to login with `next=/goals/new/`, and `Goal.objects.count()` is unchanged. Impl: none, since step 5 has `LoginRequiredMixin`. Covers: AC2 (create).
   - Guard. Mutation: drop `LoginRequiredMixin` from `GoalCreateView`. It must go red (the GET is 200). Revert afterwards.
   - Done 2026-10-02: green on arrival. Under the mutation, both subtests went red: the GET returned 200, and the anonymous POST failed when assigning the owner. The view was then restored.
-- [ ] 9. Invalid input re-renders the form and creates nothing. Subtests, each checking:
+- [x] 9. Invalid input re-renders the form and creates nothing. Subtests, each checking:
   - status 200 and `goal_form.html`
   - `assertFormError(form, field, message)` with the message in `page.text("main")`
   - `Goal.objects.count()` unchanged
