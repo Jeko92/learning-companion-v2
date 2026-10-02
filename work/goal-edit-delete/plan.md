@@ -146,7 +146,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-edit-de
       - the docstring explains the rule
     - **The real remaining risk** is a goal view that sets `model = Goal` on *itself* and lists the mixin second, which would be unscoped. The defences are the docs rule (list `OwnGoalsMixin` first, never set `model` on goal views) and the per-view 404 tests (steps 4 and 12).
     - This was committed before the green-on-arrival was noticed; the commit message overstates the change.
-- [ ] 16. Docs. No test. Commit `docs(goal-edit-delete): document the goal detail, edit and delete pages`.
+- [x] 16. Docs. No test. Commit `docs(goal-edit-delete): document the goal detail, edit and delete pages`.
   - `CLAUDE.md`, Goals bullet:
     - the detail, edit and delete pages
     - `get_absolute_url` as the success URL
@@ -158,6 +158,14 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-edit-de
     - alice's delete confirmation page, then the delete, shows "Goal deleted."
     - bob gets 404 on alice's detail, edit and delete pages
     - restore the sample goal afterwards
+
+  - Done 2026-10-02. Results against `runserver` with curl, real CSRF tokens, alice and bob:
+    - alice's detail page showed the title and the Edit, Delete and Back links
+    - the edit gave 302 to the detail page, which showed "Goal updated." and the new values
+    - bob got 404 on alice's detail, edit and delete pages
+    - the confirmation page showed `Delete “…”?`, and the delete POST gave 302 to `/goals/` with "Goal deleted."
+    - the sample goal "Learn Tailwind basics" was recreated afterwards
+  - The `CLAUDE.md` Goals bullet states the corrected mixin rule from step 15 (list it first, never set `model` on a goal view).
 
 ## Coverage
 | AC | Steps |

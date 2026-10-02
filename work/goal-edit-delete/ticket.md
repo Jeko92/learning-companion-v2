@@ -74,6 +74,8 @@ Added after a best-practice review (2026-10-02, the user's choice):
 - **Django's default template names:** `goals/goal_detail.html`, `goals/goal_form.html` (shared by create and edit) and `goals/goal_confirm_delete.html`.
 - **A Cancel link on the edit page** (AC6).
 
+Correction found during implementation (step 15): a wrongly ordered `OwnGoalsMixin` already raised `ImproperlyConfigured` even with `model = Goal` on the mixin. Django's `SingleObjectMixin.model = None` precedes it in the MRO. AC14's behaviour holds; its "instead of silently serving" premise came from an incorrect #8 security note. The real risk is `model = Goal` set on a goal view itself, which `CLAUDE.md` now rules out.
+
 Constraints and context:
 - **Ruff RUF012:** class-level options are tuples (CLAUDE.md).
 - **Docs:** `CLAUDE.md` (Goals bullet, Layout) and `README.md` get the new pages. The plan includes this.
