@@ -236,9 +236,13 @@ The verdict was FAIL because AC7's visible-error half was not proven (finding 1)
   - The mismatch message contains a curly apostrophe (`didn’t`). Autoescaping leaves it unchanged, but compare against parsed text rather than raw HTML, so entity encoding can't matter.
   - Commit: `feat(auth-signup): prove the re-rendered sign-up page shows each error`.
   - Done 2026-10-02: green on arrival. With `signup.html` rendering the bare fields without errors, all five subtests went red. The template was then restored.
-- [ ] 18. Pin the anonymous nav exactly: `page.text("nav") == "Goals Log in Sign up"` in `test_anonymous_nav_has_placeholders_and_a_signup_link`. Remove `test_anonymous_nav_shows_no_username`, which can't fail. Test: `src/accounts/tests/test_nav.py`. Impl: none. Covers: AC9, AC10 (finding 2, low).
+- [x] 18. Pin the anonymous nav exactly: `page.text("nav") == "Goals Log in Sign up"` in `test_anonymous_nav_has_placeholders_and_a_signup_link`. Remove `test_anonymous_nav_shows_no_username`, which can't fail. Test: `src/accounts/tests/test_nav.py`. Impl: none. Covers: AC9, AC10 (finding 2, low).
   - This replaces a vacuous test with a stronger one. It is a deliberate test change, not a weakening, because the exact match subsumes the old assertion. Confirm it guards: temporarily render `{{ user.get_username }}` without the `is_authenticated` check, plus an extra stray word in the nav. The test must go red, and the change is then reverted.
   - Commit: `refactor(auth-signup): pin the anonymous nav text exactly`.
+  - Done 2026-10-02: the suite went from 51 to 50 tests, all green. The exact pin replaces the removed test's assertion.
+    - Mutation B (a stray `<span>Profile</span>` in the anonymous nav) went red: `'Goals Profile Log in Sign up' != 'Goals Log in Sign up'`.
+    - Mutation A (the username rendered without the `is_authenticated` check) stays green, and no test can make it red. The anonymous username is `""`, so the anonymous page is byte-for-byte the same in its text, and there's no visible regression to catch. The plan's wording ("plus an extra stray word ... must go red") had combined the two, but only the stray word is detectable.
+    - Both mutations were reverted.
 - [ ] 19. Docs wording. No test.
   - In `CLAUDE.md`, the Stack auth bullet and the `src/accounts/` Layout line should describe log-in and log-out as #4's future work: "#4 adds log-in and log-out under `/accounts/` and reuses `LOGIN_REDIRECT_URL`" (finding 3).
   - In this plan, correct step 5's "(33)" to 38 (finding 4).

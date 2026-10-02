@@ -23,9 +23,10 @@ class NavTests(TestCase):
         page = self.get_page()
 
         self.assertEqual(page.links("nav"), [(reverse("accounts:signup"), "Sign up")])
+        # Exact text: the placeholders and the link, and nothing else (no username).
+        self.assertEqual(page.text("nav"), "Goals Log in Sign up")
         for placeholder in ("Goals", "Log in"):
             with self.subTest(placeholder=placeholder):
-                self.assertIn(placeholder, page.text("nav"))
                 self.assertNotIn(placeholder, page.href_text())
 
     def test_logged_in_nav_has_no_login_placeholder_and_no_signup_link(self):
@@ -43,10 +44,3 @@ class NavTests(TestCase):
         page = self.get_page()
 
         self.assertIn(USERNAME, page.text("nav"))
-
-    def test_anonymous_nav_shows_no_username(self):
-        get_user_model().objects.create_user(USERNAME, password=PASSWORD)
-
-        page = self.get_page()
-
-        self.assertNotIn(USERNAME, page.text("nav"))
