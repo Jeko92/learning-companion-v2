@@ -80,7 +80,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(profile-page
 
 Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
 
-- [ ] 1. Your own profile page is served. Logged in as alice, `GET /profile/<alice.profile.pk>/`.
+- [x] 1. Your own profile page is served. Logged in as alice, `GET /profile/<alice.profile.pk>/`.
   - The status is **asserted first** (200).
   - `profiles/profile_detail.html` and `base.html` are used.
   - `reverse("profiles:detail", args=[pk]) == f"/profile/{pk}/"`.
