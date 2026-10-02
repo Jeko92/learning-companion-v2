@@ -75,7 +75,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-model):
   Impl: none, since step 2 defines the fields. Covers: AC6.
   - Guard. Mutation: `updated_at = DateTimeField(auto_now_add=True)`. It must go red (`updated_at` stays at t1). Revert afterwards.
   - Done 2026-10-02: green on arrival. Under the mutation it went red (`updated_at` stayed at t1). The model was then restored.
-- [ ] 6. Goals are ordered newest first. Test:
+- [x] 6. Goals are ordered newest first. Test:
   - Create goals a, b and c.
   - Set a's `created_at` to an older time, and b's and c's to the same newer time, via `QuerySet.update`.
   - `list(Goal.objects.all()) == [c, b, a]`.

@@ -103,3 +103,15 @@ class GoalTimestampTests(TestCase):
             goal.save()
         goal.refresh_from_db()
         self.assertEqual((goal.created_at, goal.updated_at), (t1, t2))
+
+
+class GoalOrderingTests(TestCase):
+    def test_goals_are_newest_first_with_ties_broken_by_id(self):
+        owner = get_user_model().objects.create_user("alice")
+        a, b, c = (Goal.objects.create(owner=owner, title=t) for t in "abc")
+        older = datetime(2026, 1, 1, tzinfo=UTC)
+        newer = datetime(2026, 1, 2, tzinfo=UTC)
+        Goal.objects.filter(pk=a.pk).update(created_at=older)
+        Goal.objects.filter(pk__in=[b.pk, c.pk]).update(created_at=newer)
+
+        self.assertEqual(list(Goal.objects.all()), [c, b, a])

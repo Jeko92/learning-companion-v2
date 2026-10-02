@@ -29,6 +29,8 @@ class Goal(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        # Newest first; the id breaks ties between goals created together.
+        ordering = ("-created_at", "-id")
         constraints = (
             # choices are only checked by full_clean() and forms; this stops
             # update() and bulk_create() from storing anything else.
