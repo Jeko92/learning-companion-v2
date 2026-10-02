@@ -5,38 +5,38 @@ Issue: #4 · Branch: feature/auth-login-logout
 As a registered user of the Learning Companion, I want to log in and out, and get back to the page I was trying to open, so that I can use my account safely across visits.
 
 ## Acceptance criteria
-- [ ] AC1 Login and logout URLs exist in the `accounts` namespace:
+- [x] AC1 Login and logout URLs exist in the `accounts` namespace:
   - `reverse("accounts:login")` is `/accounts/login/` and `reverse("accounts:logout")` is `/accounts/logout/`
   - `settings.LOGIN_URL` resolves to `/accounts/login/`
   - `settings.LOGOUT_REDIRECT_URL` is `"/"`
   - Only these two views are added, not the whole `django.contrib.auth.urls`, so no password-reset or password-change routes exist.
-- [ ] AC2 An anonymous `GET /accounts/login/` returns 200 and renders `accounts/login.html`, which extends `base.html`. The page contains a `method="post"` form whose `action` is `reverse("accounts:login")`, with the fields `username` and `password` and a CSRF token.
-- [ ] AC3 A valid `POST` with no `next` logs the user in (the session's authenticated user is that user) and redirects to `settings.LOGIN_REDIRECT_URL`.
-- [ ] AC4 After a successful login, the page the user lands on shows "Welcome back, <username>!".
-- [ ] AC5 A failed login re-renders the form with status 200. The page shows Django's error "Please enter a correct username and password. Note that both fields may be case-sensitive.". No one is logged in, and the submitted password does not appear in the response. The case for a wrong password and the case for an unknown username show exactly the same message, so the page doesn't reveal which usernames exist.
-- [ ] AC6 A safe `next` is honoured. When the login page is opened with `?next=/some/page/?a=1` (a path on this site), the form carries `next`, and a valid `POST` with it redirects to `/some/page/?a=1`.
-- [ ] AC7 An unsafe `next` is never followed. A valid `POST` with any of the following as `next` still logs the user in, but redirects to `settings.LOGIN_REDIRECT_URL`, and the `Location` header never points off-site:
+- [x] AC2 An anonymous `GET /accounts/login/` returns 200 and renders `accounts/login.html`, which extends `base.html`. The page contains a `method="post"` form whose `action` is `reverse("accounts:login")`, with the fields `username` and `password` and a CSRF token.
+- [x] AC3 A valid `POST` with no `next` logs the user in (the session's authenticated user is that user) and redirects to `settings.LOGIN_REDIRECT_URL`.
+- [x] AC4 After a successful login, the page the user lands on shows "Welcome back, <username>!".
+- [x] AC5 A failed login re-renders the form with status 200. The page shows Django's error "Please enter a correct username and password. Note that both fields may be case-sensitive.". No one is logged in, and the submitted password does not appear in the response. The case for a wrong password and the case for an unknown username show exactly the same message, so the page doesn't reveal which usernames exist.
+- [x] AC6 A safe `next` is honoured. When the login page is opened with `?next=/some/page/?a=1` (a path on this site), the form carries `next`, and a valid `POST` with it redirects to `/some/page/?a=1`.
+- [x] AC7 An unsafe `next` is never followed. A valid `POST` with any of the following as `next` still logs the user in, but redirects to `settings.LOGIN_REDIRECT_URL`, and the `Location` header never points off-site:
   - an absolute external URL: `https://evil.example/`
   - a scheme-relative URL: `//evil.example/`
   - a backslash variant browsers treat as external: `/\evil.example/` and `\\evil.example`
   - a non-HTTP scheme: `javascript:alert(1)`
   - a look-alike host: `https://testserver.evil.example/`
   - the same cases passed in the query string (`GET ?next=`) and then posted
-- [ ] AC8 For a logged-in user, `GET` and `POST` to `/accounts/login/` redirect to `settings.LOGIN_REDIRECT_URL`. The form is not shown.
-- [ ] AC9 Logout works only by `POST`. A `POST /accounts/logout/` by a logged-in user ends the session (the user is anonymous afterwards) and redirects to `settings.LOGOUT_REDIRECT_URL`, where the page shows "You have been logged out.". A `GET /accounts/logout/` returns 405 and leaves the user logged in.
-- [ ] AC10 The nav reflects the auth state:
+- [x] AC8 For a logged-in user, `GET` and `POST` to `/accounts/login/` redirect to `settings.LOGIN_REDIRECT_URL`. The form is not shown.
+- [x] AC9 Logout works only by `POST`. A `POST /accounts/logout/` by a logged-in user ends the session (the user is anonymous afterwards) and redirects to `settings.LOGOUT_REDIRECT_URL`, where the page shows "You have been logged out.". A `GET /accounts/logout/` returns 405 and leaves the user logged in.
+- [x] AC10 The nav reflects the auth state:
   - anonymous: exactly "Goals Log in Sign up", where "Log in" links to `reverse("accounts:login")`, "Sign up" links to `reverse("accounts:signup")`, and "Goals" stays a non-link placeholder
   - logged in: "Goals", the username, and a "Log out" button inside a `method="post"` form whose `action` is `reverse("accounts:logout")` and which carries a CSRF token. There are no "Log in" or "Sign up" links.
-- [ ] AC11 The full round trip works in one test client session: sign up or create a user, log out (POST), confirm anonymous, log back in with the same password, and confirm logged in.
-- [ ] AC12 CSRF is enforced on login and logout. With a CSRF-enforcing client (`Client(enforce_csrf_checks=True)`):
+- [x] AC11 The full round trip works in one test client session: sign up or create a user, log out (POST), confirm anonymous, log back in with the same password, and confirm logged in.
+- [x] AC12 CSRF is enforced on login and logout. With a CSRF-enforcing client (`Client(enforce_csrf_checks=True)`):
   - a login `POST` without a CSRF token returns 403 and logs no one in
   - a logout `POST` without a token returns 403 and leaves the user logged in
   - a logout `POST` with the token taken from the nav's logout form succeeds, which proves the nav button carries a working token
-- [ ] AC13 The session is replaced at login and invalidated at logout:
+- [x] AC13 The session is replaced at login and invalidated at logout:
   - after a successful login, the session key differs from the anonymous session key the visitor had before (session-fixation protection)
   - after logout, a request that reuses the old session cookie is anonymous
-- [ ] AC14 A deactivated account can't log in. A user with `is_active=False` who submits the correct password gets the same generic error as in AC5 (not a separate "inactive" message) and is not logged in.
-- [ ] AC15 A malicious `next` can't inject markup into the login page. `GET /accounts/login/?next="><script>alert(1)</script>` returns a page that doesn't contain the raw string `<script>alert(1)</script>`; the value appears only escaped (reflected-XSS protection).
+- [x] AC14 A deactivated account can't log in. A user with `is_active=False` who submits the correct password gets the same generic error as in AC5 (not a separate "inactive" message) and is not logged in.
+- [x] AC15 A malicious `next` can't inject markup into the login page. `GET /accounts/login/?next="><script>alert(1)</script>` returns a page that doesn't contain the raw string `<script>alert(1)</script>`; the value appears only escaped (reflected-XSS protection).
 
 ## Out of scope
 - Password reset and password change flows (and their routes).
