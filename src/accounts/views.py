@@ -54,3 +54,11 @@ class LogOutView(auth_views.LogoutView):
             # Messages are written at response time, so this survives the flush.
             messages.info(request, "You have been logged out.")
         return response
+
+    def get_success_url(self):
+        # LogoutView renders the admin's logged_out.html when the target is the
+        # logout URL itself; send that case to LOGOUT_REDIRECT_URL instead.
+        url = super().get_success_url()
+        if url == self.request.get_full_path():
+            return resolve_url(settings.LOGOUT_REDIRECT_URL)
+        return url

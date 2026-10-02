@@ -45,6 +45,17 @@ class LogoutTests(TestCase):
             self.client.get(response["Location"]), "You have been logged out."
         )
 
+    def test_next_pointing_at_logout_still_redirects(self):
+        # Django's LogoutView renders registration/logged_out.html (the admin's
+        # page) when the redirect target is the logout URL itself.
+        response = self.client.post(LOGOUT_PATH, {"next": reverse("accounts:logout")})
+
+        self.assertNotIn("_auth_user_id", self.client.session)
+        self.assertRedirects(
+            response, settings.LOGOUT_REDIRECT_URL, fetch_redirect_response=False
+        )
+        self.assertTemplateNotUsed(response, "registration/logged_out.html")
+
     def test_unsafe_next_is_never_followed(self):
         # LogoutView honours a posted next only after the same same-site check
         # as login.
