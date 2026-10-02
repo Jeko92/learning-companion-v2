@@ -17,7 +17,7 @@ class SignUpView(CreateView):
     def dispatch(self, request, *args, **kwargs):
         # Like LoginView.redirect_authenticated_user: signed-in users don't sign up.
         if request.user.is_authenticated:
-            return redirect(resolve_url(settings.LOGIN_REDIRECT_URL))
+            return redirect(settings.LOGIN_REDIRECT_URL)
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):

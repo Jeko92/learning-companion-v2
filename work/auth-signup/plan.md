@@ -241,7 +241,7 @@ The verdict was FAIL because AC7's visible-error half was not proven (finding 1)
   - Commit: `refactor(auth-signup): pin the anonymous nav text exactly`.
   - Done 2026-10-02: the suite went from 51 to 50 tests, all green. The exact pin replaces the removed test's assertion.
     - Mutation B (a stray `<span>Profile</span>` in the anonymous nav) went red: `'Goals Profile Log in Sign up' != 'Goals Log in Sign up'`.
-    - Mutation A (the username rendered without the `is_authenticated` check) stays green, and no test can make it red. The anonymous username is `""`, so the anonymous page is byte-for-byte the same in its text, and there's no visible regression to catch. The plan's wording ("plus an extra stray word ... must go red") had combined the two, but only the stray word is detectable.
+    - Mutation A (the username rendered without the `is_authenticated` check) stays green against the text pin. That is acceptable, because AC10's anonymous half holds by construction: `AnonymousUser.get_username()` is `""`, so no username can ever reach an anonymous visitor. The mutation still outputs an empty `<span>`, which an element-level assertion could catch, but it isn't a user-facing violation of AC10. The plan's wording ("plus an extra stray word ... must go red") had combined the two, and only the stray word is caught by the text pin. This wording was corrected in step 22 (round 2 finding 9). The earlier "no test can make it red" overstated it.
     - Both mutations were reverted.
 - [x] 19. Docs wording. No test.
   - In `CLAUDE.md`, the Stack auth bullet and the `src/accounts/` Layout line should describe log-in and log-out as #4's future work: "#4 adds log-in and log-out under `/accounts/` and reuses `LOGIN_REDIRECT_URL`" (finding 3).
@@ -260,7 +260,7 @@ The verdict was FAIL because AC2's "adds no fields" was only partly proven (find
   - This is a guard that passes on arrival. Confirm that it guards: temporarily add `<span>Profile</span>` to the logged-in branch of the nav. The test must go red. Then remove it.
   - Commit: `feat(auth-signup): pin the logged-in nav text exactly`.
   - Done 2026-10-02: green on arrival. The exact pin replaces the `assertIn("Goals")` and `assertNotIn("Log in")` pair, and covers both. A temporary `<span>Profile</span>` in the logged-in nav went red (`'Goals alice Profile' != 'Goals alice'`), and was then removed.
-- [ ] 22. A refactor, on green, with no behaviour change. Test: the whole suite stays green (50). Impl:
+- [x] 22. A refactor, on green, with no behaviour change. Test: the whole suite stays green (50). Impl:
   - `src/config/settings.py`: move `AUTH_USER_MODEL` and `LOGIN_REDIRECT_URL` into their own "# Authentication" section, with the auth settings docs link (finding 10).
   - `src/accounts/views.py`: `redirect(settings.LOGIN_REDIRECT_URL)` replaces `redirect(resolve_url(...))` in `dispatch` (finding 11). `get_success_url` keeps `resolve_url`, because it must return a URL.
   - `src/accounts/tests/test_nav.py`: reword the anonymous comment. AC10's anonymous half holds by construction (`AnonymousUser.get_username() == ""`), and the exact pin guards against stray text (finding 9).

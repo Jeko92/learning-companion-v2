@@ -23,7 +23,9 @@ class NavTests(TestCase):
         page = self.get_page()
 
         self.assertEqual(page.links("nav"), [(reverse("accounts:signup"), "Sign up")])
-        # Exact text: the placeholders and the link, and nothing else (no username).
+        # Exact text guards against stray nav text. AC10's "no username for
+        # anonymous visitors" holds by construction: AnonymousUser.get_username()
+        # is "", so the username can never reach this nav.
         self.assertEqual(page.text("nav"), "Goals Log in Sign up")
         for placeholder in ("Goals", "Log in"):
             with self.subTest(placeholder=placeholder):
