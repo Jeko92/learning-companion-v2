@@ -99,13 +99,14 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-model):
   - As a superuser with a goal, `GET reverse("admin:goals_goal_changelist")` returns 200 and contains the goal's title.
 
   Expected red: the `assertIn` fails. Impl: `src/goals/admin.py` `GoalAdmin`. Covers: AC10.
-- [ ] 10. One initial migration. No new test; this is a refactor, committed as `refactor(goal-model): ship the goals app with one initial migration`.
+- [x] 10. One initial migration. No new test; this is a refactor, committed as `refactor(goal-model): ship the goals app with one initial migration`.
   - On the dev DB, `migrate goals zero` if any goals migrations were applied.
   - Delete `src/goals/migrations/0001–0003` and regenerate with `makemigrations goals`, giving a single `0001_initial` that holds the fields, the status choices and default, the check constraint and the ordering.
   - The full suite stays green, including `MigrationsTests` (`makemigrations --check`).
   - Then `migrate` the dev DB again.
 
   Covers: AC11.
+  - Done 2026-10-02. None of the goals migrations was applied to the dev DB, so no rollback was needed. The single regenerated `0001_initial` holds the choices, the default, the ordering and the check constraint. `makemigrations --check` and the suite are green, and `migrate` applied `goals.0001_initial` (and the pending `tags.0004`).
 - [ ] 11. Docs. No test. Commit `docs(goal-model): document the goals app`.
   - `CLAUDE.md`:
     - A Stack bullet on goals: owned by a user (`user.goals`, deleted with the user), `Goal.Status` values `planned`/`in-progress`/`done` (the hyphen matches the planned `?status=` filter, and a database check constraint enforces them), newest first, and the title stored trimmed. Goal views should scope through a `Goal.objects.owned_by(user)` helper, which #8 introduces.
