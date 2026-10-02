@@ -2,7 +2,10 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 from django.conf import settings
-from django.test import TestCase
+from django.contrib import messages
+from django.contrib.messages.storage import default_storage
+from django.contrib.sessions.middleware import SessionMiddleware
+from django.test import RequestFactory, TestCase
 from django.urls import resolve
 
 from core import views
@@ -85,3 +88,15 @@ class HomePageTests(TestCase):
             with self.subTest(placeholder=placeholder):
                 self.assertIn(placeholder, page.text["nav"])
                 self.assertNotIn(placeholder, page.href_text)
+
+    def test_layout_renders_messages_added_for_the_request(self):
+        # No view adds messages yet, so attach the storage to a request by hand
+        # and call the view directly.
+        request = RequestFactory().get("/")
+        SessionMiddleware(lambda request: None).process_request(request)
+        request._messages = default_storage(request)
+        messages.info(request, "Profile saved.")
+
+        response = views.home(request)
+
+        self.assertContains(response, "Profile saved.")
