@@ -88,6 +88,14 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-status-
     - `?status=in-progress` listed only "Finish the Django tutorial", with In progress active
     - `?status=bogus` listed all 3, with All active
 
+## Review fixes (from `review.md`, 2026-10-02)
+- [ ] 10. Make the AC8 guard prove that `get_queryset` resolves to `OwnGoalsMixin.get_queryset` (review finding, medium). Extend `GoalViewsScopingTests` with two checks per walked route (`list`, `detail`, `edit`, `delete`), as subtests, keeping the existing checks.
+  - **Structural:** a view that doesn't define `get_queryset` itself (`"get_queryset" not in view.__dict__`) must have `view.get_queryset is OwnGoalsMixin.get_queryset`.
+  - **Behavioural, for every route:** create one goal for alice and one for bob. Build the view with `RequestFactory().get("/")`, `request.user = alice`, `view_instance = view(); view_instance.setup(request, pk=alice_goal.pk)` (no `pk` for `list`). `set(view_instance.get_queryset())` contains alice's goal and not bob's. This covers the list view's own `get_queryset` override and any later one.
+  - Expected: green on arrival (guard step, as in step 8).
+  - Guard. Mutation: add `def get_queryset(self): return Goal.objects.all()` to `GoalDetailView`, keeping `OwnGoalsMixin` first. It must go red (both checks). Revert afterwards and record the result here.
+  - Impl: none. Commit `feat(goal-status-filter): prove every goal view scopes through OwnGoalsMixin`. Covers: AC8.
+
 ## Coverage
 | AC | Steps |
 |---|---|
@@ -98,4 +106,4 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-status-
 | AC5 pagination keeps the filter; filter links start at page 1 | 5 |
 | AC6 two empty states | 6 |
 | AC7 no raw reflection of query parameters | 7 |
-| AC8 every goal view pinned to `OwnGoalsMixin` | 8 |
+| AC8 every goal view pinned to `OwnGoalsMixin` | 8, 10 |
