@@ -256,7 +256,7 @@ Each step is one cycle and one commit. Steps 21 and 23 are guards and test harde
 - [x] 21. (Finding 3, medium; AC7) Entries that differ only in non-ASCII case are merged in the form. Test: in `test_forms.py`, POSTing `focus_areas="\u00c9lan, \u00e9lan"` gives exactly one tag, "Élan", and exactly one new `Tag` row. Impl: none, because `casefold` de-duplication already exists.
   - Guard. Mutation: replace `if name.casefold() not in seen:` with `if True:`. It must go red (two tags). Revert afterwards.
   - Done 2026-10-02: green on arrival. Under the mutation it went red, with two tags ('Élan', 'élan'). The form was then restored.
-- [ ] 22. (Finding 4) `ProfileForm` behaves as a normal `ModelForm`. Test: `test_forms.py`.
+- [x] 22. (Finding 4) `ProfileForm` behaves as a normal `ModelForm`. Test: `test_forms.py`.
   - `ProfileForm()` with no instance renders: `str(form)` doesn't raise, and the initial `focus_areas` is `""`.
   - For alice's profile, a bound valid form with `save(commit=False)` doesn't change her tags until `form.save_m2m()` is called. After that call the tags are set.
 
@@ -266,6 +266,10 @@ Each step is one cycle and one commit. Steps 21 and 23 are guards and test harde
   - keep `save()` atomic
 
   Covers: AC7.
+  - Done 2026-10-02: red on both tests.
+    - `commit=False`: `True is not false`, because the tags were written at once.
+    - The unbound form errored with `RelatedObjectDoesNotExist: Profile has no user`, not the planned `ValueError`. That `ValueError`'s message calls `str(profile)`, which fails first on an unsaved profile. It is the same root cause, fixed by guarding on `instance.pk`.
+    - Then green, with `set()` moved into `_save_m2m()`.
 - [ ] 23. (Findings 5, 7 and 8, plus the security info item on errors) Test hardening. Commit `refactor(profile-page): tighten the profile tests`. Changes:
   - **Atomicity:** a test patches `Tag.objects.get_or_create_by_name` to raise on its second call. Saving `"Python, Rust"` then raises, alice's name is unchanged and no tag was created.
     - Guard mutation: remove the atomic wrapper, which must go red. Revert afterwards.

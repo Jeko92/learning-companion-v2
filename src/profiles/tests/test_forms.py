@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
+from profiles.forms import ProfileForm
 from tags.models import Tag
 
 PASSWORD = "Tr4ck-Learning!"
@@ -98,3 +99,24 @@ class FocusAreasInputTests(TestCase):
             [t.name for t in self.profile.focus_areas.all()], ["\u00c9lan"]
         )
         self.assertEqual(Tag.objects.count(), tag_count + 1)
+
+
+class ProfileFormTests(TestCase):
+    def test_an_unbound_form_without_a_profile_renders(self):
+        form = ProfileForm()
+
+        str(form)
+        self.assertEqual(form["focus_areas"].initial, "")
+
+    def test_save_without_commit_defers_the_focus_areas(self):
+        profile = get_user_model().objects.create_user("alice").profile
+        form = ProfileForm(
+            {"name": "Alice", "cohort": "", "focus_areas": "Rust"}, instance=profile
+        )
+        self.assertTrue(form.is_valid())
+
+        form.save(commit=False)
+
+        self.assertFalse(profile.focus_areas.exists())
+        form.save_m2m()
+        self.assertEqual([t.name for t in profile.focus_areas.all()], ["Rust"])

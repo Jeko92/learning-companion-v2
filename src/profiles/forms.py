@@ -29,8 +29,11 @@ class ProfileForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # Blank on the model (auto-created profiles start empty), required here.
         self.fields["name"].required = True
-        self.fields["focus_areas"].initial = ", ".join(
-            tag.name for tag in self.instance.focus_areas.all()
+        # An unsaved profile has no focus areas (and can't be queried for them).
+        self.fields["focus_areas"].initial = (
+            ", ".join(tag.name for tag in self.instance.focus_areas.all())
+            if self.instance.pk
+            else ""
         )
 
     def clean_focus_areas(self):
@@ -62,9 +65,13 @@ class ProfileForm(forms.ModelForm):
 
     @transaction.atomic
     def save(self, commit=True):
-        profile = super().save(commit=commit)
-        profile.focus_areas.set(
+        return super().save(commit=commit)
+
+    def _save_m2m(self):
+        # Django calls this from save(commit=True), or later from save_m2m()
+        # after save(commit=False), so tags are only created with the profile.
+        super()._save_m2m()
+        self.instance.focus_areas.set(
             Tag.objects.get_or_create_by_name(name)[0]
             for name in self.cleaned_data["focus_areas"]
         )
-        return profile
