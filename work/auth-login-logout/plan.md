@@ -167,13 +167,14 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-login-l
   Test: `test_logout.py`. Impl: none. Covers: AC12.
   - This is a guard. Mutation: remove `{% csrf_token %}` from the nav's logout form. The third case must go red. Revert afterwards.
   - Done 2026-10-02: green on arrival. The first mutation run hit an *error* (unpacking a missing token), not an assertion. The test was refactored to assert that the nav form holds exactly one CSRF token. With that, the mutation went red with `0 != 1 : the nav logout form has no CSRF token`. The template was then restored.
-- [ ] 16. Full round trip in one client:
+- [x] 16. Full round trip in one client:
   1. sign up `alice` through `/accounts/signup/` (logged in)
   2. `POST` logout, and check that the user is anonymous
   3. `POST` login with the same password, and check that the user is logged in and the nav shows "alice"
 
   Test: `test_logout.py`. Impl: none. Covers: AC11.
   - This is a guard. Mutation: `LogOutView.post` returns a redirect without calling `super().post()`. The test must go red. Revert afterwards.
+  - Done 2026-10-02: green on arrival. Under the mutation, the test went red (`'_auth_user_id' unexpectedly found` after the logout POST). The view was then restored.
 - [ ] 17. Docs. No test. Commit `docs(auth-login-logout): document log-in and log-out`.
   - In `CLAUDE.md`, the Stack auth bullet should cover:
     - log-in at `/accounts/login/` and log-out at `/accounts/logout/`, through `LoginView` and `LogoutView` subclasses

@@ -111,3 +111,23 @@ class CsrfTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertNotIn("_auth_user_id", self.csrf_client.session)
+
+
+class RoundTripTests(TestCase):
+    def test_sign_up_log_out_and_log_back_in(self):
+        self.client.post(
+            reverse("accounts:signup"),
+            {"username": USERNAME, "password1": PASSWORD, "password2": PASSWORD},
+        )
+        self.assertIn("_auth_user_id", self.client.session)
+
+        self.client.post(LOGOUT_PATH)
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+        self.client.post(
+            reverse("accounts:login"), {"username": USERNAME, "password": PASSWORD}
+        )
+        self.assertIn("_auth_user_id", self.client.session)
+        page = PageParser()
+        page.feed(self.client.get("/").content.decode())
+        self.assertIn(USERNAME, page.text("nav"))
