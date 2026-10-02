@@ -86,7 +86,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(profile-mode
 
   Expected red: `'tags.Tag' not found in {…}`. Impl: `src/tags/models.py`; `makemigrations tags` creates `0001_initial`. Refactor: the test imports `from tags.models import Tag` directly. Covers: AC2.
 - [x] 3. The name is stored trimmed. `Tag.objects.create(name="  Python ")`, then `refresh_from_db()`, gives `name == "Python"`. Expected red: `'  Python ' != 'Python'`. Impl: `Tag.save()` strips `name`. Covers: AC2.
-- [ ] 4. A blank or whitespace-only name fails validation. With `subTest` for `""` and `"   "`, `Tag(name=…).full_clean()` raises `ValidationError` with `"name"` in `error_dict`. Expected red: the `"   "` subtest doesn't raise. Impl: `Tag.clean_fields()` strips `name` before `super()`. Covers: AC2.
+- [x] 4. A blank or whitespace-only name fails validation. With `subTest` for `""` and `"   "`, `Tag(name=…).full_clean()` raises `ValidationError` with `"name"` in `error_dict`. Expected red: the `"   "` subtest doesn't raise. Impl: `Tag.clean_fields()` strips `name` before `super()`. Covers: AC2.
 - [ ] 5. Names are unique regardless of case, enforced by the database:
   - with `"Python"` saved, `Tag.objects.create(name="python")` inside `transaction.atomic()` raises `IntegrityError`
   - `Tag(name="PYTHON").full_clean()` raises `ValidationError` whose messages include "A tag with this name already exists."
