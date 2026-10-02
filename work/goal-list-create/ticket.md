@@ -5,38 +5,38 @@ Issue: #8 · Branch: feature/goal-list-create
 As a logged-in learner, I want to see a list of my own goals and add new ones, so that I can keep track of what I'm learning, and nobody else sees my goals.
 
 ## Acceptance criteria
-- [ ] AC1 Two URLs in a `goals` namespace: `reverse("goals:list")` is `/goals/` and `reverse("goals:create")` is `/goals/new/`.
-- [ ] AC2 Both pages require login. An anonymous `GET` to either, and an anonymous `POST` to `/goals/new/`, redirect to `settings.LOGIN_URL` with `next` set to the requested path, and the `POST` creates no goal.
-- [ ] AC3 `Goal.objects.owned_by(user)` returns exactly that user's goals, in the model's default order (newest first). It is a custom QuerySet method, so it chains, e.g. `Goal.objects.owned_by(user).filter(status=…)`.
-- [ ] AC4 The list page shows only your own goals.
+- [x] AC1 Two URLs in a `goals` namespace: `reverse("goals:list")` is `/goals/` and `reverse("goals:create")` is `/goals/new/`.
+- [x] AC2 Both pages require login. An anonymous `GET` to either, and an anonymous `POST` to `/goals/new/`, redirect to `settings.LOGIN_URL` with `next` set to the requested path, and the `POST` creates no goal.
+- [x] AC3 `Goal.objects.owned_by(user)` returns exactly that user's goals, in the model's default order (newest first). It is a custom QuerySet method, so it chains, e.g. `Goal.objects.owned_by(user).filter(status=…)`.
+- [x] AC4 The list page shows only your own goals.
   - `GET /goals/` returns 200 and renders `goals/goal_list.html`, which extends `base.html`.
   - `<main>` lists the current user's goals newest first, each with its title and status label (e.g. "In progress").
   - Another user's goal titles never appear.
   - A "New goal" link points to `goals:create`.
   - With no goals, `<main>` shows "No goals yet."
-- [ ] AC5 The create page renders a goal form.
+- [x] AC5 The create page renders a goal form.
   - `GET /goals/new/` returns 200 and renders `goals/goal_form.html`, which extends `base.html`.
   - `<main>` has one `method="post"` form whose `action` is `/goals/new/`. It has a CSRF token, a `title` input, a `description` textarea and a `status` select.
   - The `status` select offers exactly Planned, In progress and Done, with Planned selected.
   - The form has **no `owner` field**.
-- [ ] AC6 A valid create saves the goal for the current user and returns to the list.
+- [x] AC6 A valid create saves the goal for the current user and returns to the list.
   - The new goal's `owner` is `request.user`, its title is trimmed, and the chosen status is saved.
   - The response redirects to `/goals/`, which shows "Goal created." and lists the new goal first.
-- [ ] AC7 The owner can never be chosen. A `POST` that also sends `owner=<another user's id>` creates the goal owned by the logged-in user (mass-assignment guard).
-- [ ] AC8 Invalid input re-renders the form (200) with a field error, and creates nothing:
+- [x] AC7 The owner can never be chosen. A `POST` that also sends `owner=<another user's id>` creates the goal owned by the logged-in user (mass-assignment guard).
+- [x] AC8 Invalid input re-renders the form (200) with a field error, and creates nothing:
   - a blank or whitespace-only title gives "This field is required." on `title`
   - a 201-character title gives the standard length error on `title`
   - a description over 2,000 characters gives the standard length error on `description`. The limit is a `MaxLengthValidator(2000)` on the model field, so `full_clean()`, the admin and every form share it.
   - an unknown status gives the standard invalid-choice error on `status`
-- [ ] AC9 CSRF is enforced on create. With CSRF checks enforced, a `POST` without a token returns 403 and creates nothing. A `POST` with the token from the rendered form succeeds.
-- [ ] AC10 The logged-in nav links to the goals list.
+- [x] AC9 CSRF is enforced on create. With CSRF checks enforced, a `POST` without a token returns 403 and creates nothing. A `POST` with the token from the rendered form succeeds.
+- [x] AC10 The logged-in nav links to the goals list.
   - "Goals" becomes a link to `goals:list`.
   - The logged-in nav's exact text stays "Goals alice Log out".
   - `links("nav")` is `[(reverse("goals:list"), "Goals"), (reverse("profiles:mine"), "alice")]`.
   - The anonymous nav no longer shows "Goals": its exact text is "Log in Sign up", with only those two links.
   - This deliberately changes the earlier nav and home tests (#2 AC4, #3 AC9, #4 AC10, #6 AC11), which pinned "Goals" as a non-link placeholder. Those tests are updated in the same step.
-- [ ] AC11 Goal values are shown escaped. A title and description containing `<script>alert(1)</script>` appear only escaped on the list page, never as raw markup.
-- [ ] AC12 The list is paginated, 20 goals per page.
+- [x] AC11 Goal values are shown escaped. A title and description containing `<script>alert(1)</script>` appear only escaped on the list page, never as raw markup.
+- [x] AC12 The list is paginated, 20 goals per page.
   - With 21 goals, `/goals/` shows the 20 newest, and `/goals/?page=2` shows the oldest one.
   - Page links ("Previous"/"Next") appear only when there is such a page.
   - An out-of-range page (`?page=99`) returns 404, Django's default.
