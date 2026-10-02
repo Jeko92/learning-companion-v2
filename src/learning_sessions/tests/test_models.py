@@ -117,3 +117,19 @@ class LearningSessionDateTests(TestCase):
 
         session.refresh_from_db()
         self.assertEqual(session.date, date(2026, 3, 10))
+
+    def test_a_future_date_is_rejected(self):
+        with patch("django.utils.timezone.now", return_value=NOW):
+            for day in (date(2026, 3, 10), date(2025, 1, 1)):
+                with self.subTest(day=day):
+                    LearningSession(
+                        goal=self.goal, date=day, duration_minutes=30
+                    ).full_clean()
+
+            tomorrow = LearningSession(
+                goal=self.goal, date=date(2026, 3, 11), duration_minutes=30
+            )
+            with self.assertRaises(ValidationError) as caught:
+                tomorrow.full_clean()
+
+        self.assertIn("date", caught.exception.error_dict)

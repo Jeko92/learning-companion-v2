@@ -81,7 +81,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(session-mode
   - Test: with `django.utils.timezone.now` patched to `datetime(2026, 3, 10, 23, 30, tzinfo=UTC)`, a session saved without a date has `date == date(2026, 3, 10)`. The field is a `DateField`. Expected red: the field name is missing.
   - Impl: `date = DateField(default=timezone.localdate)`, plus a migration.
   - Covers: AC3.
-- [ ] 6. **A future date is rejected.**
+- [x] 6. **A future date is rejected.**
   - Test: with `now` patched as in step 5, `full_clean()` rejects `date(2026, 3, 11)` with an error on `date`, and accepts `date(2026, 3, 10)` and `date(2025, 1, 1)`. Expected red: no `ValidationError` for tomorrow.
   - Impl: the `reject_future_dates` validator on `date`, plus a migration.
   - Covers: AC3.

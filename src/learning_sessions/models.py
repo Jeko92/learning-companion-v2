@@ -1,7 +1,14 @@
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
+
+
+def reject_future_dates(value):
+    """A session logs time already spent, so it can't happen after today."""
+    if value > timezone.localdate():
+        raise ValidationError("A session can't be in the future.", code="future")
 
 
 class LearningSession(models.Model):
@@ -10,7 +17,9 @@ class LearningSession(models.Model):
     goal = models.ForeignKey(
         "goals.Goal", on_delete=models.CASCADE, related_name="sessions"
     )
-    date = models.DateField(default=timezone.localdate)
+    date = models.DateField(
+        default=timezone.localdate, validators=[reject_future_dates]
+    )
     duration_minutes = models.PositiveIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(1440)]
     )
