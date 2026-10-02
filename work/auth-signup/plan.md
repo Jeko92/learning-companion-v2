@@ -231,10 +231,11 @@ Step 13 is beyond the ACs: `sensitive_post_parameters`, as Django's own auth vie
 ## Review findings (review.md, 2026-10-02)
 The verdict was FAIL because AC7's visible-error half was not proven (finding 1). Findings 5 and 6 (security, low: transport hardening and admin throttling) were deferred to a deployment-hardening ticket, so they are not steps here.
 
-- [ ] 17. The re-rendered sign-up page shows each error: in every AC7 subtest, `message` is in `PageParser` `text("main")` of the response. Test: `src/accounts/tests/test_signup.py`, extending `test_invalid_signup_rerenders_the_form_with_the_field_error`. Impl: none. Covers: AC7 (finding 1, medium).
+- [x] 17. The re-rendered sign-up page shows each error: in every AC7 subtest, `message` is in `PageParser` `text("main")` of the response. Test: `src/accounts/tests/test_signup.py`, extending `test_invalid_signup_rerenders_the_form_with_the_field_error`. Impl: none. Covers: AC7 (finding 1, medium).
   - This is a guard that passes on arrival, because `{{ form }}` renders the errors. Confirm that it guards: temporarily render `{{ form.username }}{{ form.password1 }}{{ form.password2 }}` instead of `{{ form }}` in `signup.html`. Every subtest must go red, and the template is then restored.
   - The mismatch message contains a curly apostrophe (`didn’t`). Autoescaping leaves it unchanged, but compare against parsed text rather than raw HTML, so entity encoding can't matter.
   - Commit: `feat(auth-signup): prove the re-rendered sign-up page shows each error`.
+  - Done 2026-10-02: green on arrival. With `signup.html` rendering the bare fields without errors, all five subtests went red. The template was then restored.
 - [ ] 18. Pin the anonymous nav exactly: `page.text("nav") == "Goals Log in Sign up"` in `test_anonymous_nav_has_placeholders_and_a_signup_link`. Remove `test_anonymous_nav_shows_no_username`, which can't fail. Test: `src/accounts/tests/test_nav.py`. Impl: none. Covers: AC9, AC10 (finding 2, low).
   - This replaces a vacuous test with a stronger one. It is a deliberate test change, not a weakening, because the exact match subsumes the old assertion. Confirm it guards: temporarily render `{{ user.get_username }}` without the `is_authenticated` check, plus an extra stray word in the nav. The test must go red, and the change is then reverted.
   - Commit: `refactor(auth-signup): pin the anonymous nav text exactly`.

@@ -142,6 +142,10 @@ class SignUpInvalidTests(TestCase):
                 form = response.context["form"]
                 self.assertFormError(form, field, message)
                 self.assertEqual(list(form.errors), [field])
+                # The user must see the error, not just the form object hold it.
+                page = PageParser()
+                page.feed(response.content.decode())
+                self.assertIn(message, page.text("main"))
                 self.assertEqual(get_user_model().objects.count(), 1)
                 self.assertNotIn("_auth_user_id", self.client.session)
                 for password in {data["password1"], data["password2"]}:
