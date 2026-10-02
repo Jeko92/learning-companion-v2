@@ -45,7 +45,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-status-
 - [x] 3. The filter stays scoped to the owner. Bob's goals in the same statuses never appear in alice's `?status=<value>` lists. Impl: none, because the filter starts from `super().get_queryset()`. Covers: AC3.
   - Guard. Mutation: filter `Goal.objects.filter(status=…)` instead of `super().get_queryset()`. It must go red (bob's titles appear). Revert afterwards.
   - Done 2026-10-02: green on arrival. Under the mutation, all three subtests went red (bob's titles appeared). The view was then restored.
-- [ ] 4. The filter links, with the active one marked. Test:
+- [x] 4. The filter links, with the active one marked. Test:
   - On `/goals/`, the `<main>` links include `("/goals/?status=planned", "Planned")`, `("/goals/?status=in-progress", "In progress")` and `("/goals/?status=done", "Done")`. "All" isn't a link, and it's a `span` with `aria-current="page"`.
   - On `?status=done`, `("/goals/", "All")` is a link, and "Done" is the `aria-current="page"` span.
   - On `?status=bogus`, "All" is the active filter.

@@ -3,6 +3,20 @@
 {% block content %}
   <h1 class="text-2xl font-bold">Your goals</h1>
   <a href="{% url 'goals:create' %}" class="mt-4 inline-block font-medium hover:underline">New goal</a>
+  <nav aria-label="Filter by status" class="mt-6 flex gap-4 text-sm">
+    {% if active_status %}
+      <a href="{% url 'goals:list' %}" class="hover:underline">All</a>
+    {% else %}
+      <span aria-current="page" class="font-semibold">All</span>
+    {% endif %}
+    {% for value, label in statuses %}
+      {% if value == active_status %}
+        <span aria-current="page" class="font-semibold">{{ label }}</span>
+      {% else %}
+        <a href="{% url 'goals:list' %}?status={{ value }}" class="hover:underline">{{ label }}</a>
+      {% endif %}
+    {% endfor %}
+  </nav>
   <ul class="mt-6 space-y-3">
     {% for goal in goal_list %}
       <li class="flex justify-between rounded border border-slate-200 bg-white px-4 py-3">

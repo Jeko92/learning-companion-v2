@@ -638,3 +638,29 @@ class GoalStatusFilterTests(TestCase):
                 listed = self.listed(f"/goals/?status={status}")
 
                 self.assertFalse({t for t in listed if t.startswith("bob-")})
+
+    def active_filter(self, path):
+        """The text of the one aria-current="page" span (the active filter)."""
+        html = self.client.get(path).content.decode()
+        return re.findall(r'<span[^>]*aria-current="page"[^>]*>([^<]*)</span>', html)
+
+    def test_filter_links_mark_the_active_filter(self):
+        filters = [
+            ("/goals/?status=planned", "Planned"),
+            ("/goals/?status=in-progress", "In progress"),
+            ("/goals/?status=done", "Done"),
+        ]
+        page = get_page(self.client, "/goals/")
+        links = page.links("main")
+        for link in filters:
+            with self.subTest(link=link):
+                self.assertIn(link, links)
+        self.assertNotIn(("/goals/", "All"), links)
+        self.assertEqual(self.active_filter("/goals/"), ["All"])
+
+        done = get_page(self.client, "/goals/?status=done")
+        self.assertIn(("/goals/", "All"), done.links("main"))
+        self.assertNotIn(("/goals/?status=done", "Done"), done.links("main"))
+        self.assertEqual(self.active_filter("/goals/?status=done"), ["Done"])
+
+        self.assertEqual(self.active_filter("/goals/?status=bogus"), ["All"])
