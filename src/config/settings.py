@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     "django_tailwind_cli",
     "core",
     "accounts",
+    "tags",
+    "profiles",
 ]
 
 MIDDLEWARE = [

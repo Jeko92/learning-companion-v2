@@ -19,6 +19,8 @@ Styling uses Tailwind through `django-tailwind-cli`, a standalone binary with no
 
 Users sign up at `/accounts/signup/`, log in at `/accounts/login/` and log out with the nav's Log out button (a POST to `/accounts/logout/`). The project uses a custom user model, `accounts.User`. If your `src/db.sqlite3` was created before that change (before the `auth-signup` ticket), `migrate` fails with `InconsistentMigrationHistory`. Delete `src/db.sqlite3` once and run `migrate` again.
 
+Every user gets a profile (name, cohort, focus areas), created automatically when the user is created through sign-up, `createsuperuser` or the admin. Users loaded from fixtures don't get one automatically. Running `migrate` gives users who existed before that a profile too. Profiles can be edited in the admin on each user's page.
+
 Settings come from the environment via `django-environ`, read in `src/config/env.py`:
 
 | Variable | Default when unset | Notes |
@@ -43,6 +45,8 @@ Values are read from the process environment first. `.env` at the repo root only
 - `src/<app>/`: Django apps, each with its own tests
 - `src/core/`: the home page and other site-wide views
 - `src/accounts/`: the custom user model (`accounts.User`), and sign-up, log-in and log-out under `/accounts/`
+- `src/tags/`: shared tags (case-insensitive unique names), used for focus areas
+- `src/profiles/`: each user's profile (name, cohort, focus areas), created automatically for every user
 - `src/templates/`: project-wide templates (`base.html` layout, pages that extend it, `accounts/` pages)
 - `src/assets/`: static source files; the built `css/tailwind.css` is git-ignored
 - `work/`: workflow artifacts per ticket (`ticket.md`, `plan.md`, `review.md`)
