@@ -53,3 +53,5 @@ Constraints and context:
 - `TIME_ZONE = "UTC"` with `USE_TZ = True`, so "today" is `timezone.localdate()` in UTC.
 - Tests follow `src/goals/tests/` (`test_models.py`, `test_admin.py`, `test_apps.py`). Constraint tests use `update()` inside `transaction.atomic()` and expect `IntegrityError`.
 - **Docs:** `CLAUDE.md` (Stack and Layout) and `README.md`, where it applies, describe the new app and model. The plan includes this.
+
+Status: the user approved these acceptance criteria (AC1–AC9) on 2026-10-02. The next step is `plan-ticket`.
