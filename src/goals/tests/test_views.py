@@ -631,3 +631,10 @@ class GoalStatusFilterTests(TestCase):
             with self.subTest(path=path):
                 self.assertEqual(self.client.get(path).status_code, 200)
                 self.assertEqual(self.listed(path), set(self.titles.values()))
+
+    def test_the_filter_never_shows_other_users_goals(self):
+        for status in Goal.Status.values:
+            with self.subTest(status=status):
+                listed = self.listed(f"/goals/?status={status}")
+
+                self.assertFalse({t for t in listed if t.startswith("bob-")})

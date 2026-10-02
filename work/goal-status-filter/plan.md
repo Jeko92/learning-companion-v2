@@ -42,8 +42,9 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-status-
 
 - [x] 1. `?status=<value>` filters the list. With subtests for `planned`, `in-progress` and `done`, `GET /goals/?status=<value>` lists exactly alice's goals with that status (titles in `main`, newest first), and none of her others. Expected red: all of her goals are listed. Impl: `GoalListView.get_queryset()` filters `super().get_queryset()` by a valid `status`. Covers: AC1.
 - [x] 2. A missing, empty or invalid status shows all goals. With subtests for `/goals/`, `?status=` and `?status=bogus`: 200, and all of alice's goals are listed. Expected red: `?status=bogus` lists none. A naive filter applies any value, so the step 1 implementation stays minimal and step 2 adds the `in Goal.Status.values` check. Impl: validate against `Goal.Status.values`. Covers: AC2.
-- [ ] 3. The filter stays scoped to the owner. Bob's goals in the same statuses never appear in alice's `?status=<value>` lists. Impl: none, because the filter starts from `super().get_queryset()`. Covers: AC3.
+- [x] 3. The filter stays scoped to the owner. Bob's goals in the same statuses never appear in alice's `?status=<value>` lists. Impl: none, because the filter starts from `super().get_queryset()`. Covers: AC3.
   - Guard. Mutation: filter `Goal.objects.filter(status=…)` instead of `super().get_queryset()`. It must go red (bob's titles appear). Revert afterwards.
+  - Done 2026-10-02: green on arrival. Under the mutation, all three subtests went red (bob's titles appeared). The view was then restored.
 - [ ] 4. The filter links, with the active one marked. Test:
   - On `/goals/`, the `<main>` links include `("/goals/?status=planned", "Planned")`, `("/goals/?status=in-progress", "In progress")` and `("/goals/?status=done", "Done")`. "All" isn't a link, and it's a `span` with `aria-current="page"`.
   - On `?status=done`, `("/goals/", "All")` is a link, and "Done" is the `aria-current="page"` span.
