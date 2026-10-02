@@ -127,7 +127,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-signup)
   - the HTML has a `<form>` with `method="post"` and `action == reverse("accounts:signup")`, an `<input name="csrfmiddlewaretoken">`, and an `<input name=...>` for each of the three fields
 
   Test: `test_signup.py`, expected red `KeyError: 'form'`. Write that check as `assertIn("form", response.context)` so the red is an assertion. Impl: `src/accounts/forms.py` (`SignUpForm`); `SignUpView.get_context_data` adds `form=SignUpForm()` (still a `TemplateView`, so `POST` is not handled yet); the form markup in `signup.html`; and `PageParser.elements`, a list of `(tag, attrs dict)`, in `core/tests/html.py`. Covers: AC3.
-- [ ] 8. A valid `POST` creates exactly one user with a hashed password:
+- [x] 8. A valid `POST` creates exactly one user with a hashed password:
   - `get_user_model().objects.count() == 1`
   - `user.username == "alice"`
   - `user.check_password(PASSWORD)`

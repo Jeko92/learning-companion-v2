@@ -1,10 +1,9 @@
-from django.views.generic import TemplateView
+from django.views.generic import CreateView
 
 from accounts.forms import SignUpForm
 
 
-class SignUpView(TemplateView):
+class SignUpView(CreateView):
+    form_class = SignUpForm
     template_name = "accounts/signup.html"
-
-    def get_context_data(self, **kwargs):
-        return super().get_context_data(form=SignUpForm(), **kwargs)
+    success_url = "/"

@@ -6,6 +6,13 @@ from accounts import urls as accounts_urls
 from core.tests.html import PageParser
 
 SIGNUP_PATH = "/accounts/signup/"
+USERNAME = "alice"
+# Passes all four configured password validators for USERNAME.
+PASSWORD = "Tr4ck-Learning!"
+
+
+def signup_data(username=USERNAME, password1=PASSWORD, password2=PASSWORD):
+    return {"username": username, "password1": password1, "password2": password2}
 
 
 class SignUpPageTests(TestCase):
@@ -45,3 +52,15 @@ class SignUpPageTests(TestCase):
             {"csrfmiddlewaretoken", "username", "password1", "password2"},
             input_names,
         )
+
+
+class SignUpSubmitTests(TestCase):
+    def test_valid_signup_creates_one_user_with_a_hashed_password(self):
+        self.client.post(SIGNUP_PATH, signup_data())
+
+        users = get_user_model().objects.all()
+        self.assertEqual(users.count(), 1)
+        user = users.get()
+        self.assertEqual(user.username, USERNAME)
+        self.assertIs(user.check_password(PASSWORD), True)
+        self.assertNotEqual(user.password, PASSWORD)
