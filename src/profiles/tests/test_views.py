@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.shortcuts import resolve_url
 from django.test import TestCase
 from django.urls import reverse
 
@@ -13,6 +15,10 @@ def get_page(client, path):
     page = PageParser()
     page.feed(client.get(path).content.decode())
     return page
+
+
+def login_redirect(path):
+    return f"{resolve_url(settings.LOGIN_URL)}?next={path}"
 
 
 class ProfileDetailTests(TestCase):
@@ -53,3 +59,13 @@ class ProfileDetailTests(TestCase):
             self.assertLess(main.index("Django"), main.index("Python"))
             self.assertNotIn("Not set", main)
             self.assertNotIn("No focus areas yet.", main)
+
+    def test_anonymous_visitors_are_sent_to_log_in(self):
+        self.client.logout()
+        path = f"/profile/{self.profile.pk}/"
+
+        response = self.client.get(path)
+
+        self.assertRedirects(
+            response, login_redirect(path), fetch_redirect_response=False
+        )

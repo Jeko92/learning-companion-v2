@@ -96,7 +96,7 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
   - **empty:** `main` shows "Not set" twice and "No focus areas yet.".
 
   Expected red: the values are missing from `main`. Impl: the template's `<dl>` and placeholders. Covers: AC4.
-- [ ] 3. The detail page requires login. An anonymous `GET /profile/<pk>/` redirects to `f"{resolve_url(settings.LOGIN_URL)}?next=/profile/<pk>/"` (`fetch_redirect_response=False`). Expected red: `200 != 302`. Impl: `LoginRequiredMixin` on the detail view. Covers: AC2 (detail).
+- [x] 3. The detail page requires login. An anonymous `GET /profile/<pk>/` redirects to `f"{resolve_url(settings.LOGIN_URL)}?next=/profile/<pk>/"` (`fetch_redirect_response=False`). Expected red: `200 != 302`. Impl: `LoginRequiredMixin` on the detail view. Covers: AC2 (detail).
 - [ ] 4. Another user's profile, and an id that doesn't exist, are 404 on the detail page. Bob, logged in, requests alice's detail URL, and then `pk=999999`. Both return 404, and the first response contains neither alice's name nor her cohort. Expected red: `200 != 404`. Impl: `OwnProfileMixin` (the scoped `get_queryset`) used by the detail view. Covers: AC5 (detail).
 - [ ] 5. `/profile/` sends you to your own profile. Logged in:
   - `GET /profile/` returns 302, **asserted first**, to alice's detail URL.
