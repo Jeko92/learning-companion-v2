@@ -35,3 +35,27 @@ class TagModelTests(TestCase):
         with self.assertRaises(ValidationError) as caught:
             Tag(name="PYTHON").full_clean()
         self.assertIn("A tag with this name already exists.", caught.exception.messages)
+
+
+class GetOrCreateByNameTests(TestCase):
+    def setUp(self):
+        self.python = Tag.objects.create(name="Python")
+
+    def test_finds_an_existing_tag_whatever_the_case_and_whitespace(self):
+        tag, created = Tag.objects.get_or_create_by_name(" PYTHON ")
+
+        self.assertEqual((tag, created), (self.python, False))
+        self.assertEqual(tag.name, "Python")
+        self.assertEqual(Tag.objects.count(), 1)
+
+    def test_creates_a_trimmed_tag_when_none_matches(self):
+        tag, created = Tag.objects.get_or_create_by_name(" Django ")
+
+        self.assertIs(created, True)
+        self.assertEqual(Tag.objects.get(pk=tag.pk).name, "Django")
+
+    def test_blank_name_is_rejected_and_creates_nothing(self):
+        with self.assertRaises(ValidationError):
+            Tag.objects.get_or_create_by_name("   ")
+
+        self.assertEqual(Tag.objects.count(), 1)

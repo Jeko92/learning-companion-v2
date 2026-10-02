@@ -2,10 +2,27 @@ from django.db import models
 from django.db.models.functions import Lower
 
 
+class TagManager(models.Manager):
+    def get_or_create_by_name(self, name):
+        """Turn typed input into a tag: (tag, created), matched the way the
+        unique constraint compares names (trimmed, ASCII case-insensitive), so
+        the first spelling is kept. A blank name raises ValidationError."""
+        name = name.strip()
+        tag = self.filter(name__iexact=name).first()
+        if tag is not None:
+            return tag, False
+        tag = self.model(name=name)
+        tag.full_clean()
+        tag.save()
+        return tag, True
+
+
 class Tag(models.Model):
     """A shared label, e.g. a profile's focus area (and later a session tag)."""
 
     name = models.CharField(max_length=50)
+
+    objects = TagManager()
 
     class Meta:
         ordering = ("name",)
