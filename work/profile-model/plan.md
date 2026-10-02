@@ -115,8 +115,9 @@ Each step is one red–green–refactor cycle and one commit, `feat(profile-mode
   - a successful `POST /accounts/signup/`
 
   Each asserts `Profile.objects.filter(user=user).count() == 1`, `name == ""`, `cohort == ""` and no `focus_areas`. Expected red: `0 != 1`. Impl: `src/profiles/signals.py` (the receiver as designed) and `ProfilesConfig.ready()` importing it. Covers: AC5.
-- [ ] 10. Saving an existing user again creates no second profile and doesn't raise. Change `first_name` and `save()` twice, then check the count is still 1. Test: `test_signals.py`. Impl: none. Covers: AC5.
+- [x] 10. Saving an existing user again creates no second profile and doesn't raise. Change `first_name` and `save()` twice, then check the count is still 1. Test: `test_signals.py`. Impl: none. Covers: AC5.
   - Guard. Mutation: the receiver creates `Profile.objects.create(user=instance)` without checking `created`. It must go red (`IntegrityError` on the re-save). Revert afterwards.
+  - Done 2026-10-02: green on arrival. Under the mutation it went red with `IntegrityError: UNIQUE constraint failed: profiles_profile.user_id`. The receiver was then restored.
 - [ ] 11. Deleting a user deletes their profile. `user.delete()`, then `Profile.objects.filter(pk=profile_pk).exists()` is false. Test: `test_models.py`. Impl: none, because `CASCADE` comes from step 8. Covers: AC6.
   - Guard. Mutation: `on_delete=models.PROTECT` in a scratch edit, with a matching migration not needed for the run. It must go red (`ProtectedError`). Revert afterwards.
 - [ ] 12. `str(profile)` is the name, or the username when the name is blank. Subtests: blank gives `"alice"`; `name="Alice Smith"` gives `"Alice Smith"`. Test: `test_models.py`. Expected red: `'Profile object (1)' != 'alice'`. Impl: `Profile.__str__`. Covers: AC7.

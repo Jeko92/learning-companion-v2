@@ -39,3 +39,12 @@ class ProfileAutoCreationTests(TestCase):
                 user = create(f"{USERNAME}-{path}")
 
                 self.assert_has_one_empty_profile(user)
+
+    def test_saving_an_existing_user_again_adds_no_profile(self):
+        user = get_user_model().objects.create_user(USERNAME, password=PASSWORD)
+
+        for first_name in ("Alice", "Alicia"):
+            user.first_name = first_name
+            user.save()
+
+        self.assertEqual(Profile.objects.filter(user=user).count(), 1)
