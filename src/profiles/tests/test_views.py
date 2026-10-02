@@ -159,3 +159,31 @@ class ProfileEditTests(TestCase):
         page = get_page(self.client, f"/profile/{self.profile.pk}/")
 
         self.assertIn((self.path, "Edit profile"), page.links("main"))
+
+    def test_anonymous_visitors_are_sent_to_log_in_and_nothing_is_saved(self):
+        self.client.logout()
+        for method in ("get", "post"):
+            with self.subTest(method=method):
+                # Only the POST carries data; on a GET it would land in `next`.
+                data = {"name": "hacked"} if method == "post" else None
+                response = getattr(self.client, method)(self.path, data)
+
+                self.assertRedirects(
+                    response, login_redirect(self.path), fetch_redirect_response=False
+                )
+                self.profile.refresh_from_db()
+                self.assertEqual(self.profile.name, "Alice")
+
+    def test_another_user_cannot_see_or_change_your_profile(self):
+        bob = get_user_model().objects.create_user("bob", password=PASSWORD)
+        self.client.force_login(bob)
+        for method in ("get", "post"):
+            with self.subTest(method=method):
+                # Only the POST carries data; on a GET it would land in `next`.
+                data = {"name": "hacked"} if method == "post" else None
+                response = getattr(self.client, method)(self.path, data)
+
+                self.assertEqual(response.status_code, 404)
+                self.assertNotContains(response, "Alice", status_code=404)
+                self.profile.refresh_from_db()
+                self.assertEqual(self.profile.name, "Alice")

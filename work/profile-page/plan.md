@@ -120,12 +120,14 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
   - the `profile_form.html` template, and the Edit link in the detail template
 
   Covers: AC1 (edit), AC4 (link), AC6.
-- [ ] 7. The edit page is login-required and scoped. Subtests:
+- [x] 7. The edit page is login-required and scoped. Subtests:
   - **anonymous** `GET` and `POST` to alice's edit URL: redirected to login with `next`, and the name is unchanged
   - **bob** `GET` and `POST` (`name="hacked"`) to alice's edit URL: 404 both times, alice's name is unchanged, and the 404 page contains none of alice's values
 
   Impl: none, because `OwnProfileMixin` from step 6 already covers it. Covers: AC2 (edit), AC5 (edit).
   - Guard. Mutation: the update view uses `LoginRequiredMixin, UpdateView` with `model = Profile` (unscoped) instead of `OwnProfileMixin`. The bob subtests must go red. Revert afterwards.
+  - Done 2026-10-02: green on arrival, after one deliberate test fix. The first draft sent `{"name": "hacked"}` with the GET too, which put it in the query string and so in `next`. Now only the POST carries data.
+  - Under the mutation, both bob subtests went red: GET `200 != 404`, and the POST errored because the unscoped view accepted the save. The view was then restored.
 - [ ] 8. A valid save stores trimmed values and redirects with a message. POST `name="  Alice Smith "`, `cohort=" Spring 2026 "` and `focus_areas=""`. Assert:
   - a redirect to the detail URL
   - the stored values are trimmed
