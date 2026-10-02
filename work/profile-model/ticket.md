@@ -5,38 +5,38 @@ Issue: #5 · Branch: feature/profile-model
 As a learner using the Learning Companion, I want every account to have a profile with my name, cohort and focus areas, so that later pages can show my own data and the dashboard can group my learning by topic.
 
 ## Acceptance criteria
-- [ ] AC1 Two new apps are installed: `tags` and `profiles` (`apps.is_installed("tags")` and `apps.is_installed("profiles")` are both true).
-- [ ] AC2 `tags.Tag` has a `name` of at most 50 characters, and `str(tag)` is its name.
+- [x] AC1 Two new apps are installed: `tags` and `profiles` (`apps.is_installed("tags")` and `apps.is_installed("profiles")` are both true).
+- [x] AC2 `tags.Tag` has a `name` of at most 50 characters, and `str(tag)` is its name.
   - The name is stored trimmed: `Tag.objects.create(name="  Python ")` stores `"Python"`.
   - A blank or whitespace-only name fails `full_clean()` with a `ValidationError`.
-- [ ] AC3 Tag names are unique regardless of case.
+- [x] AC3 Tag names are unique regardless of case.
   - Creating `"python"` when `"Python"` exists raises an `IntegrityError`, enforced by the database, not only by validation.
   - A get-or-create lookup by name returns the existing tag for any case and surrounding-whitespace variant (`" PYTHON "` finds `"Python"`), keeping the first spelling. It creates a new tag only when none matches.
-- [ ] AC4 `profiles.Profile` is linked one-to-one to `settings.AUTH_USER_MODEL`, reachable as `user.profile`. Its fields:
+- [x] AC4 `profiles.Profile` is linked one-to-one to `settings.AUTH_USER_MODEL`, reachable as `user.profile`. Its fields:
   - `name`: up to 100 characters, may be blank
   - `cohort`: up to 50 characters, may be blank
   - `focus_areas`: many-to-many to `Tag`, may be empty
 
   `accounts.User` gains no fields; profile data lives only on `Profile`.
-- [ ] AC5 Every new user automatically gets exactly one profile, with an empty name and cohort and no focus areas. This applies to every way a user is created:
+- [x] AC5 Every new user automatically gets exactly one profile, with an empty name and cohort and no focus areas. This applies to every way a user is created:
   - `create_user`
   - `create_superuser`
   - a successful `POST /accounts/signup/`
 
   Saving an existing user again doesn't create a second profile and doesn't raise.
-- [ ] AC6 Deleting a user deletes their profile.
-- [ ] AC7 `str(profile)` is the profile's name when it is set, and the username when it is blank.
-- [ ] AC8 Focus areas work as shared tags.
+- [x] AC6 Deleting a user deletes their profile.
+- [x] AC7 `str(profile)` is the profile's name when it is set, and the username when it is blank.
+- [x] AC8 Focus areas work as shared tags.
   - A profile can hold several tags.
   - Two profiles can share the same `Tag` row, so no duplicate is created.
   - A tag lists the profiles that use it.
   - Deleting a tag removes it from profiles without deleting any profile.
-- [ ] AC9 The admin covers both models.
+- [x] AC9 The admin covers both models.
   - `Tag` is registered with a search on `name`.
   - The `User` admin is still a `UserAdmin` and shows the profile inline (name, cohort, focus areas).
   - The admin's change page for a user returns 200 and contains the inline's fields.
-- [ ] AC10 Users who existed before this ticket get a profile too. Applying the `profiles` migrations to a database that already has users leaves every user with exactly one empty profile (a data migration, tested with the migration executor).
-- [ ] AC11 The migrations are complete: `makemigrations --check` reports no changes (the existing project-wide test stays green).
+- [x] AC10 Users who existed before this ticket get a profile too. Applying the `profiles` migrations to a database that already has users leaves every user with exactly one empty profile (a data migration, tested with the migration executor).
+- [x] AC11 The migrations are complete: `makemigrations --check` reports no changes (the existing project-wide test stays green).
 
 ## Out of scope
 - Profile pages and forms (view or edit your own profile): ticket #6, `profile-page`. It decides which fields the edit form requires.
