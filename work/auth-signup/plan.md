@@ -186,7 +186,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-signup)
   - after `force_login`: `page.links("nav") == []`, "Goals" is in `page.text("nav")`, and "Log in" is not
 
   Test: `src/accounts/tests/test_nav.py`, two tests (anonymous, logged in). The expected red for the anonymous test is `[] != [('/accounts/signup/', 'Sign up')]`. The logged-in test fails as well, because "Log in" is still shown, so both go red for real. Impl: the `{% if user.is_authenticated %}…{% else %}<span>Log in</span><a href="{% url 'accounts:signup' %}">Sign up</a>{% endif %}` block in `base.html`, and `PageParser.links(section)` in `core/tests/html.py`. Covers: AC9.
-- [ ] 15. Logged-in users see their username in the nav, and anonymous visitors don't. A user `alice` exists in both cases:
+- [x] 15. Logged-in users see their username in the nav, and anonymous visitors don't. A user `alice` exists in both cases:
   - after `force_login`, `"alice"` is in `page.text("nav")`
   - anonymous, `"alice"` is not in `page.text("nav")`
 

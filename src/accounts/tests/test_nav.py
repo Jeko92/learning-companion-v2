@@ -36,3 +36,17 @@ class NavTests(TestCase):
         self.assertEqual(page.links("nav"), [])
         self.assertIn("Goals", page.text("nav"))
         self.assertNotIn("Log in", page.text("nav"))
+
+    def test_logged_in_nav_shows_the_username(self):
+        self.log_in()
+
+        page = self.get_page()
+
+        self.assertIn(USERNAME, page.text("nav"))
+
+    def test_anonymous_nav_shows_no_username(self):
+        get_user_model().objects.create_user(USERNAME, password=PASSWORD)
+
+        page = self.get_page()
+
+        self.assertNotIn(USERNAME, page.text("nav"))
