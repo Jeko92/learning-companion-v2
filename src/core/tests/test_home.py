@@ -7,8 +7,9 @@ from django.contrib.messages.storage import default_storage
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.template.loader import render_to_string
 from django.test import RequestFactory, TestCase
-from django.urls import resolve
+from django.urls import URLResolver, get_resolver, resolve
 
+from core import urls as core_urls
 from core import views
 
 # Elements that never get an end tag, so they must not stay on the open stack.
@@ -67,6 +68,18 @@ class HomePageTests(TestCase):
         self.assertIs(match.func, views.home)
         self.assertEqual(match.url_name, "home")
         self.assertIs(resolve("/", urlconf="core.urls").func, views.home)
+
+    def test_root_urlconf_includes_core_urls_at_the_root(self):
+        # resolve() gives the same match for a direct path() to the view, so
+        # check the root URLconf for the include itself. include() imports the
+        # module, so urlconf_name is the module, not the dotted path.
+        includes = [
+            str(pattern.pattern)
+            for pattern in get_resolver().url_patterns
+            if isinstance(pattern, URLResolver) and pattern.urlconf_name is core_urls
+        ]
+
+        self.assertEqual(includes, [""])
 
     def test_home_renders_home_template_extending_base(self):
         response = self.client.get("/")
