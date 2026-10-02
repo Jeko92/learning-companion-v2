@@ -74,3 +74,38 @@ class LoginSubmitTests(TestCase):
         )
 
         self.assertContains(response, f"Welcome back, {USERNAME}!")
+
+
+INVALID_LOGIN = (
+    "Please enter a correct username and password. Note that both fields may be"
+    " case-sensitive."
+)
+
+
+class LoginFailureTests(TestCase):
+    def setUp(self):
+        get_user_model().objects.create_user(USERNAME, password=PASSWORD)
+
+    def test_failed_login_shows_one_generic_error(self):
+        # Same message for a wrong password and an unknown username, so the page
+        # doesn't reveal which usernames exist.
+        cases = (
+            ("wrong password", USERNAME, "Wrong-Pass-9!"),
+            ("unknown username", "nobody", "Wrong-Pass-9!"),
+        )
+        main_texts = []
+        for case, username, password in cases:
+            with self.subTest(case=case):
+                response = self.client.post(
+                    LOGIN_PATH, {"username": username, "password": password}
+                )
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "accounts/login.html")
+                page = PageParser()
+                page.feed(response.content.decode())
+                self.assertIn(INVALID_LOGIN, page.text("main"))
+                self.assertNotIn("_auth_user_id", self.client.session)
+                self.assertNotContains(response, password)
+                main_texts.append(page.text("main"))
+        self.assertEqual(main_texts[0], main_texts[1])

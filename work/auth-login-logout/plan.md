@@ -92,7 +92,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-login-l
 - [x] 2. The page renders the login form: `page.forms("main")` has exactly one form with `method="post"` and `action=reverse("accounts:login")`, whose inputs include `csrfmiddlewaretoken`, `username` and `password`. Test: `test_login.py`, expected red `[] != [...]`. Impl: `PageParser.forms(section)` in `core/tests/html.py`; `LogInView.get_context_data` adds `form=AuthenticationForm(self.request)` (still a `TemplateView`); the form markup in `login.html` (no `next` input yet). Covers: AC2.
 - [x] 3. Valid credentials log the user in and redirect to `LOGIN_REDIRECT_URL`: after posting `alice`/`PASSWORD`, `client.session["_auth_user_id"] == str(user.pk)`, and `assertRedirects(…, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False)`. Test: `test_login.py`, expected red: no `_auth_user_id` (a `TemplateView` answers `POST` with 405). Impl: `LogInView` becomes `auth_views.LoginView` with `template_name`, and `get_context_data` is dropped. Covers: AC3.
 - [x] 4. After login, the landing page shows "Welcome back, alice!" (`POST` with `follow=True`, then `assertContains`). Test: `test_login.py`, expected red: the message is not found. Impl: a `form_valid` override with `messages.success`. Covers: AC4.
-- [ ] 5. A failed login shows one generic, visible error, and the page doesn't reveal which usernames exist. The test has two subtests, a wrong password for `alice` and an unknown username `nobody`. Each asserts:
+- [x] 5. A failed login shows one generic, visible error, and the page doesn't reveal which usernames exist. The test has two subtests, a wrong password for `alice` and an unknown username `nobody`. Each asserts:
   - status 200, and `login.html` used
   - the `invalid_login` text is in `page.text("main")`
   - `_auth_user_id` is not in the session
@@ -100,6 +100,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-login-l
 
   Across the two subtests, the `<main>` text is identical once the echoed username value is removed. Test: `test_login.py`. Impl: none. Covers: AC5.
   - This is a guard. Mutation: render `{{ form.username }}{{ form.password }}` without errors. Both subtests must go red. Revert afterwards.
+  - Done 2026-10-02: green on arrival. The mutation turned both subtests red: the message was not found in `'Log in Log in'`. The final "identical text" comparison also errored as a knock-on, because the failed subtests recorded no text. The template was restored. The username echo lives in an attribute, not in text, so the two `<main>` texts compare equal directly.
 - [ ] 6. A deactivated account can't log in, and the page doesn't reveal it. A user `alice` with `is_active=False` posts the correct password. The page shows the same `invalid_login` text, not "This account is inactive.", and no one is logged in. Test: `test_login.py`. Impl: none. Covers: AC14.
   - This is a guard. Mutation: `@override_settings(AUTHENTICATION_BACKENDS=["django.contrib.auth.backends.AllowAllUsersModelBackend"])` on the test, run in a scratch edit. It must go red, because the "inactive" message appears instead. Revert afterwards.
 - [ ] 7. A safe `next` is carried and honoured:
