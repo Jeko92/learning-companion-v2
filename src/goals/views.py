@@ -29,6 +29,25 @@ class GoalListView(OwnGoalsMixin, ListView):
     template_name = "goals/goal_list.html"
     paginate_by = 20
 
+    def active_status(self):
+        """The status to filter by, or "" (All) for a missing or unknown one."""
+        status = self.request.GET.get("status")
+        return status if status in Goal.Status.values else ""
+
+    def get_queryset(self):
+        goals = super().get_queryset()
+        if status := self.active_status():
+            goals = goals.filter(status=status)
+        return goals
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["active_status"] = self.active_status()
+        context["statuses"] = Goal.Status.choices
+        # Before filtering: tells "filter hides everything" from "no goals".
+        context["has_goals"] = super().get_queryset().exists()
+        return context
+
 
 class GoalDetailView(OwnGoalsMixin, DetailView):
     pass

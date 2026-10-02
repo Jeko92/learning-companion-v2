@@ -3,6 +3,20 @@
 {% block content %}
   <h1 class="text-2xl font-bold">Your goals</h1>
   <a href="{% url 'goals:create' %}" class="mt-4 inline-block font-medium hover:underline">New goal</a>
+  <nav aria-label="Filter by status" class="mt-6 flex gap-4 text-sm">
+    {% if active_status %}
+      <a href="{% url 'goals:list' %}" class="hover:underline">All</a>
+    {% else %}
+      <span aria-current="page" class="font-semibold">All</span>
+    {% endif %}
+    {% for value, label in statuses %}
+      {% if value == active_status %}
+        <span aria-current="page" class="font-semibold">{{ label }}</span>
+      {% else %}
+        <a href="{% url 'goals:list' %}?status={{ value }}" class="hover:underline">{{ label }}</a>
+      {% endif %}
+    {% endfor %}
+  </nav>
   <ul class="mt-6 space-y-3">
     {% for goal in goal_list %}
       <li class="flex justify-between rounded border border-slate-200 bg-white px-4 py-3">
@@ -10,16 +24,16 @@
         <span class="text-sm text-slate-500">{{ goal.get_status_display }}</span>
       </li>
     {% empty %}
-      <li>No goals yet.</li>
+      <li>{% if active_status and has_goals %}No goals with this status.{% else %}No goals yet.{% endif %}</li>
     {% endfor %}
   </ul>
   {% if is_paginated %}
     <nav class="mt-6 flex gap-6 text-sm" aria-label="Pages">
       {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}" class="hover:underline">Previous</a>
+        <a href="{% querystring page=page_obj.previous_page_number %}" class="hover:underline">Previous</a>
       {% endif %}
       {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}" class="hover:underline">Next</a>
+        <a href="{% querystring page=page_obj.next_page_number %}" class="hover:underline">Next</a>
       {% endif %}
     </nav>
   {% endif %}
