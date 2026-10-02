@@ -5,15 +5,15 @@ Issue: #2 · Branch: feature/setup-layout-tailwind
 As a learner using the Learning Companion, I want a consistent, styled page layout and a home page at `/`, so that every feature built later has a shared frame and the app has a landing page.
 
 ## Acceptance criteria
-- [ ] AC1 `GET /` returns 200 and renders `home.html`, which extends `base.html`. Both show up in `assertTemplateUsed`.
-- [ ] AC2 `base.html` and `home.html` are loaded from the project-level `src/templates/` directory, not from an app's `templates/` folder.
-- [ ] AC3 The layout's header shows the app name "Learning Companion", and the page `<title>` contains "Learning Companion".
-- [ ] AC4 The layout's nav shows "Goals" and "Log in" as placeholders that aren't links: neither is inside an element with an `href`.
-- [ ] AC5 The layout renders Django messages. A message added for the request appears on the rendered page.
-- [ ] AC6 The layout has a content block that the home page fills, and the home page shows the one-line pitch "Track your learning goals and sessions, and get AI-powered summaries and next steps."
-- [ ] AC7 The layout has a `<footer>`.
-- [ ] AC8 The layout links the Tailwind stylesheet. The rendered page contains the `<link rel="stylesheet">` that `django-tailwind-cli` produces for its CSS file, and the test passes without the CSS having been built.
-- [ ] AC9 `django_tailwind_cli` and a new `core` app are in `INSTALLED_APPS`, and the home view lives in `core`, routed through `core/urls.py` included at `/`.
+- [x] AC1 `GET /` returns 200 and renders `home.html`, which extends `base.html`. Both show up in `assertTemplateUsed`.
+- [x] AC2 `base.html` and `home.html` are loaded from the project-level `src/templates/` directory, not from an app's `templates/` folder.
+- [x] AC3 The layout's header shows the app name "Learning Companion", and the page `<title>` contains "Learning Companion".
+- [x] AC4 The layout's nav shows "Goals" and "Log in" as placeholders that aren't links: neither is inside an element with an `href`.
+- [x] AC5 The layout renders Django messages. A message added for the request appears on the rendered page.
+- [x] AC6 The layout has a content block that the home page fills, and the home page shows the one-line pitch "Track your learning goals and sessions, and get AI-powered summaries and next steps."
+- [x] AC7 The layout has a `<footer>`.
+- [x] AC8 The layout links the Tailwind stylesheet. The rendered page contains the `<link rel="stylesheet">` that `django-tailwind-cli` produces for its CSS file, and the test passes without the CSS having been built.
+- [x] AC9 `django_tailwind_cli` and a new `core` app are in `INSTALLED_APPS`, and the home view lives in `core`, routed through `core/urls.py` included at `/`.
 
 ## Out of scope
 - Real auth links and auth-aware nav (tickets `auth-signup`, `auth-login-logout`).
