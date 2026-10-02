@@ -210,7 +210,7 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
   Rename the test to `test_logged_in_nav_links_the_username_to_the_profile_and_has_logout`. The anonymous nav test is unchanged. Expected red: `[] != [('/profile/', 'alice')]`. Impl: the `<a>` in `base.html`. Covers: AC11.
   - This deliberately changes #4 AC10 ("no links" when logged in), recorded in the step note and the commit body.
   - Done 2026-10-02: red as expected (`[] != [('/profile/', 'alice')]`), then green with the `<a>` in `base.html`. The exact nav text and the logout-form assertions were unchanged, and so was the anonymous nav test.
-- [ ] 18. Docs. No test. Commit `docs(profile-page): document the profile pages and tag normalisation`.
+- [x] 18. Docs. No test. Commit `docs(profile-page): document the profile pages and tag normalisation`.
   - `CLAUDE.md`:
     - **Stack, auth bullet:** the profile pages (`/profile/` redirects to your own, `/profile/<pk>/` and `/profile/<pk>/edit/` are login-required), and any view taking a pk must scope its queryset to `request.user` (`OwnProfileMixin`), so others' ids are 404.
     - **Tags bullet:** names are NFKC-normalised with whitespace collapsed; control and invisible characters are rejected; `Tag.objects.clean_name()` validates without touching the DB; and `get_or_create_by_name` validates before its lookup.
@@ -220,6 +220,13 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
     - log in as A, follow `/profile/`, edit with tags "Python, Django", and see "Profile saved."
     - log in as B and request A's `/profile/<pk>/` and `/edit/`: both 404
     - delete the throwaway users afterwards
+  - Done 2026-10-02. Results against `runserver` with curl, a cookie jar per user and real CSRF tokens:
+    - `migrate` applied `tags.0003_alter_tag_name` to the dev DB.
+    - Anonymous `/profile/` gave 302 to `/accounts/login/?next=/profile/`.
+    - For mc-alice, `/profile/` gave 302 to `/profile/3/`. Saving name "MC Alice" with focus areas "Python, Django, python" gave 302 back, and the page showed "Profile saved.", the name and the two tags (Django, Python).
+    - The nav username linked to `/profile/`.
+    - mc-bob got 404 for alice's detail, for her edit page and for a POST to it, and alice's name was unchanged.
+    - The throwaway users and their two tags were deleted (0 users, 0 tags left).
 
 ## Coverage
 | AC | Steps |
