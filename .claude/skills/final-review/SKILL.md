@@ -11,9 +11,13 @@ Read `.claude/state/workflow.json`. The phase must be `reviewing`. All plan step
 
 ## Steps
 
-1. Collect the diff under review: `git diff develop...HEAD` (paths only in the main context; the reviewers read the contents themselves).
+1. **Fix the review base and collect the diff under review** (paths only in the main context; the reviewers read the contents themselves). The code reviewer reviews only new code, never earlier tickets or already-reviewed steps.
+   - **First review of the ticket:** base = `git merge-base origin/develop HEAD`.
+   - **Re-review after a FAIL:** base = the ticket's latest `docs(<id>): review findings` commit (`git log --format=%h --grep="docs(<id>): review findings" -1`). The scope is then only the fix steps.
+
+   Then run `git diff --stat <base>..HEAD`.
 2. **Verification fan-out.** Spawn both reviewers in parallel, each with its own lens and a clean context:
-   - `code-reviewer` agent: correctness, plan conformance, test quality of the changed files.
+   - `code-reviewer` agent: correctness, plan conformance, test quality of the changed files. Pass it the ticket id, the review base and the changed files. On a re-review, also tell it to confirm the previous `review.md` findings are resolved. Don't ask it to review the whole branch again. Its agent definition limits it to `<base>..HEAD`.
    - `security-reviewer` agent: OWASP Top 10, authn/authz, secrets in the changed files.
 
    The reviewers are read-only by design. They report findings; they do not fix anything.
