@@ -247,6 +247,19 @@ class LoginLoggedInTests(TestCase):
         )
         self.assertTemplateNotUsed(response, "accounts/login.html")
 
+    def test_logged_in_get_never_follows_an_unsafe_next(self):
+        # The logged-in short-circuit (dispatch -> get_success_url) is a
+        # separate path from form_valid, so pin its next check too.
+        for payload in UNSAFE_NEXTS:
+            with self.subTest(payload=payload):
+                response = self.client.get(LOGIN_PATH, {"next": payload})
+
+                self.assertRedirects(
+                    response,
+                    settings.LOGIN_REDIRECT_URL,
+                    fetch_redirect_response=False,
+                )
+
     def test_logged_in_post_redirects_without_logging_in_again(self):
         # Empty data: a re-login with valid credentials would redirect to the
         # same place, so only the logged-in short-circuit can pass this.
