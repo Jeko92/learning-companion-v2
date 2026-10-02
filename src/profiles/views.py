@@ -1,5 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import DetailView
+from django.urls import reverse
+from django.views.generic import DetailView, RedirectView
 
 from profiles.models import Profile
 
@@ -16,3 +17,12 @@ class OwnProfileMixin(LoginRequiredMixin):
 
 class ProfileDetailView(OwnProfileMixin, DetailView):
     template_name = "profiles/profile_detail.html"
+
+
+class MyProfileView(LoginRequiredMixin, RedirectView):
+    """/profile/: your own profile, so its id never has to be known."""
+
+    def get_redirect_url(self, *args, **kwargs):
+        # get_or_create: users loaded from fixtures have no profile (CLAUDE.md).
+        profile, _ = Profile.objects.get_or_create(user=self.request.user)
+        return reverse("profiles:detail", args=[profile.pk])

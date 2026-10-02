@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.tests.html import PageParser
+from profiles.models import Profile
 from tags.models import Tag
 
 USERNAME = "alice"
@@ -83,3 +84,43 @@ class ProfileDetailTests(TestCase):
         self.assertNotContains(response, "Alice Smith", status_code=404)
         self.assertNotContains(response, "Spring 2026", status_code=404)
         self.assertEqual(self.client.get("/profile/999999/").status_code, 404)
+
+
+class MyProfileTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user(USERNAME, password=PASSWORD)
+
+    def test_sends_you_to_your_own_profile(self):
+        self.client.force_login(self.alice)
+
+        response = self.client.get("/profile/")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(
+            response,
+            f"/profile/{self.alice.profile.pk}/",
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(reverse("profiles:mine"), "/profile/")
+
+    def test_creates_a_missing_profile_first(self):
+        # loaddata saves users with raw=True, so the signal makes no profile.
+        fixture_user = get_user_model()(username="fixture")
+        fixture_user.save_base(raw=True)
+        self.client.force_login(fixture_user)
+
+        response = self.client.get("/profile/")
+
+        self.assertEqual(response.status_code, 302)
+        profile = Profile.objects.get(user=fixture_user)
+        self.assertRedirects(
+            response, f"/profile/{profile.pk}/", fetch_redirect_response=False
+        )
+
+    def test_anonymous_visitors_are_sent_to_log_in(self):
+        response = self.client.get("/profile/")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(
+            response, login_redirect("/profile/"), fetch_redirect_response=False
+        )
