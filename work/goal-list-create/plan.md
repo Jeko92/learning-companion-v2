@@ -60,7 +60,7 @@ Guard steps (7, 8, 10, 12) name their mutation.
   - `.owned_by(alice).filter(status=Goal.Status.DONE)` chains
 
   Expected red: `False is not true`. Impl: `GoalQuerySet` and `objects = GoalQuerySet.as_manager()`, with no migration (checked by `MigrationsTests`). Covers: AC3.
-- [ ] 2. The goals list is served. Logged in as alice, `GET /goals/`:
+- [x] 2. The goals list is served. Logged in as alice, `GET /goals/`:
   - the status is **asserted first** (200)
   - `goals/goal_list.html` and `base.html` are used
   - `reverse("goals:list") == "/goals/"`
