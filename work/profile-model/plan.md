@@ -78,7 +78,7 @@ The user approved this plan on 2026-10-02.
 
 Each step is one red–green–refactor cycle and one commit, `feat(profile-model): …`. Test commands: `./.venv/bin/python src/manage.py test <app>.tests.test_<x>` for the step, and the full suite before every commit.
 
-- [ ] 1. The `tags` app is installed. Test: `src/tags/tests/test_apps.py` (`SimpleTestCase`, `apps.is_installed("tags")`). Expected red: `False is not True`. Impl: `src/tags/__init__.py`, `src/tags/apps.py` (`TagsConfig`), `src/tags/tests/__init__.py`, and `"tags"` added to `INSTALLED_APPS` after `"accounts"`. Covers: AC1.
+- [x] 1. The `tags` app is installed. Test: `src/tags/tests/test_apps.py` (`SimpleTestCase`, `apps.is_installed("tags")`). Expected red: `False is not True`. Impl: `src/tags/__init__.py`, `src/tags/apps.py` (`TagsConfig`), `src/tags/tests/__init__.py`, and `"tags"` added to `INSTALLED_APPS` after `"accounts"`. Covers: AC1.
 - [ ] 2. `Tag` exists with a `name` of at most 50 characters and shows it. Test: `src/tags/tests/test_models.py`:
   - `tags.Tag` is registered
   - `Tag._meta.get_field("name").max_length == 50`
