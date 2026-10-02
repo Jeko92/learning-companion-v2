@@ -16,18 +16,20 @@ As a visitor to the Learning Companion, I want to create an account with a usern
   - a password rejected by the configured password validators (e.g. too short or too common)
 - [ ] AC7 For a logged-in user, both `GET` and `POST` to `/accounts/signup/` redirect to `/`. The form is not rendered and no user is created.
 - [ ] AC8 For anonymous visitors, the nav shows a "Sign up" link to `/accounts/signup/`. For logged-in users there is no such link. "Goals" and "Log in" stay non-link placeholders.
+- [ ] AC9 For a logged-in user, the nav shows their username, which signals that they are signed in. Anonymous visitors see no username in the nav.
 
 ## Out of scope
 - Email at sign-up, email verification, password reset, social login.
 - Log in and log out pages and real "Log in" and "Log out" links (ticket `auth-login-logout`, #4).
 - Profile fields and a profile page (profile tickets). After sign-up the user goes to `/`, not to a profile page.
-- Showing the logged-in user's name in the nav.
+- Making the username in the nav a link (there is no profile page yet).
 
 ## Notes
 Answers from refinement (2026-10-02):
 - Fields: username and password only, using Django's `UserCreationForm` as is (username, password, confirmation). No email.
 - After sign-up: log the user in, redirect to `/`, and add a success message "Welcome, <username>!". The base layout already renders messages (#2, AC5).
 - A logged-in user opening the sign-up page (`GET` or `POST`) is redirected to `/`, with no message.
+- Nav for a logged-in user: show their username as plain text, so it's clear they are signed in (added at the user's request after the first draft). Don't show the "Sign up" link.
 - Location: a new `accounts` app with the URL namespace `accounts`, mounted at `/accounts/`. Ticket #4 adds Django's log-in and log-out views under the same prefix.
 
 Constraints and context:
