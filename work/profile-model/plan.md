@@ -151,7 +151,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(profile-mode
   5. Assert each user has exactly one profile, and `old`'s is empty.
 
   `tearDown` migrates back to the leaf nodes. Expected red: the node is not in the graph. Impl: the hand-written `src/profiles/migrations/0002_create_missing_profiles.py` (`RunPython(create_missing_profiles, RunPython.noop)`, dependencies on `("profiles", "0001_initial")` and `swappable_dependency(settings.AUTH_USER_MODEL)`). Covers: AC10, and AC11 (`MigrationsTests` stays green).
-- [ ] 18. Docs. No test. Commit `docs(profile-model): document the profiles and tags apps`.
+- [x] 18. Docs. No test. Commit `docs(profile-model): document the profiles and tags apps`.
   - `CLAUDE.md`:
     - The Stack auth bullet: every user gets a `Profile` (`user.profile`: `name`, `cohort`, `focus_areas`), created by a `post_save` signal in `profiles` and backfilled by a data migration.
     - A Stack line on tags: a shared `tags.Tag`, unique regardless of case (ASCII-only on SQLite). Always turn typed names into tags with `Tag.objects.get_or_create_by_name()`.
@@ -160,6 +160,13 @@ Each step is one red–green–refactor cycle and one commit, `feat(profile-mode
   - Manual check:
     - `migrate` on the dev DB reports `0002_create_missing_profiles` applied, and in `manage.py shell` the user count equals the profile count.
     - `runserver`: the admin user change page shows the Profile inline with tag autocomplete, and the add-user page has no inline.
+  - Done 2026-10-02. Results against the dev DB:
+    - `migrate` applied `tags.0001`, `tags.0002`, `profiles.0001` and `profiles.0002_create_missing_profiles`, all OK.
+    - The dev DB had **0 users**, so the backfill ran with nothing to do. Its real behaviour is covered by step 17's test.
+    - The admin pages were checked with Django's test `Client` (`HTTP_HOST="localhost"`) in `manage.py shell` against the dev DB, not with a browser on `runserver`. Results for a throwaway superuser and user:
+      - the change page returned 200 with `profile-0-name`, `-cohort` and `-focus_areas`, and an `admin-autocomplete` widget
+      - the add page returned 200 with no inline management form
+    - The throwaway users were deleted (0 left, 0 profiles).
 
 ## Coverage
 | AC | Steps |
