@@ -66,3 +66,40 @@ class GoalListTests(TestCase):
         main = get_page(self.client, "/goals/").text("main")
 
         self.assertIn("No goals yet.", main)
+
+
+class GoalCreatePageTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.client.force_login(self.alice)
+
+    def test_the_create_page_renders_a_goal_form(self):
+        response = self.client.get("/goals/new/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "goals/goal_form.html")
+        self.assertEqual(reverse("goals:create"), "/goals/new/")
+        page = PageParser()
+        page.feed(response.content.decode())
+        ((attrs, inputs),) = page.forms("main")
+        self.assertEqual(attrs.get("method"), "post")
+        self.assertEqual(attrs.get("action"), "/goals/new/")
+        self.assertLessEqual(
+            {"csrfmiddlewaretoken", "title"}, {a.get("name") for a in inputs}
+        )
+        tags = [(tag, attrs) for tag, attrs in page.elements]
+        self.assertIn(
+            "description", {a.get("name") for t, a in tags if t == "textarea"}
+        )
+        self.assertIn("status", {a.get("name") for t, a in tags if t == "select"})
+        options = [a for t, a in tags if t == "option"]
+        self.assertEqual(
+            [o.get("value") for o in options], ["planned", "in-progress", "done"]
+        )
+        self.assertIn("selected", options[0])
+        self.assertNotIn("owner", {a.get("name") for _, a in tags})
+
+    def test_the_list_links_to_the_create_page(self):
+        page = get_page(self.client, "/goals/")
+
+        self.assertIn(("/goals/new/", "New goal"), page.links("main"))

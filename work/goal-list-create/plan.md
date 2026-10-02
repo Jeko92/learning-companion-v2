@@ -73,7 +73,7 @@ Guard steps (7, 8, 10, 12) name their mutation.
   - A subtest with a user who has no goals: "No goals yet.".
 
   Expected red: the titles are missing. Impl: `OwnGoalsMixin` (scoped `get_queryset`) and the template loop with `get_status_display` and `{% empty %}`. Covers: AC4.
-- [ ] 5. The create page renders a goal form, and the list links to it. `GET /goals/new/`:
+- [x] 5. The create page renders a goal form, and the list links to it. `GET /goals/new/`:
   - the status is asserted first (200), and `goals/goal_form.html` is used
   - `reverse("goals:create") == "/goals/new/"`
   - `forms("main")` has one `method="post"` form with the create URL as `action`, and a `csrfmiddlewaretoken` and `title` input
