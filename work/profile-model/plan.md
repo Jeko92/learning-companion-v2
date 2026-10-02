@@ -132,7 +132,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(profile-mode
   - Done 2026-10-02: green on arrival. Under the mutation it went red (`AttributeError: 'Tag' object has no attribute 'profiles'`). The model was then restored.
   - The test adds Bob's tag through `get_or_create_by_name("python")`, which also shows typed input reusing the existing `Python` row.
 - [x] 14. `Tag` is registered in the admin with a search on `name`. Test: `src/tags/tests/test_admin.py`: `admin.site._registry[Tag]` exists and has `"name"` in `search_fields`. Expected red: `KeyError` or `None`; written as `assertIn(Tag, admin.site._registry)`, so the red is an assertion. Impl: `src/tags/admin.py`. Covers: AC9.
-- [ ] 15. The User admin's change page shows the profile inline. Test: `src/profiles/tests/test_admin.py`, as a superuser (`create_superuser` + `force_login`).
+- [x] 15. The User admin's change page shows the profile inline. Test: `src/profiles/tests/test_admin.py`, as a superuser (`create_superuser` + `force_login`).
   - `GET reverse("admin:accounts_user_change", args=[alice.pk])` returns 200.
   - `PageParser.elements` contains inputs or selects named `profile-0-name`, `profile-0-cohort` and `profile-0-focus_areas`.
   - The registered User admin is still an `isinstance(…, auth_admin.UserAdmin)`.
