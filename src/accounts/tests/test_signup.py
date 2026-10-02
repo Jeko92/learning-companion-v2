@@ -82,6 +82,15 @@ class SignUpSubmitTests(TestCase):
         self.assertEqual(response.request["PATH_INFO"], "/")
         self.assertContains(response, f"Welcome, {USERNAME}!")
 
+    def test_signup_marks_the_passwords_as_sensitive(self):
+        # Keeps the passwords out of error reports, as Django's auth views do.
+        response = self.client.post(SIGNUP_PATH, signup_data())
+
+        self.assertEqual(
+            getattr(response.wsgi_request, "sensitive_post_parameters", None),
+            ("password1", "password2"),
+        )
+
 
 class SignUpInvalidTests(TestCase):
     # (case, submitted data, field with the error, error message). Only the two
