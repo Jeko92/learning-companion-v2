@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import MaxLengthValidator
 from django.db import models
 from django.db.models import Q
 
@@ -6,6 +7,12 @@ from django.db.models import Q
 def strip(value):
     """Trim the ends of free text; other values reach field validation."""
     return value.strip() if isinstance(value, str) else value
+
+
+class GoalQuerySet(models.QuerySet):
+    def owned_by(self, user):
+        """The one way views look up goals: only the given user's own."""
+        return self.filter(owner=user)
 
 
 class Goal(models.Model):
@@ -21,12 +28,16 @@ class Goal(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="goals"
     )
     title = models.CharField(max_length=200)
-    description = models.TextField(blank=True)
+    # One limit for forms, full_clean() and the admin (TextField's own
+    # max_length would only shape the form widget).
+    description = models.TextField(blank=True, validators=[MaxLengthValidator(2000)])
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PLANNED
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = GoalQuerySet.as_manager()
 
     class Meta:
         # Newest first; the id breaks ties between goals created together.
