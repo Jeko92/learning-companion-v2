@@ -1,19 +1,31 @@
 #!/usr/bin/env bash
 # PreToolUse hook for Bash.
 # Gates around git and gh, following the gitflow in .claude/rules/git.md:
-# no commits or merges on protected branches (except develop while
-# releasing), no commits with red tests, no --no-verify, no push before the
+# no commits or merges on protected branches (while releasing, develop only
+# takes the main-into-develop merge and its push), the releasing phase can
+# only be entered from done/idle, no commits with red tests, no --no-verify, no push before the
 # review has passed, main only changes through a PR from develop, PR merge
-# strategy per target, ticket branches are never deleted.
+# strategy per target, ticket branches are never deleted, and no new ticket
+# branch is created while develop has commits that main lacks.
 # Exit 2 blocks the command; stderr is fed back to Claude.
+#
+# Scope: this is a guardrail against mistakes made while following the skills,
+# not a sandbox. It pattern-matches the command text, so a deliberately evasive
+# command can get past it. Known gaps: global options before the subcommand
+# (git -C <dir>, git -c k=v), 'env git' and subshells '( git ... )', quote tricks
+# around the branch gate, heredoc bodies, history rewrites other than the ones
+# checked (cherry-pick, reset), 'gh api' calls, and the time between the suite run
+# and 'gh pr merge'. The real control is GitHub branch protection on main and
+# develop (required PR reviews and, once CI exists, required checks).
 source "$(dirname "$0")/lib.sh"
 
 input="$(cat)"
 cmd="$(jq -r '.tool_input.command // empty' <<<"$input")"
 [ -z "$cmd" ] && exit 0
 
+# The subcommand must end at a word boundary, so 'git merge' does not match 'git merge-base'.
 is_git() {
-  echo "$cmd" | grep -qE "(^|[;&|]\s*)git\s+$1"
+  echo "$cmd" | grep -qE "(^|[;&|]\s*)git\s+$1([[:space:];&|)]|$)"
 }
 
 is_gh() {
@@ -25,6 +37,21 @@ block() {
   exit 2
 }
 
+# Every "git <sub> ..." segment of a chained command (split on ; && || | &), trimmed.
+git_segments() {
+  awk '{ gsub(/&&|\|\||;|\||&/, "\n"); print }' <<<"$cmd" \
+    | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' | grep -E "^git\s+$1(\s|$)"
+}
+
+# True only if every "git <sub>" segment matches the regex (an allowlist for all of them).
+all_git_segments_match() {
+  local seg
+  while IFS= read -r seg; do
+    echo "$seg" | grep -qE "$2" || return 1
+  done < <(git_segments "$1")
+  return 0
+}
+
 phase="$(current_phase)"
 branch="$(current_branch)"
 on_protected=false
@@ -32,12 +59,26 @@ echo "$branch" | grep -qE "^($PROTECTED_BRANCHES)$" && on_protected=true
 releasing_on_develop=false
 [ "$phase" = "releasing" ] && [ "$branch" = "$DEVELOP_BRANCH" ] && releasing_on_develop=true
 
+# The command with quote characters removed (their text kept), so quoting can't hide
+# a value from the checks below that use it.
+cmd_nq="$(tr -d "\"'" <<<"$cmd")"
+
+if echo "$cmd_nq" | grep -qE "set-state\.sh(\s.*)?\sphase\s+releasing(\s|$)"; then
+  case "$phase" in
+    done|idle|releasing) ;;
+    *) block "a release can only start after a ticket's close-out (phase 'done'), as a catch-up from 'idle', or resume from 'releasing'; current phase: $phase." ;;
+  esac
+fi
+
 if is_git "commit"; then
   if echo "$cmd" | grep -qE -- "--no-verify|-n\b"; then
     block "'git commit --no-verify' is not allowed. Commit hooks are part of the quality gate."
   fi
   if $on_protected && ! $releasing_on_develop; then
     block "direct commits to '$branch' are not allowed. The refine-ticket skill creates a feature/ or fix/ branch from $DEVELOP_BRANCH; work there. Only the release skill may commit on $DEVELOP_BRANCH (the main-into-develop merge)."
+  fi
+  if $releasing_on_develop && ! git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+    block "while releasing, the only commit allowed on $DEVELOP_BRANCH is the main-into-develop merge, and no merge is in progress."
   fi
   if [ "$phase" = "idle" ]; then
     block "no ticket is in progress (phase: idle). Start with the refine-ticket skill before committing."
@@ -51,34 +92,72 @@ if is_git "commit"; then
   fi
 fi
 
-if is_git "merge"; then
+merge_abort_only=false
+echo "$cmd" | grep -qE "^\s*git\s+merge\s+--abort\s*$" && merge_abort_only=true
+
+if is_git "merge" && ! $merge_abort_only; then
   if $on_protected && ! $releasing_on_develop; then
     block "merging into '$branch' locally is not allowed. Ticket branches reach $DEVELOP_BRANCH through a squash-merged PR, $DEVELOP_BRANCH reaches $MAIN_BRANCH through the release skill."
   fi
+  if $releasing_on_develop \
+     && ! all_git_segments_match merge "^git\s+merge\s+((--no-ff|--no-commit)\s+)*origin/$MAIN_BRANCH$|^git\s+merge\s+--abort$"; then
+    block "while releasing, every merge into $DEVELOP_BRANCH must be exactly 'git merge --no-ff --no-commit origin/$MAIN_BRANCH' (no other sources) or 'git merge --abort'."
+  fi
 fi
 
-if is_git "pull" && $on_protected && ! $releasing_on_develop; then
+if is_git "pull" && $on_protected; then
   if ! echo "$cmd" | grep -qE -- "--ff-only"; then
     block "pull on '$branch' must use --ff-only so no local merge commits land on a protected branch."
   fi
 fi
 
 if is_git "push"; then
-  if echo "$cmd" | grep -qE -- "--force|-f\b" && echo "$cmd" | grep -qE "($PROTECTED_BRANCHES)"; then
+  if echo "$cmd_nq" | grep -qE -- "--mirror|--all\b"; then
+    block "'git push --mirror' and 'git push --all' push every branch, including protected ones; push one named branch."
+  fi
+  # A "+<ref>" refspec is a force push too.
+  if echo "$cmd_nq" | grep -qE -- "--force|-f\b|\s\+[^[:space:]]" \
+     && { echo "$cmd_nq" | grep -qE "($PROTECTED_BRANCHES)" || $on_protected; }; then
     block "force-pushing to a protected branch is not allowed."
   fi
-  if echo "$cmd" | grep -qE -- "--delete|\s:[A-Za-z]"; then
+  if echo "$cmd_nq" | grep -qE -- "--delete|\s:[A-Za-z]"; then
     block "deleting remote branches is not allowed. feature/ and fix/ branches are kept so their per-step commit history stays visible."
   fi
-  if echo "$cmd" | grep -qE "(\s|:)$MAIN_BRANCH(\s|$)" || [ "$branch" = "$MAIN_BRANCH" ]; then
+  if echo "$cmd_nq" | grep -qE "(\s|:|\+)(refs/heads/)?$MAIN_BRANCH(\s|$|[;&|)])" || [ "$branch" = "$MAIN_BRANCH" ]; then
     block "'$MAIN_BRANCH' only changes through a PR from $DEVELOP_BRANCH (release skill). Never push to it."
   fi
   if [ "$phase" = "releasing" ]; then
-    :
+    all_git_segments_match push "^git\s+push\s+origin\s+$DEVELOP_BRANCH$" \
+      || block "while releasing, every push must be exactly 'git push origin $DEVELOP_BRANCH'."
   elif [ "$phase" != "done" ]; then
     block "pushing requires a passed final review (current phase: $phase). Run the final-review skill; it sets the phase to 'done' on a PASS verdict."
-  elif $on_protected || echo "$cmd" | grep -qE "(\s|:)$DEVELOP_BRANCH(\s|$)"; then
+  elif $on_protected || echo "$cmd_nq" | grep -qE "(\s|:|\+)(refs/heads/)?$DEVELOP_BRANCH(\s|$|[;&|)])"; then
     block "in phase 'done' only the ticket branch may be pushed. $DEVELOP_BRANCH is pushed only by the release skill."
+  fi
+fi
+
+# Ticket-branch creation: switch -c/-C/--create[=], checkout -b/-B, worktree add -b/-B,
+# branch [<opts>] [-c|-m <old>] <name>, each optionally after 'git -C <dir>' and with
+# options before the flag. Quoted text is ignored (messages, --grep patterns), so a
+# quoted branch name is not caught; heredoc bodies are not parsed either.
+cmd_unquoted="$(echo "$cmd" | sed -E "s/\"[^\"]*\"//g; s/'[^']*'//g")"
+opts='(-[^[:space:]]+\s+)*'
+create_re="(^|[;&|]\s*)git\s+(-C\s+[^[:space:]]+\s+)?("
+create_re+="switch\s+${opts}(-c|-C|--create|--force-create)(\s+|=)"
+create_re+="|checkout\s+${opts}(-b|-B)\s+"
+create_re+="|worktree\s+add\s+${opts}(-b|-B)\s+"
+create_re+="|branch\s+((--no-track|--track(=[^[:space:]]+)?|-t|-f|--force|-q|--quiet)\s+)*((-c|-C|-m|-M|--copy|--move)\s+([^-[:space:]][^[:space:]]*\s+)?)?"
+create_re+=")(feature|fix)/"
+if echo "$cmd_unquoted" | grep -qE "$create_re"; then
+  # Uses the remote-tracking refs from the last fetch; a missing ref counts as 0.
+  ahead="$(git rev-list --count "origin/$MAIN_BRANCH..origin/$DEVELOP_BRANCH" 2>/dev/null)" || ahead=0
+  # A blocked release is repaired by a fix ticket, so fix/ branches stay allowed then.
+  if [ "$(get_state release_status)" = "blocked" ] \
+     && echo "$cmd_unquoted" | grep -qE "[[:space:]=]fix/" && ! echo "$cmd_unquoted" | grep -qE "[[:space:]=]feature/"; then
+    ahead=0
+  fi
+  if [ "${ahead:-0}" -gt 0 ]; then
+    block "origin/$DEVELOP_BRANCH has $ahead commit(s) that origin/$MAIN_BRANCH lacks. Release first: factory-manager runs the release skill, which promotes $DEVELOP_BRANCH to $MAIN_BRANCH. The next ticket starts only once $MAIN_BRANCH has the last one."
   fi
 fi
 
@@ -88,18 +167,39 @@ if is_git "branch" && echo "$cmd" | grep -qE -- "\s-(d|D)\b|--delete" \
 fi
 
 if is_gh "pr\s+merge"; then
+  [ "$(grep -oE "(^|[;&|]\s*)gh\s+pr\s+merge" <<<"$cmd" | wc -l)" -le 1 ] \
+    || block "one 'gh pr merge' per command, so every merge gets its own checks."
   if echo "$cmd" | grep -qE -- "--delete-branch|-d\b"; then
     block "do not delete the branch on merge; feature/ and fix/ branches are kept for their commit history."
   fi
   if echo "$cmd" | grep -qE -- "--admin"; then
     block "'gh pr merge --admin' bypasses branch protection and is not allowed."
   fi
+  if [ "$phase" = "done" ] || [ "$phase" = "releasing" ]; then
+    pr_num="$(echo "$cmd" | sed -nE 's/.*gh[[:space:]]+pr[[:space:]]+merge[[:space:]]+([0-9]+).*/\1/p')"
+    [ -n "$pr_num" ] || block "name the PR explicitly: 'gh pr merge <n> ...'."
+    pr_refs="$(gh pr view "$pr_num" -R "$GH_REPO" --json baseRefName,headRefName --jq '.headRefName + ">" + .baseRefName' 2>/dev/null)"
+    [ -n "$pr_refs" ] || block "could not look up PR #$pr_num, so it is not merged."
+  fi
   if [ "$phase" = "done" ]; then
     echo "$cmd" | grep -qE -- "--squash|-s\b" \
       || block "ticket PRs into $DEVELOP_BRANCH are squash-merged: use 'gh pr merge <n> --squash'."
+    [ "${pr_refs#*>}" = "$DEVELOP_BRANCH" ] \
+      || block "in phase 'done' only a ticket PR into $DEVELOP_BRANCH may be merged; PR #$pr_num is '$pr_refs'."
   elif [ "$phase" = "releasing" ]; then
     echo "$cmd" | grep -qE -- "--merge|-m\b" \
       || block "the release PR from $DEVELOP_BRANCH into $MAIN_BRANCH is merged with a merge commit: use 'gh pr merge <n> --merge'."
+    [ "$pr_refs" = "$DEVELOP_BRANCH>$MAIN_BRANCH" ] \
+      || block "while releasing, only the release PR ($DEVELOP_BRANCH -> $MAIN_BRANCH) may be merged; PR #$pr_num is '$pr_refs'."
+    # The release gate: main only gets what passes the suite and lint here.
+    if [ -f "$TEST_GUARD_FILE" ]; then
+      $TEST_CMD >/dev/null 2>&1 || block "the test suite is red; the release PR is not merged ($TEST_CMD)."
+    fi
+    $LINT_CMD >/dev/null 2>&1 || block "lint fails; the release PR is not merged ($LINT_CMD)."
+    # Anything but an explicit "false" counts as on; then every check must have passed.
+    if [ "$REQUIRE_CHECKS" != "false" ] && ! gh pr checks "$pr_num" -R "$GH_REPO" >/dev/null 2>&1; then
+      block "REQUIRE_CHECKS is on and release PR #$pr_num has no passing checks (none, pending or failed); it is not merged."
+    fi
   else
     block "PRs are merged only by factory-manager after a passed review (phase 'done') or by the release skill (phase 'releasing'); current phase: $phase."
   fi
