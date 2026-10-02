@@ -191,7 +191,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-signup)
   - anonymous, `"alice"` is not in `page.text("nav")`
 
   Test: `test_nav.py`, expected red `'alice' not found in 'Goals'`. Impl: `<span>{{ user.get_username }}</span>` in the authenticated branch of `base.html`. Covers: AC10.
-- [ ] 16. Docs. No test. Commit `docs(auth-signup): document the accounts app and the custom user model`.
+- [x] 16. Docs. No test. Commit `docs(auth-signup): document the accounts app and the custom user model`.
   - In `CLAUDE.md`, add to Stack: auth uses the custom user model `accounts.User` (`AUTH_USER_MODEL`), and code always refers to it through `get_user_model()` or `settings.AUTH_USER_MODEL`, never `django.contrib.auth.models.User`. Profile data goes on `Profile`, not on `User`. `LOGIN_REDIRECT_URL = "/"`.
   - In `CLAUDE.md`, add to Layout: `src/accounts/` (custom user model, sign-up at `/accounts/signup/`; #4 adds log-in and log-out under `/accounts/`).
   - In `README.md`, add the same Layout entry, plus a short note after Setup: a checkout from before `auth-signup` must delete `src/db.sqlite3` once and re-run `migrate`, because the user model changed.
@@ -200,6 +200,17 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-signup)
     - `createsuperuser` creates an `accounts.User`
     - in `runserver`, `/accounts/signup/` signs up a new user, who lands on `/` with "Welcome, <name>!" and sees their username in the nav
     - `/admin/` lists Users under Accounts
+  - Done 2026-10-02.
+    - `migrate` on the fresh DB succeeded (step 2). `createsuperuser --noinput` created an `accounts.models.User` superuser.
+    - Against `runserver`, with a real CSRF-carrying session:
+      - the anonymous nav showed Goals, Log in and the Sign up link
+      - a password similar to the username was rejected with "The password is too similar to the username." on `password2`
+      - a valid sign-up returned 302 to `/`, which showed "Welcome, manualcheck!" with the username in the nav and no Log in or Sign up
+      - `/accounts/signup/` while logged in returned 302 to `/`
+      - a POST without a CSRF token got 403
+    - The admin index lists Accounts › Users, and the user list and the add-user form both return 200.
+    - The throwaway users were deleted afterwards.
+    - Also fixed README's "after every checkout" wording (#2 review finding 10).
 
 ## Coverage
 | AC | Steps |
