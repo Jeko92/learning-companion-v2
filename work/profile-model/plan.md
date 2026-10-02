@@ -138,7 +138,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(profile-mode
   - The registered User admin is still an `isinstance(…, auth_admin.UserAdmin)`.
 
   Expected red: the `profile-0-name` input is missing. Impl: `src/profiles/admin.py` (`ProfileInline`), and `accounts/admin.py` with a `UserAdmin` subclass using `inlines = [ProfileInline]`. Covers: AC9.
-- [ ] 16. Adding a user in the admin creates exactly one profile. Test: `test_admin.py`, as a superuser.
+- [x] 16. Adding a user in the admin creates exactly one profile. Test: `test_admin.py`, as a superuser.
   - `GET reverse("admin:accounts_user_add")` has no `profile-TOTAL_FORMS` input, so the inline is not on the add page.
   - Posting the add form (username plus the password fields of Django 6.1's admin add form, to be confirmed on the red run) creates the user, with `Profile.objects.filter(user=new_user).count() == 1`.
 

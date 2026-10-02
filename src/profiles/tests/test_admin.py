@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.tests.html import PageParser
+from profiles.models import Profile
 
 PASSWORD = "Tr4ck-Learning!"
 
@@ -39,3 +40,22 @@ class UserAdminProfileInlineTests(TestCase):
         self.assertIsInstance(
             admin.site._registry[get_user_model()], auth_admin.UserAdmin
         )
+
+    def test_adding_a_user_in_the_admin_creates_exactly_one_profile(self):
+        # The inline is hidden on the add page: a filled-in inline would save a
+        # second profile next to the one the post_save signal creates.
+        add_path = reverse("admin:accounts_user_add")
+        self.assertNotIn("profile-TOTAL_FORMS", self.field_names(add_path))
+
+        self.client.post(
+            add_path,
+            {
+                "username": "bob",
+                "usable_password": "true",
+                "password1": PASSWORD,
+                "password2": PASSWORD,
+            },
+        )
+
+        bob = get_user_model().objects.get(username="bob")
+        self.assertEqual(Profile.objects.filter(user=bob).count(), 1)
