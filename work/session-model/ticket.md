@@ -5,21 +5,21 @@ Issue: #11 · Branch: feature/session-model
 As a learner, I want each learning session I log to be stored against one of my goals with its date, duration, notes and tags, so that later features (session pages, AI summaries, the hours dashboard) can show and total the time I spent.
 
 ## Acceptance criteria
-- [ ] AC1 A new app `learning_sessions` is installed and holds `LearningSession`. Its migration is generated with `makemigrations`, and `makemigrations --check` reports no changes.
-- [ ] AC2 A session belongs to one goal. `goal` is a required foreign key to `goals.Goal`, with `related_name="sessions"` (`goal.sessions`) and `on_delete=CASCADE`.
+- [x] AC1 A new app `learning_sessions` is installed and holds `LearningSession`. Its migration is generated with `makemigrations`, and `makemigrations --check` reports no changes.
+- [x] AC2 A session belongs to one goal. `goal` is a required foreign key to `goals.Goal`, with `related_name="sessions"` (`goal.sessions`) and `on_delete=CASCADE`.
   - Deleting a goal deletes its sessions.
   - Deleting a user deletes their sessions, through their goals.
-- [ ] AC3 `date` is a `DateField` that defaults to today (`timezone.localdate()`). `full_clean()` accepts today and past dates and rejects a future date (tomorrow) with an error on `date`.
-- [ ] AC4 `duration_minutes` is a required `PositiveIntegerField` of whole minutes, from 1 to 1,440.
+- [x] AC3 `date` is a `DateField` that defaults to today (`timezone.localdate()`). `full_clean()` accepts today and past dates and rejects a future date (tomorrow) with an error on `date`.
+- [x] AC4 `duration_minutes` is a required `PositiveIntegerField` of whole minutes, from 1 to 1,440.
   - `full_clean()` accepts 1 and 1,440 and rejects 0 and 1,441 with an error on `duration_minutes`.
   - A database `CheckConstraint` enforces the same range, so `update()` to 0 or 1,441 raises `IntegrityError`.
-- [ ] AC5 `notes` is an optional `TextField` (`blank=True`), capped at 2,000 characters by a model-level `MaxLengthValidator`. `full_clean()` accepts 2,000 characters and rejects 2,001 with an error on `notes`.
-- [ ] AC6 `tags` is a `ManyToManyField` to `tags.Tag`, with `blank=True` and `related_name="sessions"`. A session can carry several tags, and one tag can be shared by sessions of different users.
-- [ ] AC7 `LearningSession.objects.owned_by(user)` returns only the sessions whose goal belongs to `user`. With alice and bob each having sessions, including sessions that share a tag:
+- [x] AC5 `notes` is an optional `TextField` (`blank=True`), capped at 2,000 characters by a model-level `MaxLengthValidator`. `full_clean()` accepts 2,000 characters and rejects 2,001 with an error on `notes`.
+- [x] AC6 `tags` is a `ManyToManyField` to `tags.Tag`, with `blank=True` and `related_name="sessions"`. A session can carry several tags, and one tag can be shared by sessions of different users.
+- [x] AC7 `LearningSession.objects.owned_by(user)` returns only the sessions whose goal belongs to `user`. With alice and bob each having sessions, including sessions that share a tag:
   - `owned_by(bob)` never contains alice's sessions.
   - The tags reached through `owned_by(bob)` (`Tag.objects.filter(sessions__in=...)`) never include a tag that only alice uses.
-- [ ] AC8 Sessions are ordered newest first: `-date`, then `-created_at`, then `-id`. `created_at` (`auto_now_add`) and `updated_at` (`auto_now`) are set. `str(session)` is `"<goal title> · <YYYY-MM-DD> · <n> min"`.
-- [ ] AC9 `LearningSession` is registered in the admin:
+- [x] AC8 Sessions are ordered newest first: `-date`, then `-created_at`, then `-id`. `created_at` (`auto_now_add`) and `updated_at` (`auto_now`) are set. `str(session)` is `"<goal title> · <YYYY-MM-DD> · <n> min"`.
+- [x] AC9 `LearningSession` is registered in the admin:
   - `list_display` includes goal, date and `duration_minutes`
   - `list_filter` includes date
   - `autocomplete_fields` covers goal and tags
