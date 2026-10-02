@@ -64,7 +64,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-edit-de
   - In `test_admin.py`: the superuser's change page for a goal contains an `a.viewsitelink`.
 
   Expected red: `False is not true`. Impl: `get_absolute_url`. Covers: AC15 (method, admin).
-- [ ] 3. The detail page shows the goal. Subtests:
+- [x] 3. The detail page shows the goal. Subtests:
   - **filled:** the title, "In progress", a two-line description rendered with a `<br>` between the lines (a `br` in `page.elements`, both lines in `main`), "Created" and "Updated", and a "Back to goals" link to `/goals/`
   - **empty description:** "No description."
 

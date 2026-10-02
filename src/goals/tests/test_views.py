@@ -285,3 +285,21 @@ class GoalDetailTests(TestCase):
         self.assertTemplateUsed(response, "goals/goal_detail.html")
         self.assertTemplateUsed(response, "base.html")
         self.assertEqual(reverse("goals:detail", args=[self.goal.pk]), self.path)
+
+    def test_shows_the_goal(self):
+        page = get_page(self.client, self.path)
+        main = page.text("main")
+
+        for text in ("Learn Django", "In progress", "Parts 1-3", "Parts 4-7"):
+            with self.subTest(text=text):
+                self.assertIn(text, main)
+        self.assertIn("br", [tag for tag, _ in page.elements])
+        self.assertIn("Created", main)
+        self.assertIn("Updated", main)
+        self.assertIn(("/goals/", "Back to goals"), page.links("main"))
+
+    def test_shows_a_placeholder_without_a_description(self):
+        self.goal.description = ""
+        self.goal.save()
+
+        self.assertIn("No description.", get_page(self.client, self.path).text("main"))
