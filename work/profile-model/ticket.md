@@ -65,4 +65,4 @@ Constraints and context:
 - `CLAUDE.md` (Layout, Stack) and `README.md` get the two new apps and the tag decision. The plan includes this.
 - Depends on #3 (custom user model and sign-up), which is done.
 
-Status: waiting for the user to approve the acceptance criteria.
+Status: the user approved these acceptance criteria (AC1–AC11) on 2026-10-02. The next step is `plan-ticket`.
