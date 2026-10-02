@@ -78,4 +78,4 @@ Constraints and context:
 - **Ruff RUF012:** class-level options are tuples (CLAUDE.md).
 - **Docs:** `CLAUDE.md` (Goals bullet, Layout) and `README.md` get the new pages. The plan includes this.
 
-Status: waiting for the user to approve the acceptance criteria (AC1–AC15).
+Status: the user approved these acceptance criteria (AC1–AC15) on 2026-10-02, together with the plan.
