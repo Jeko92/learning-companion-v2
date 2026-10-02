@@ -146,17 +146,19 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-login-l
 
   Test: `test_nav.py` (anonymous test rewritten) and `core/tests/test_home.py` (the placeholder test now checks only "Goals"). The expected red is the new `links` list. Impl: `<a href="{% url 'accounts:login' %}">Log in</a>` in `base.html`. Covers: AC10 (anonymous).
   - This is a deliberate change of #2 AC4 and #3 AC9, made in the same commit, and recorded in the step note and the commit body.
+  - Done 2026-10-02: red as expected against the old template, `[('/accounts/signup/', 'Sign up')] != [('/accounts/login/', 'Log in'), ('/accounts/signup/', 'Sign up')]`, then green with the link in `base.html`. The home test now pins only "Goals" as a non-link placeholder.
   - Done 2026-10-02.
     - `accounts.tests.test_nav` was renamed to `test_anonymous_nav_has_goals_and_login_and_signup_links`. It now pins both links, the exact text, and "Goals" not being a link.
     - `core.tests.test_home` was renamed to `test_nav_shows_goals_as_a_placeholder_that_is_not_a_link`, so it now covers only "Goals".
     - Red: the old one-link list. Green after the `<a href>` change.
-- [ ] 14. The logged-in nav has a "Log out" button in a POST form:
+- [x] 14. The logged-in nav has a "Log out" button in a POST form:
   - `text("nav") == "Goals alice Log out"`
   - `links("nav") == []`
   - `forms("nav")` is exactly one form with `method="post"` and `action=reverse("accounts:logout")`, whose inputs include `csrfmiddlewaretoken`
 
   Test: `test_nav.py` (logged-in test rewritten). Expected red: `forms("nav") == []`, and the text lacks "Log out". Impl: the logout form in the authenticated branch of `base.html`. Covers: AC10 (logged in).
   - This is a deliberate change of #3's logged-in exact text, recorded the same way.
+  - Done 2026-10-02: the exact text went from `"Goals alice"` to `"Goals alice Log out"`. The test also checks that `links("nav") == []` and that the nav has exactly one POST form to `accounts:logout` with a `csrfmiddlewaretoken`. Red: `'Goals alice' != 'Goals alice Log out'`. Green after the form was added.
 - [ ] 15. CSRF is enforced on login and logout. With `Client(enforce_csrf_checks=True)`:
   - a login `POST` without a token returns 403, and no one is logged in
   - for a logged-in user (`force_login`), a logout `POST` without a token returns 403, and the user stays logged in
