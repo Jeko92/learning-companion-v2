@@ -190,8 +190,9 @@ Each step is one cycle and one commit. Steps 21 and 22 are guards that pass on a
   - `get_or_create_by_name(None)` raises `ValidationError`.
 
   Test: `test_models.py`. Expected red: `AttributeError` (`'NoneType' object has no attribute 'strip'`). Impl: strip only when `isinstance(name, str)` (in `clean_fields`, `save` and the manager). Covers: AC2.
-- [ ] 21. (Finding 3, AC5) Fixture loads create no profile. Test: `profiles/tests/test_signals.py`. `get_user_model()(username="fixture").save_base(raw=True)`, which is what `loaddata` does, leaves `Profile.objects.filter(user__username="fixture")` empty. Impl: none.
+- [x] 21. (Finding 3, AC5) Fixture loads create no profile. Test: `profiles/tests/test_signals.py`. `get_user_model()(username="fixture").save_base(raw=True)`, which is what `loaddata` does, leaves `Profile.objects.filter(user__username="fixture")` empty. Impl: none.
   - Guard. Mutation: the receiver checks only `if created:`. It must go red. Revert afterwards.
+  - Done 2026-10-02: green on arrival. Under the mutation it went red (`True is not false`). The receiver was then restored.
 - [ ] 22. (Finding 4, AC9) The focus-areas field uses the tag autocomplete. Test: `profiles/tests/test_admin.py`. On the change page, the `select` named `profile-0-focus_areas` has `admin-autocomplete` in its `class` and `data-model-name="tag"`. Impl: none.
   - Guard. Mutation: remove `autocomplete_fields` from `ProfileInline`. It must go red. Revert afterwards.
 - [ ] 23. (Findings 5 and 6) Test hardening, with no behaviour change. Commit `refactor(profile-model): tighten the backfill and admin add tests`.

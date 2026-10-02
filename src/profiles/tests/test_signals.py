@@ -48,3 +48,9 @@ class ProfileAutoCreationTests(TestCase):
             user.save()
 
         self.assertEqual(Profile.objects.filter(user=user).count(), 1)
+
+    def test_fixture_loads_create_no_profile(self):
+        # loaddata saves with raw=True; fixtures bring their own profile rows.
+        get_user_model()(username="fixture").save_base(raw=True)
+
+        self.assertFalse(Profile.objects.filter(user__username="fixture").exists())
