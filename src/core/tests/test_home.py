@@ -28,10 +28,12 @@ class PageParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.open_tags = []
+        self.seen_tags = set()
         self.text = dict.fromkeys(SECTIONS, "")
         self.href_text = ""
 
     def handle_starttag(self, tag, attrs):
+        self.seen_tags.add(tag)
         if tag not in VOID_ELEMENTS:
             has_href = any(name == "href" for name, _ in attrs)
             self.open_tags.append((tag, has_href))
@@ -111,3 +113,8 @@ class HomePageTests(TestCase):
 
         self.assertIn(PITCH, " ".join(page.text["main"].split()))
         self.assertNotIn(PITCH, render_to_string("base.html"))
+
+    def test_layout_has_a_footer(self):
+        page = self.get_page()
+
+        self.assertIn("footer", page.seen_tags)
