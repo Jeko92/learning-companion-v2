@@ -118,3 +118,12 @@ class HomePageTests(TestCase):
         page = self.get_page()
 
         self.assertIn("footer", page.seen_tags)
+
+    def test_layout_links_the_tailwind_stylesheet_without_a_build(self):
+        # Nothing checks that the built file exists, so this passes on a fresh
+        # checkout where 'tailwind build' has never run.
+        response = self.client.get("/")
+
+        self.assertContains(
+            response, '<link rel="stylesheet" href="/static/css/tailwind.css">'
+        )

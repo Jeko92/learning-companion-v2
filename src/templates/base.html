@@ -1,29 +1,32 @@
-<!doctype html>
+{% load tailwind_cli %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Learning Companion</title>
+  {% tailwind_css %}
 </head>
-<body>
-  <header>
-    <span>Learning Companion</span>
-    <nav>
-      <span>Goals</span>
-      <span>Log in</span>
-    </nav>
+<body class="flex min-h-screen flex-col bg-slate-50 text-slate-800">
+  <header class="border-b border-slate-200 bg-white">
+    <div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
+      <span class="text-lg font-semibold">Learning Companion</span>
+      <nav class="flex gap-6 text-sm text-slate-500">
+        <span>Goals</span>
+        <span>Log in</span>
+      </nav>
+    </div>
   </header>
   {% if messages %}
-    <ul>
+    <ul class="mx-auto mt-4 w-full max-w-3xl space-y-2 px-4">
       {% for message in messages %}
-        <li>{{ message }}</li>
+        <li class="rounded border border-sky-200 bg-sky-50 px-4 py-2 text-sm">{{ message }}</li>
       {% endfor %}
     </ul>
   {% endif %}
-  <main>
+  <main class="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
     {% block content %}{% endblock %}
   </main>
-  <footer>
+  <footer class="border-t border-slate-200 py-6 text-center text-sm text-slate-500">
     <p>Learning Companion</p>
   </footer>
 </body>
