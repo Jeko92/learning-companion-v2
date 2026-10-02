@@ -40,7 +40,7 @@ As a registered user of the Learning Companion, I want to log in and out, and ge
 
 ## Out of scope
 - Password reset and password change flows (and their routes).
-- `next` handling on logout: `LOGOUT_REDIRECT_URL` is always used, and the logout form sends no `next`.
+- A `next` field on the logout form. The nav's logout form sends no `next`, so logging out from the UI always lands on `LOGOUT_REDIRECT_URL`. Django's `LogoutView` still honours a `next` that is posted directly, validated with the same `url_has_allowed_host_and_scheme` check as login. That is Django's native behaviour, which the user chose to keep (plan review, 2026-10-02).
 - Cross-links between the login and sign-up pages (the user chose not to add them).
 - Pages that require login (`login_required`). The Goals tickets add them. This ticket only makes `next` work and safe for them.
 - Rate limiting and lockout of repeated failed logins (deployment hardening, like #3's deferred findings).
