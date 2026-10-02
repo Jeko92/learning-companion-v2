@@ -77,6 +77,15 @@ class GoalListTests(TestCase):
         self.assertNotContains(response, payload)
         self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
 
+    def test_each_title_links_to_its_goal(self):
+        goals = [Goal.objects.create(owner=self.alice, title=t) for t in ("A", "B")]
+
+        links = get_page(self.client, "/goals/").links("main")
+
+        for goal in goals:
+            with self.subTest(goal=goal.title):
+                self.assertIn((goal.get_absolute_url(), goal.title), links)
+
 
 class GoalCreatePageTests(TestCase):
     def setUp(self):
