@@ -397,3 +397,43 @@ class GoalEditTests(TestCase):
         self.assertContains(
             self.client.get(self.goal.get_absolute_url()), "Goal updated."
         )
+
+    def test_an_invalid_edit_rerenders_the_form_and_changes_nothing(self):
+        valid = {"title": "Changed", "description": "Changed", "status": "done"}
+        cases = (
+            ("blank title", {"title": ""}, "title", "This field is required."),
+            ("whitespace title", {"title": "   "}, "title", "This field is required."),
+            (
+                "long title",
+                {"title": "t" * 201},
+                "title",
+                "Ensure this value has at most 200 characters (it has 201).",
+            ),
+            (
+                "long description",
+                {"description": "d" * 2001},
+                "description",
+                "Ensure this value has at most 2000 characters (it has 2001).",
+            ),
+            (
+                "unknown status",
+                {"status": "bogus"},
+                "status",
+                "Select a valid choice. bogus is not one of the available choices.",
+            ),
+        )
+        for case, changes, field, message in cases:
+            with self.subTest(case=case):
+                response = self.client.post(self.path, {**valid, **changes})
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "goals/goal_form.html")
+                self.assertFormError(response.context["form"], field, message)
+                page = PageParser()
+                page.feed(response.content.decode())
+                self.assertIn(message, page.text("main"))
+                self.goal.refresh_from_db()
+                self.assertEqual(
+                    (self.goal.title, self.goal.description, self.goal.status),
+                    ("Learn Django", "Parts 1-7", Goal.Status.IN_PROGRESS),
+                )

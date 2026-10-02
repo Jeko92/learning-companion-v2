@@ -106,8 +106,9 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-edit-de
   - with `follow=True`, "Goal updated." is shown
 
   Expected red: "Goal updated." is missing (the redirect already works). Impl: `SuccessMessageMixin` and `success_message` on `GoalUpdateView`. Covers: AC7.
-- [ ] 9. An invalid edit re-renders the form and leaves the goal unchanged. Subtests mirror #8's create cases: blank and whitespace title, 201-character title, 2,001-character description, bogus status. Each asserts 200, `goal_form.html`, `assertFormError` with the message in `main`, and the goal's values unchanged. Impl: none, since `GoalForm` and the model validators are shared. Covers: AC8.
+- [x] 9. An invalid edit re-renders the form and leaves the goal unchanged. Subtests mirror #8's create cases: blank and whitespace title, 201-character title, 2,001-character description, bogus status. Each asserts 200, `goal_form.html`, `assertFormError` with the message in `main`, and the goal's values unchanged. Impl: none, since `GoalForm` and the model validators are shared. Covers: AC8.
   - Guard. Mutation: drop `MaxLengthValidator(2000)` from `Goal.description` (no migration needed for the run). The description case must go red. Revert afterwards.
+  - Done 2026-10-02: green on arrival. Under the mutation (`validators=[]`), the long-description case went red (`302 != 200`). The model was then restored. The first attempt's `sed` had broken the syntax, and its silent output was caught before trusting it.
 - [ ] 10. Delete asks for confirmation, and the detail page links to it. `GET /goals/<pk>/delete/`:
   - status 200, asserted first, with `goals/goal_confirm_delete.html` used
   - `reverse("goals:delete", …)` matches
