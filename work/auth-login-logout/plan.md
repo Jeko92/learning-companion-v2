@@ -228,6 +228,17 @@ Each step is still one cycle and one commit. Steps 18–21 are guard tests that 
   - `core/tests/html.py`: the class docstring mentions forms; the `forms()` docstring says only `<input>` is collected and nested forms aren't collapsed the way browsers do
   - this plan's design section: the settings checks live in `test_login.py` and `test_logout.py`, not `test_apps.py`
 
+#### Review finding 12: the user decided to fix both logout edge cases (AC16, 2026-10-02)
+Django's `LogoutView.post` renders `registration/logged_out.html` only when `get_success_url()` equals `request.get_full_path()`. Otherwise it redirects. The "You have been logged out." message is currently added unconditionally after `super().post()`.
+
+- [ ] 23. An anonymous logout shows no "logged out" message. In `LogoutTests`, an anonymous POST to `/accounts/logout/` must redirect to `settings.LOGOUT_REDIRECT_URL`. With `follow=True`, the page must not contain "You have been logged out.". Expected red: the message is present. Impl: in `LogOutView.post`, read `request.user.is_authenticated` before `super().post()`, and add the message only if it was true. Covers: AC16 (anonymous).
+- [ ] 24. Logout never renders the admin "Logged out" page. In `LogoutTests`, a logged-in user POSTs `next=/accounts/logout/` (`reverse("accounts:logout")`). Assert:
+  - the user is anonymous
+  - a redirect to `settings.LOGOUT_REDIRECT_URL` (`fetch_redirect_response=False`)
+  - `registration/logged_out.html` is not used
+
+  Expected red: `200 != 302`. Impl: `LogOutView.get_success_url` returns `resolve_url(settings.LOGOUT_REDIRECT_URL)` when `super().get_success_url()` equals `self.request.get_full_path()`, so `post()` always redirects. Covers: AC16 (self-referencing `next`).
+
 ## Coverage
 | AC | Steps |
 |---|---|
@@ -246,5 +257,6 @@ Each step is still one cycle and one commit. Steps 18–21 are guard tests that 
 | AC13 session rotation and invalidation | 12 |
 | AC14 inactive users rejected generically | 6 |
 | AC15 `next` escaped (literal and safe-path payloads) | 9 |
+| AC16 logout always redirects, confirms only a real logout | 23, 24 |
 
 AC1's "no password routes" is checked in step 1 as well: `reverse("password_reset")` and `reverse("accounts:password_reset")` both raise `NoReverseMatch` (`assertRaises`). Step 17 covers the docs and the manual check.

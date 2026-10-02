@@ -53,7 +53,9 @@ The two reviewers (code and security) found no high-severity issues. The suite i
 11. **[low] (code) `plan.md` design section: the settings checks are said to go in `test_apps.py`, but they live in `test_login.py` and `test_logout.py`.**
     - **Fix:** align the plan text.
 
-### Needs a decision from the user (behaviour beyond the ACs; not turned into steps)
+### Needs a decision from the user (behaviour beyond the ACs)
+Decision on finding 12 (2026-10-02): the user chose to fix both edge cases. They are now AC16 and plan steps 23–24. Finding 13 is still open.
+
 12. **[low] (code and security) `src/accounts/views.py:49-53`: two logout edge cases.**
     - An anonymous POST to logout also shows "You have been logged out.".
     - A POST with `next=/accounts/logout/` makes Django render the admin-styled `registration/logged_out.html` instead of redirecting.
