@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.test import TestCase
 
 from goals.models import Goal
@@ -75,3 +75,21 @@ class LearningSessionDurationTests(TestCase):
                 with self.assertRaises(ValidationError) as caught:
                     session.full_clean()
                 self.assertIn("duration_minutes", caught.exception.error_dict)
+
+    def test_the_database_rejects_a_duration_outside_1_to_1440(self):
+        session = LearningSession.objects.create(goal=self.goal, duration_minutes=30)
+        sessions = LearningSession.objects.filter(pk=session.pk)
+
+        for minutes in (0, 1441):
+            with (
+                self.subTest(minutes=minutes),
+                self.assertRaises(IntegrityError),
+                transaction.atomic(),
+            ):
+                sessions.update(duration_minutes=minutes)
+
+        for minutes in (1, 1440):
+            with self.subTest(minutes=minutes):
+                sessions.update(duration_minutes=minutes)
+                session.refresh_from_db()
+                self.assertEqual(session.duration_minutes, minutes)

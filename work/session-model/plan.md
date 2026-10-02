@@ -73,7 +73,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(session-mode
     - **Correction to the plan:** a required field added to an existing table makes `makemigrations` prompt for a default. Since the app has no data, each model-changing step deletes and regenerates `0001_initial` instead of adding a migration, so step 13 only has to confirm a single initial migration.
     - The red for the boundary test was a `TypeError` until the field-name check moved into the class `setUp`; then both tests failed on the assertion.
     - Step 2's fixtures now pass `duration_minutes=30`, because the column is required.
-- [ ] 4. **The database enforces the duration range.**
+- [x] 4. **The database enforces the duration range.**
   - Test: for 0 and 1,441, `update(duration_minutes=…)` inside `transaction.atomic()` raises `IntegrityError`. For 1 and 1,440, `update()` then `refresh_from_db()` stores the value. Expected red: no `IntegrityError` for 1,441 (and for 0, which `PositiveIntegerField` allows).
   - Impl: `Meta.constraints` with the `CheckConstraint` and a comment saying why, plus a migration.
   - Covers: AC4.
