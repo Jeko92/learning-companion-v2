@@ -1,3 +1,5 @@
+import unicodedata
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -36,7 +38,9 @@ class ProfileForm(forms.ModelForm):
         entries that differ only in case (the first one wins). Creates
         nothing: an invalid entry fails the whole form before any save."""
         names, seen, errors = [], set(), []
-        for entry in self.cleaned_data["focus_areas"].split(","):
+        # NFKC first, so full-width commas (CJK keyboards) separate entries too.
+        text = unicodedata.normalize("NFKC", self.cleaned_data["focus_areas"])
+        for entry in text.split(","):
             entry = entry.strip()
             if not entry:
                 continue

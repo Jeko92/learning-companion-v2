@@ -244,7 +244,7 @@ Each step is one cycle and one commit. Steps 21 and 23 are guards and test harde
   - in `clean_focus_areas`, after de-duplication and before returning, raise the count error when there are more than `MAX_FOCUS_AREAS = 20` names. `clean_name` does no DB work, so nothing touches the DB before this check.
 
   Covers: AC13.
-- [ ] 20. (Finding 2, medium; AC7, AC9) Full-width commas separate entries, and tag names can't contain commas.
+- [x] 20. (Finding 2, medium; AC7, AC9) Full-width commas separate entries, and tag names can't contain commas.
   - **Test:** in `test_forms.py`, POSTing `focus_areas="Python\uff0cDjango"` gives exactly the tags ["Django", "Python"].
   - **Test:** in `tags/tests/test_models.py`, `get_or_create_by_name("a,b")` raises `ValidationError` "Tag names can't contain commas." and creates nothing.
 

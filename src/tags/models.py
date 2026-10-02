@@ -26,6 +26,13 @@ def reject_invisible_characters(value):
         )
 
 
+def reject_commas(value):
+    """The comma separates typed focus areas, so a name containing one could
+    not be typed back unchanged."""
+    if "," in value:
+        raise ValidationError("Tag names can't contain commas.", code="comma")
+
+
 class TagManager(models.Manager):
     def clean_name(self, name):
         """The name as it would be stored, or ValidationError if it's invalid.
@@ -59,7 +66,9 @@ class TagManager(models.Manager):
 class Tag(models.Model):
     """A shared label, e.g. a profile's focus area (and later a session tag)."""
 
-    name = models.CharField(max_length=50, validators=[reject_invisible_characters])
+    name = models.CharField(
+        max_length=50, validators=[reject_invisible_characters, reject_commas]
+    )
 
     objects = TagManager()
 

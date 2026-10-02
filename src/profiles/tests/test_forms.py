@@ -78,3 +78,11 @@ class FocusAreasInputTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(self.profile.focus_areas.count(), 20)
+
+    def test_full_width_commas_separate_entries(self):
+        response = self.save("Python\uff0cDjango")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            [t.name for t in self.profile.focus_areas.all()], ["Django", "Python"]
+        )

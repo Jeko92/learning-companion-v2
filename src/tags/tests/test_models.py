@@ -138,3 +138,11 @@ class NameNormalisationTests(TestCase):
             Tag.objects.get_or_create_by_name("x" * 50_001)
 
         self.assertEqual(Tag.objects.count(), 1)
+
+    def test_tag_names_cannot_contain_commas(self):
+        # The comma separates typed focus areas, so it can't be in a name.
+        with self.assertRaises(ValidationError) as caught:
+            Tag.objects.get_or_create_by_name("a,b")
+
+        self.assertIn("Tag names can't contain commas.", caught.exception.messages)
+        self.assertEqual(Tag.objects.count(), 1)
