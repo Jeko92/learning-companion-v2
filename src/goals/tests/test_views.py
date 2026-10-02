@@ -131,3 +131,11 @@ class GoalCreateTests(TestCase):
         self.assertTrue(
             page.text("main").startswith("Your goals New goal Learn Django")
         )
+
+    def test_a_posted_owner_is_ignored(self):
+        bob = get_user_model().objects.create_user("bob")
+
+        self.client.post("/goals/new/", {**self.data, "owner": bob.pk})
+
+        self.assertEqual(Goal.objects.get().owner, self.alice)
+        self.assertFalse(bob.goals.exists())

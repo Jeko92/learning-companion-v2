@@ -88,8 +88,11 @@ Guard steps (7, 8, 10, 12) name their mutation.
   - with `follow=True`, "Goal created." appears and the goal is first in `main`
 
   Expected red: `IntegrityError` (NOT NULL `owner_id`). That is the missing behaviour itself: the view doesn't set the owner yet. Impl: `form_valid` setting the owner, plus `SuccessMessageMixin`, `success_message` and `success_url`. Covers: AC6.
-- [ ] 7. A posted owner is ignored. Alice POSTs a valid goal with `owner=<bob.pk>`; the goal is owned by alice, and bob has none. Impl: none. Covers: AC7.
+- [x] 7. A posted owner is ignored. Alice POSTs a valid goal with `owner=<bob.pk>`; the goal is owned by alice, and bob has none. Impl: none. Covers: AC7.
   - Guard. Mutation: `GoalForm.Meta.fields = ("title", "description", "status", "owner")`. It must go red (owned by bob). Revert afterwards.
+  - Done 2026-10-02: green on arrival.
+  - **Correction to the plan:** the planned mutation (adding `owner` to `Meta.fields`) **survived**. There are two layers of protection, and `form_valid` overwrites any posted owner with `request.user`. The field allow-list on its own is pinned by step 5 (no element named `owner`), which that mutation turns red.
+  - The mutation used here breaks both layers in a realistic way: `owner` in the fields, plus `form_valid` setting the owner only `if not form.instance.owner_id`. The guard went red (`bob != alice`) and was then restored.
 - [ ] 8. Create requires login. An anonymous `GET` and `POST` (with valid data) to `/goals/new/` both redirect to login with `next=/goals/new/`, and `Goal.objects.count()` is unchanged. Impl: none, since step 5 has `LoginRequiredMixin`. Covers: AC2 (create).
   - Guard. Mutation: drop `LoginRequiredMixin` from `GoalCreateView`. It must go red (the GET is 200). Revert afterwards.
 - [ ] 9. Invalid input re-renders the form and creates nothing. Subtests, each checking:
