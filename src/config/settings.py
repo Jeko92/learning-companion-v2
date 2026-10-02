@@ -90,6 +90,8 @@ DATABASES = {
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
 
 AUTH_USER_MODEL = "accounts.User"
+# Where sign-up (and, from auth-login-logout, log-in) sends the user.
+LOGIN_REDIRECT_URL = "/"
 
 AUTH_PASSWORD_VALIDATORS = [
     {

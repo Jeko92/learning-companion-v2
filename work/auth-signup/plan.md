@@ -134,7 +134,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-signup)
   - `user.password != PASSWORD`
 
   Test: `test_signup.py`, expected red `0 != 1`, because a `TemplateView` answers `POST` with 405. Impl: `SignUpView` becomes a `CreateView` (`form_class = SignUpForm`, `template_name`), and `get_context_data` is dropped. It gets a minimal `success_url = "/"`, so the redirect works. Covers: AC4.
-- [ ] 9. After a valid `POST` the new user is logged in and redirected to `LOGIN_REDIRECT_URL`:
+- [x] 9. After a valid `POST` the new user is logged in and redirected to `LOGIN_REDIRECT_URL`:
   - `settings.LOGIN_REDIRECT_URL == "/"`
   - `self.client.session["_auth_user_id"] == str(user.pk)`
   - `assertRedirects(response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False)`

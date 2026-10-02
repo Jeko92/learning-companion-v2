@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import URLResolver, get_resolver, reverse
@@ -64,3 +65,13 @@ class SignUpSubmitTests(TestCase):
         self.assertEqual(user.username, USERNAME)
         self.assertIs(user.check_password(PASSWORD), True)
         self.assertNotEqual(user.password, PASSWORD)
+
+    def test_valid_signup_logs_the_user_in_and_redirects(self):
+        response = self.client.post(SIGNUP_PATH, signup_data())
+
+        user = get_user_model().objects.get(username=USERNAME)
+        self.assertEqual(self.client.session.get("_auth_user_id"), str(user.pk))
+        self.assertEqual(settings.LOGIN_REDIRECT_URL, "/")
+        self.assertRedirects(
+            response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
+        )
