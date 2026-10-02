@@ -2,13 +2,19 @@ from django.db import IntegrityError, models, transaction
 from django.db.models.functions import Lower
 
 
+def strip(value):
+    """Model CharFields don't strip; only strings are, so other values still
+    reach field validation (e.g. None gives "cannot be null")."""
+    return value.strip() if isinstance(value, str) else value
+
+
 class TagManager(models.Manager):
     def get_or_create_by_name(self, name):
         """Turn typed input into a tag: (tag, created), matched the way the
         unique constraint compares names (trimmed, ASCII case-insensitive), so
         the first spelling is kept. A blank name raises ValidationError.
         Safe when another request creates the same name concurrently."""
-        name = name.strip()
+        name = strip(name)
         tag = self.filter(name__iexact=name).first()
         if tag is not None:
             return tag, False
@@ -48,10 +54,10 @@ class Tag(models.Model):
 
     def clean_fields(self, exclude=None):
         # Strip first, so a whitespace-only name fails as blank.
-        self.name = self.name.strip()
+        self.name = strip(self.name)
         super().clean_fields(exclude=exclude)
 
     def save(self, *args, **kwargs):
-        # Model CharFields don't strip; "Python" and " Python" must be one tag.
-        self.name = self.name.strip()
+        # "Python" and " Python" must be one tag.
+        self.name = strip(self.name)
         super().save(*args, **kwargs)

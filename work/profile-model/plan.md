@@ -185,7 +185,7 @@ Each step is one cycle and one commit. Steps 21 and 22 are guards that pass on a
   - Done 2026-10-02: red as expected (`ValidationError: A tag with this name already exists.`), then green.
   - The test forces the miss by patching `QuerySet.first` to return `None` once.
   - Extra check: without the savepoint around `save()`, the test goes red (`TransactionManagementError` on the caller's next query). That proves the "transaction still usable" assertion matters.
-- [ ] 20. (Finding 2) Non-string names give a `ValidationError`, not an `AttributeError`.
+- [x] 20. (Finding 2) Non-string names give a `ValidationError`, not an `AttributeError`.
   - `Tag(name=None).full_clean()` raises `ValidationError` with `"name"` in `error_dict`.
   - `get_or_create_by_name(None)` raises `ValidationError`.
 

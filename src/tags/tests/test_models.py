@@ -39,6 +39,12 @@ class TagModelTests(TestCase):
             Tag(name="PYTHON").full_clean()
         self.assertIn("A tag with this name already exists.", caught.exception.messages)
 
+    def test_a_missing_name_is_invalid_not_a_crash(self):
+        with self.assertRaises(ValidationError) as caught:
+            Tag(name=None).full_clean()
+
+        self.assertIn("name", caught.exception.error_dict)
+
 
 class GetOrCreateByNameTests(TestCase):
     def setUp(self):
@@ -85,3 +91,9 @@ class GetOrCreateByNameTests(TestCase):
 
         self.assertEqual((tag, created), (self.python, False))
         self.assertEqual(count, 1)
+
+    def test_a_missing_name_is_rejected(self):
+        with self.assertRaises(ValidationError):
+            Tag.objects.get_or_create_by_name(None)
+
+        self.assertEqual(Tag.objects.count(), 1)
