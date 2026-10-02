@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.sessions.models import Session
 from django.test import TestCase
 from django.urls import reverse
 
@@ -34,3 +35,38 @@ class LogoutTests(TestCase):
 
         self.assertEqual(response.status_code, 405)
         self.assertEqual(self.client.session.get("_auth_user_id"), str(self.user.pk))
+
+
+class SessionLifecycleTests(TestCase):
+    def setUp(self):
+        get_user_model().objects.create_user(USERNAME, password=PASSWORD)
+
+    def session_key(self):
+        return self.client.cookies[settings.SESSION_COOKIE_NAME].value
+
+    def test_login_replaces_the_session_key(self):
+        # An anonymous session that an attacker could have planted (fixation).
+        session = self.client.session
+        session["probe"] = "anonymous"
+        session.save()
+        anonymous_key = session.session_key
+
+        self.client.post(
+            reverse("accounts:login"), {"username": USERNAME, "password": PASSWORD}
+        )
+
+        self.assertNotEqual(self.session_key(), anonymous_key)
+        self.assertFalse(Session.objects.filter(session_key=anonymous_key).exists())
+
+    def test_logout_invalidates_the_old_session(self):
+        self.client.post(
+            reverse("accounts:login"), {"username": USERNAME, "password": PASSWORD}
+        )
+        old_key = self.session_key()
+
+        self.client.post(LOGOUT_PATH)
+        self.client.cookies[settings.SESSION_COOKIE_NAME] = old_key
+        response = self.client.get("/")
+
+        self.assertFalse(Session.objects.filter(session_key=old_key).exists())
+        self.assertIs(response.wsgi_request.user.is_authenticated, False)

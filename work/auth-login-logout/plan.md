@@ -129,12 +129,16 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-login-l
   - a `GET` returns 405 and the user stays logged in
 
   Test: `test_logout.py`, expected red `404 != 302` on the `POST` (the literal path is asserted first). Impl: `path("logout/", LogOutView.as_view(), name="logout")`; `LogOutView(LogoutView)` whose `post()` adds the message; `LOGOUT_REDIRECT_URL = "/"`. Covers: AC1 (logout, `LOGOUT_REDIRECT_URL`), AC9.
-- [ ] 12. The session is replaced at login and invalidated at logout:
+- [x] 12. The session is replaced at login and invalidated at logout:
   - **Login:** take the session key before login, after an anonymous GET that creates a session. A real credential POST must produce a different key, and the old key must be gone from `Session.objects`.
   - **Logout:** a logged-in key K, followed by a POST to logout, then putting K back in the cookie and `GET /`, gives an anonymous response (the nav shows "Log in").
 
   Test: `test_logout.py` (both halves, one test per half). Impl: none. Covers: AC13.
   - This is a guard. Mutation: `LogOutView.post` only deletes `_auth_user_id` from the session instead of calling `super().post()`. The logout half must go red. The login half pins `login()`'s built-in `cycle_key`, and has no realistic project-level mutation, which is noted. Revert afterwards.
+  - Done 2026-10-02: green on arrival.
+    - Changed during implementation: the logout half also asserts that the old key's row is gone from `Session.objects`. Under the planned mutation (deleting only `_auth_user_id`), a reused old cookie is *already* anonymous, so the planned "reused cookie is anonymous" check alone would not have caught it.
+    - The login half's "old row gone" assertion also keeps that half from passing vacuously, in case the planted session were never used.
+    - Mutation result: the logout half went red (`True is not false`, because the old row survived). The login half stayed green, as expected. The view was then restored.
 - [ ] 13. "Log in" in the nav becomes a real link for anonymous visitors. Assertions:
   - `links("nav") == [(reverse("accounts:login"), "Log in"), (reverse("accounts:signup"), "Sign up")]`
   - `text("nav") == "Goals Log in Sign up"`
