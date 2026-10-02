@@ -2,4 +2,14 @@
 
 {% block content %}
   <h1 class="text-2xl font-bold">Your goals</h1>
+  <ul class="mt-6 space-y-3">
+    {% for goal in goal_list %}
+      <li class="flex justify-between rounded border border-slate-200 bg-white px-4 py-3">
+        <span>{{ goal.title }}</span>
+        <span class="text-sm text-slate-500">{{ goal.get_status_display }}</span>
+      </li>
+    {% empty %}
+      <li>No goals yet.</li>
+    {% endfor %}
+  </ul>
 {% endblock %}

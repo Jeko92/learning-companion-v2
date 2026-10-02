@@ -67,7 +67,7 @@ Guard steps (7, 8, 10, 12) name their mutation.
 
   Expected red: `404 != 200`. Impl: `goals/urls.py` (`list`), the `config/urls.py` include, a minimal `GoalListView(ListView)` with `model = Goal`, and the template. Covers: AC1 (list), AC4.
 - [x] 3. The list requires login. An anonymous `GET /goals/` redirects to `f"{resolve_url(settings.LOGIN_URL)}?next=/goals/"`. Expected red: `200 != 302`. Impl: `LoginRequiredMixin`. Covers: AC2 (list).
-- [ ] 4. The list shows only your own goals, newest first, with status labels. Alice has "Learn Django" (in-progress, newer) and "Read docs" (planned, older); bob has "Bob's secret goal".
+- [x] 4. The list shows only your own goals, newest first, with status labels. Alice has "Learn Django" (in-progress, newer) and "Read docs" (planned, older); bob has "Bob's secret goal".
   - `page.text("main")` contains "Learn Django" before "Read docs", and the label "In progress".
   - Bob's title is absent.
   - A subtest with a user who has no goals: "No goals yet.".
