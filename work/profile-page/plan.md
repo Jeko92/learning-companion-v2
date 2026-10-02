@@ -142,7 +142,7 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
   - "Django" was removed from the profile, but the `Tag` "Django" still exists
 
   Expected red: the tags are unchanged. Impl: `ProfileForm.clean_focus_areas` (split, `strip()` for now, drop empty entries, de-duplicate by `casefold`) and `save()` (`transaction.atomic` and `focus_areas.set(...)` via `get_or_create_by_name`). Covers: AC7.
-- [ ] 10. Invalid input re-renders the form and saves nothing. Subtests on alice's edit URL, each checking:
+- [x] 10. Invalid input re-renders the form and saves nothing. Subtests on alice's edit URL, each checking:
   - status 200 and the form template
   - `assertFormError(form, field, message)`, with the message in `page.text("main")`
   - alice's name, cohort and tags unchanged, and `Tag.objects.count()` unchanged
@@ -159,6 +159,10 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
   - `name` was already required in step 6, so only the field-level checks are new
 
   Covers: AC8.
+  - Done 2026-10-02.
+  - **Correction to the plan's expected red:** the name and cohort cases were already green. `name` became required in step 6, and the `ModelForm` gives the length errors.
+  - The red came from the over-long focus-area entry. The save raised an unhandled `ValidationError` (a 500 in a real request) instead of a form error. That is the missing validation itself.
+  - Then green, with `Tag.objects.clean_name()` and entry-named errors in `clean_focus_areas`.
 - [ ] 11. Tag names are NFKC-normalised and their whitespace collapsed. Test: `tags/tests/test_models.py`. With "Python" saved:
   - `get_or_create_by_name("ＰＹＴＨＯＮ")` returns `(python, False)`
   - `get_or_create_by_name("café")`, then `("café")`, gives one tag (the second call has `created=False`)

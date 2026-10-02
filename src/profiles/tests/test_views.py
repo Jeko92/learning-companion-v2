@@ -200,3 +200,51 @@ class ProfileEditTests(TestCase):
             (self.profile.name, self.profile.cohort), ("Alice Smith", "Spring 2026")
         )
         self.assertContains(self.client.get(detail), "Profile saved.")
+
+    def test_invalid_input_rerenders_the_form_and_saves_nothing(self):
+        long_tag = "x" * 51
+        cases = (
+            ("blank name", {"name": ""}, "name", "This field is required."),
+            ("whitespace name", {"name": "   "}, "name", "This field is required."),
+            (
+                "long name",
+                {"name": "n" * 101},
+                "name",
+                "Ensure this value has at most 100 characters (it has 101).",
+            ),
+            (
+                "long cohort",
+                {"cohort": "c" * 51},
+                "cohort",
+                "Ensure this value has at most 50 characters (it has 51).",
+            ),
+            (
+                "long focus area",
+                {"focus_areas": f"Valid, {long_tag}"},
+                "focus_areas",
+                f"“{long_tag}”: Ensure this value has at most 50 characters (it has 51).",
+            ),
+        )
+        tag_count = Tag.objects.count()
+        for case, changes, field, message in cases:
+            with self.subTest(case=case):
+                data = {"name": "Changed", "cohort": "Changed", "focus_areas": ""}
+                data.update(changes)
+
+                response = self.client.post(self.path, data)
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "profiles/profile_form.html")
+                self.assertFormError(response.context["form"], field, message)
+                page = PageParser()
+                page.feed(response.content.decode())
+                self.assertIn(message, page.text("main"))
+                self.profile.refresh_from_db()
+                self.assertEqual(
+                    (self.profile.name, self.profile.cohort), ("Alice", "")
+                )
+                self.assertEqual(
+                    [t.name for t in self.profile.focus_areas.all()],
+                    ["Django", "Python"],
+                )
+                self.assertEqual(Tag.objects.count(), tag_count)

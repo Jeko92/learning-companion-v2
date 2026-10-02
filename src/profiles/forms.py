@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from profiles.models import Profile
@@ -24,14 +25,24 @@ class ProfileForm(forms.ModelForm):
         )
 
     def clean_focus_areas(self):
-        """The typed names, trimmed, without empty entries or entries that
-        differ only in case (the first one wins). Creates nothing."""
-        names, seen = [], set()
+        """The typed names, validated as tag names, without empty entries or
+        entries that differ only in case (the first one wins). Creates
+        nothing: an invalid entry fails the whole form before any save."""
+        names, seen, errors = [], set(), []
         for entry in self.cleaned_data["focus_areas"].split(","):
-            name = entry.strip()
-            if name and name.casefold() not in seen:
+            entry = entry.strip()
+            if not entry:
+                continue
+            try:
+                name = Tag.objects.clean_name(entry)
+            except ValidationError as error:
+                errors.extend(f"“{entry}”: {message}" for message in error.messages)
+                continue
+            if name.casefold() not in seen:
                 seen.add(name.casefold())
                 names.append(name)
+        if errors:
+            raise ValidationError(errors)
         return names
 
     @transaction.atomic

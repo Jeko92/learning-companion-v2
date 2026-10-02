@@ -9,6 +9,13 @@ def strip(value):
 
 
 class TagManager(models.Manager):
+    def clean_name(self, name):
+        """The name as it would be stored, or ValidationError if it's invalid.
+        Field validation only: no database access, nothing is created."""
+        tag = self.model(name=name)
+        tag.clean_fields()
+        return tag.name
+
     def get_or_create_by_name(self, name):
         """Turn typed input into a tag: (tag, created), matched the way the
         unique constraint compares names (trimmed, ASCII case-insensitive), so
