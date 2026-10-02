@@ -1,5 +1,6 @@
 import unicodedata
 
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
 from django.db.models.functions import Lower
 
@@ -12,6 +13,17 @@ def normalize_name(value):
     if not isinstance(value, str):
         return value
     return " ".join(unicodedata.normalize("NFKC", value).split())
+
+
+def reject_invisible_characters(value):
+    """Control and format characters (NUL, zero-width space, BOM, ...) would
+    make tags that look identical but aren't. Runs after normalize_name, which
+    has already turned whitespace controls like tabs into spaces."""
+    if any(unicodedata.category(char) in ("Cc", "Cf") for char in value):
+        raise ValidationError(
+            "Tag names can't contain control or invisible characters.",
+            code="invisible_characters",
+        )
 
 
 class TagManager(models.Manager):
@@ -47,7 +59,7 @@ class TagManager(models.Manager):
 class Tag(models.Model):
     """A shared label, e.g. a profile's focus area (and later a session tag)."""
 
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, validators=[reject_invisible_characters])
 
     objects = TagManager()
 

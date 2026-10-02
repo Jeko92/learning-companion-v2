@@ -109,14 +109,24 @@ class NameNormalisationTests(TestCase):
         self.assertEqual((tag, created), (self.python, False))
 
     def test_composed_and_decomposed_spellings_are_one_tag(self):
-        first, _ = Tag.objects.get_or_create_by_name("café")
+        first, _ = Tag.objects.get_or_create_by_name("cafe\u0301")
         second, created = Tag.objects.get_or_create_by_name("café")
 
         self.assertEqual((second, created), (first, False))
 
     def test_inner_whitespace_collapses_to_one_space(self):
         tag, _ = Tag.objects.get_or_create_by_name("Machine \t  Learning")
-        saved = Tag.objects.create(name=" Data  Science ")
+        saved = Tag.objects.create(name=" Data\u00a0 Science ")
 
         self.assertEqual(Tag.objects.get(pk=tag.pk).name, "Machine Learning")
         self.assertEqual(Tag.objects.get(pk=saved.pk).name, "Data Science")
+
+    def test_control_and_invisible_characters_are_rejected(self):
+        message = "Tag names can't contain control or invisible characters."
+        for name in ("Py\x00thon", "Python\u200b", "\ufeffPython"):
+            with self.subTest(name=repr(name)):
+                with self.assertRaises(ValidationError) as caught:
+                    Tag.objects.get_or_create_by_name(name)
+
+                self.assertIn(message, caught.exception.messages)
+                self.assertEqual(Tag.objects.count(), 1)

@@ -33,3 +33,17 @@ class FocusAreasInputTests(TestCase):
         self.assertEqual(Tag.objects.filter(name__iexact="machine learning").count(), 1)
         # Django left the profile, but the shared tag itself stays.
         self.assertTrue(Tag.objects.filter(name="Django").exists())
+
+    def test_an_invisible_character_is_a_field_error_and_saves_nothing(self):
+        tag_count = Tag.objects.count()
+
+        response = self.save("Rust, Python\u200b")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(
+            response.context["form"],
+            "focus_areas",
+            "“Python\u200b”: Tag names can't contain control or invisible characters.",
+        )
+        self.assertEqual(Tag.objects.count(), tag_count)
+        self.assertEqual([t.name for t in self.profile.focus_areas.all()], ["Django"])

@@ -170,11 +170,13 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
   - `Tag.objects.create(name=" Data  Science ")` stores "Data Science"
 
   Expected red: a new tag is created for "ＰＹＴＨＯＮ" (`True is not False`). Impl: `normalize_name()` (NFKC plus split/join) replaces `strip()` in `clean_fields`, `save` and `clean_name`. Covers: AC9.
-- [ ] 12. Control and invisible characters are rejected. Test: `tags/tests/test_models.py`. Subtests over `"Py\x00thon"`, `"Python​"` and `"﻿Python"`:
+- [x] 12. Control and invisible characters are rejected. Test: `tags/tests/test_models.py`. Subtests over `"Py\x00thon"`, `"Python​"` and `"﻿Python"`:
   - `get_or_create_by_name(…)` raises `ValidationError` with "Tag names can't contain control or invisible characters.", and the tag count is unchanged.
   - In `profiles/tests/test_forms.py`, posting `focus_areas="Python​"` to the edit view gives a `focus_areas` error with that message, and nothing is saved.
 
   Expected red: no `ValidationError`. Impl: the `reject_invisible_characters` validator on `Tag.name`, and `makemigrations tags` creates `0003`. Covers: AC8, AC9.
+  - Done 2026-10-02: red as expected (`ValidationError not raised` ×3, and the form returned `302 != 200`), then green.
+  - The tests write the invisible characters as escapes (`\u200b`, `\ufeff`, `\u0301`, `\u00a0`). Ruff's PLE2515 flags literal ones, which had slipped into the step 11 test as well; they were converted here.
 - [ ] 13. The name is validated before the lookup. `get_or_create_by_name("x" * 50_001)` raises `ValidationError`, not a database error, and creates nothing. Expected red: `OperationalError: LIKE or GLOB pattern too complex` (the missing behaviour itself). Impl: `get_or_create_by_name` calls `clean_name()` first, and the `iexact` lookup uses the validated name. Covers: AC9.
 - [ ] 14. CSRF is enforced on the edit form. Test: `test_views.py`, with `Client(enforce_csrf_checks=True)` and `force_login(alice)`, after a GET of the edit page (so the cookie is set):
   - a POST without a token returns 403, and the name is unchanged
