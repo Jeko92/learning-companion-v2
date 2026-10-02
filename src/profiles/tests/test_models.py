@@ -41,3 +41,26 @@ class ProfileTests(TestCase):
                 self.profile.name = name
 
                 self.assertEqual(str(self.profile), expected)
+
+    def test_focus_areas_are_shared_tags(self):
+        bob = get_user_model().objects.create_user("bob").profile
+        python, _ = Tag.objects.get_or_create_by_name("Python")
+        django, _ = Tag.objects.get_or_create_by_name("Django")
+        self.profile.focus_areas.add(python, django)
+        bob.focus_areas.add(Tag.objects.get_or_create_by_name("python")[0])
+
+        self.assertQuerySetEqual(
+            self.profile.focus_areas.all(), [django, python], ordered=False
+        )
+        self.assertEqual(Tag.objects.count(), 2)
+        self.assertQuerySetEqual(
+            python.profiles.all(), [self.profile, bob], ordered=False
+        )
+
+        python.delete()
+
+        self.assertEqual(
+            Profile.objects.filter(pk__in=[self.profile.pk, bob.pk]).count(), 2
+        )
+        self.assertQuerySetEqual(self.profile.focus_areas.all(), [django])
+        self.assertFalse(bob.focus_areas.exists())

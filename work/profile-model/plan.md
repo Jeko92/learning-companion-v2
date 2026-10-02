@@ -122,13 +122,15 @@ Each step is one red–green–refactor cycle and one commit, `feat(profile-mode
   - Guard. Mutation: `on_delete=models.PROTECT` in a scratch edit, with a matching migration not needed for the run. It must go red (`ProtectedError`). Revert afterwards.
   - Done 2026-10-02: green on arrival. Under the mutation it went red (`ProtectedError: Cannot delete some instances of model 'User'…`). The model was then restored.
 - [x] 12. `str(profile)` is the name, or the username when the name is blank. Subtests: blank gives `"alice"`; `name="Alice Smith"` gives `"Alice Smith"`. Test: `test_models.py`. Expected red: `'Profile object (1)' != 'alice'`. Impl: `Profile.__str__`. Covers: AC7.
-- [ ] 13. Focus areas are shared tags. Alice's profile gets `Python` and `Django`, and Bob's gets `Python`. Assert:
+- [x] 13. Focus areas are shared tags. Alice's profile gets `Python` and `Django`, and Bob's gets `Python`. Assert:
   - Alice has both tags, and `Tag.objects.count() == 2` (one shared `Python` row)
   - `python.profiles` contains both profiles
   - after `python.delete()`, both profiles still exist, Alice keeps only `Django`, and Bob has none
 
   Test: `test_models.py`. Impl: none. Covers: AC8.
   - Guard. Mutation: drop `related_name="profiles"` from `focus_areas`, and regenerate nothing (`MigrationsTests` is not run). It must go red (`'Tag' object has no attribute 'profiles'`). Revert afterwards.
+  - Done 2026-10-02: green on arrival. Under the mutation it went red (`AttributeError: 'Tag' object has no attribute 'profiles'`). The model was then restored.
+  - The test adds Bob's tag through `get_or_create_by_name("python")`, which also shows typed input reusing the existing `Python` row.
 - [ ] 14. `Tag` is registered in the admin with a search on `name`. Test: `src/tags/tests/test_admin.py`: `admin.site._registry[Tag]` exists and has `"name"` in `search_fields`. Expected red: `KeyError` or `None`; written as `assertIn(Tag, admin.site._registry)`, so the red is an assertion. Impl: `src/tags/admin.py`. Covers: AC9.
 - [ ] 15. The User admin's change page shows the profile inline. Test: `src/profiles/tests/test_admin.py`, as a superuser (`create_superuser` + `force_login`).
   - `GET reverse("admin:accounts_user_change", args=[alice.pk])` returns 200.
