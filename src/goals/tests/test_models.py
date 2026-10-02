@@ -122,3 +122,18 @@ class GoalStrTests(TestCase):
         owner = get_user_model().objects.create_user("bob")
 
         self.assertEqual(str(Goal(owner=owner, title="Learn Django")), "Learn Django")
+
+
+class GoalOwnershipTests(TestCase):
+    def test_goals_belong_to_their_owner_and_go_with_them(self):
+        User = get_user_model()
+        alice, bob = User.objects.create_user("alice"), User.objects.create_user("bob")
+        mine = [Goal.objects.create(owner=alice, title=t) for t in ("A1", "A2")]
+        theirs = Goal.objects.create(owner=bob, title="B1")
+
+        self.assertCountEqual(alice.goals.all(), mine)
+
+        alice.delete()
+
+        self.assertFalse(Goal.objects.filter(pk__in=[g.pk for g in mine]).exists())
+        self.assertTrue(Goal.objects.filter(pk=theirs.pk).exists())

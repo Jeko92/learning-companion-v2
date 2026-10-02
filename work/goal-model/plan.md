@@ -82,12 +82,16 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-model):
 
   Expected red: the default id order `[a, b, c]`. Impl: `Meta.ordering = ("-created_at", "-id")`; `makemigrations` creates `0003`. Covers: AC7.
 - [x] 7. `str(goal)` is the title. Expected red: `'Goal object (1)' != 'Learn Django'`. Impl: `__str__`. Covers: AC8.
-- [ ] 8. Ownership. Test:
+- [x] 8. Ownership. Test:
   - Alice has two goals and bob has one. `alice.goals.all()` holds exactly alice's two.
   - After `alice.delete()`, no goal of alice's remains, and bob's goal still exists.
 
   Impl: none, since step 2 defines `related_name` and `CASCADE`. Covers: AC9.
   - Guard. Mutation: `on_delete=models.PROTECT`. It must go red (`ProtectedError`). Revert afterwards.
+  - Done 2026-10-02: green on arrival. Under the mutation it went red (`ProtectedError`). The model was then restored.
+  - **Pitfall found:** after the restore, the full suite was still red with `PROTECT`. `CASCADE` and `PROTECT` have the same length, so the restored file had the same size as the mutated one, and the restore landed within the same second as the cached bytecode. Python's `.pyc` check (size plus whole-second mtime) therefore kept the stale mutated bytecode.
+    - Fixed by deleting `src/goals/__pycache__`.
+    - From now on, mutation runs use `PYTHONDONTWRITEBYTECODE=1`.
 - [ ] 9. `Goal` is in the admin. Test: `test_admin.py`.
   - `assertIn(Goal, admin.site._registry)` comes first.
   - Its `list_display` includes `title`, `owner`, `status` and `created_at`.
