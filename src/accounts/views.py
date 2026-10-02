@@ -4,7 +4,7 @@ from django.contrib.auth import login
 from django.shortcuts import redirect, resolve_url
 from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
-from django.views.generic import CreateView
+from django.views.generic import CreateView, TemplateView
 
 from accounts.forms import SignUpForm
 
@@ -28,3 +28,7 @@ class SignUpView(CreateView):
         login(self.request, self.object)
         messages.success(self.request, f"Welcome, {self.object.get_username()}!")
         return response
+
+
+class LogInView(TemplateView):
+    template_name = "accounts/login.html"
