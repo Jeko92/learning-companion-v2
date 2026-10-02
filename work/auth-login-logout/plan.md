@@ -109,8 +109,9 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-login-l
   - a valid `POST` with `next=/some/page/?a=1` redirects there
 
   Test: `test_login.py`, expected red: no `next` input in the form. Impl: `<input type="hidden" name="next" value="{{ next }}">` in `login.html`. Covers: AC6.
-- [ ] 8. An unsafe `next` is never followed. One `subTest` per payload: `https://evil.example/`, `//evil.example/`, `/\evil.example/`, `\\evil.example`, `javascript:alert(1)` and `https://testserver.evil.example/`. Each payload is sent both as POST `next` and as `GET ?next=` followed by a POST. Every case logs the user in, redirects to `settings.LOGIN_REDIRECT_URL`, and has a `Location` header that starts with `/` and not with `//` or `/\`. Test: `test_login.py`. Impl: none. Covers: AC7.
+- [x] 8. An unsafe `next` is never followed. One `subTest` per payload: `https://evil.example/`, `//evil.example/`, `/\evil.example/`, `\\evil.example`, `javascript:alert(1)` and `https://testserver.evil.example/`. Each payload is sent both as POST `next` and as `GET ?next=` followed by a POST. Every case logs the user in, redirects to `settings.LOGIN_REDIRECT_URL`, and has a `Location` header that starts with `/` and not with `//` or `/\`. Test: `test_login.py`. Impl: none. Covers: AC7.
   - This is a guard. Mutation: override `LogInView.get_redirect_url` to return the raw POST or GET value, unvalidated. Every subtest must go red. Revert afterwards.
+  - Done 2026-10-02: green on arrival. The "query" variant posts to `/accounts/login/?next=<payload>`, which is how a browser submits a form opened from a link carrying `next`. With an unvalidated `get_redirect_url`, all 12 subtests (6 payloads × POST and query) went red. The view was then restored.
 - [ ] 9. `next` can't inject markup. There are two payloads:
   - the AC's literal `"><script>alert(1)</script>`
   - the safe-path `/x/?q="><script>alert(1)</script>`, which passes validation and reaches the template

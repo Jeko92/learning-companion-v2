@@ -1,3 +1,5 @@
+from urllib.parse import urlencode
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.shortcuts import resolve_url
@@ -96,6 +98,39 @@ class LoginNextTests(TestCase):
         )
 
         self.assertRedirects(response, SAFE_NEXT, fetch_redirect_response=False)
+
+    def test_unsafe_next_is_never_followed(self):
+        # Open-redirect payloads, including tricks that bypass naive checks.
+        payloads = (
+            "https://evil.example/",
+            "//evil.example/",
+            "/\\evil.example/",
+            "\\\\evil.example",
+            "javascript:alert(1)",
+            "https://testserver.evil.example/",
+        )
+        credentials = {"username": USERNAME, "password": PASSWORD}
+        for payload in payloads:
+            for via in ("post", "query"):
+                with self.subTest(payload=payload, via=via):
+                    self.client.logout()
+                    if via == "post":
+                        response = self.client.post(
+                            LOGIN_PATH, {**credentials, "next": payload}
+                        )
+                    else:
+                        url = f"{LOGIN_PATH}?{urlencode({'next': payload})}"
+                        response = self.client.post(url, credentials)
+
+                    self.assertIn("_auth_user_id", self.client.session)
+                    self.assertRedirects(
+                        response,
+                        settings.LOGIN_REDIRECT_URL,
+                        fetch_redirect_response=False,
+                    )
+                    location = response["Location"]
+                    self.assertTrue(location.startswith("/"))
+                    self.assertFalse(location.startswith(("//", "/\\")))
 
 
 INVALID_LOGIN = (
