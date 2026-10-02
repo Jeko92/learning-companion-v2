@@ -279,7 +279,7 @@ Each step is one cycle and one commit. Steps 21 and 23 are guards and test harde
   - Done 2026-10-02: all four changes are in, and the suite is green.
     - The atomicity guard went red under the mutation (`'Alice' != ''`, because the name save wasn't rolled back) and was restored.
     - The new escaping test first errored on `self.path`, which isn't defined in `ProfileEscapingTests`. It now uses `reverse("profiles:edit", …)`.
-- [ ] 24. (Findings 6 and 9) Docs. No test. Commit `docs(profile-page): correct the tag and ownership notes`.
+- [x] 24. (Findings 6 and 9) Docs. No test. Commit `docs(profile-page): correct the tag and ownership notes`.
   - `CLAUDE.md` Tags bullet:
     - `save()` normalises (NFKC, trim, collapse)
     - the 50-character limit and the Cc/Cf and comma checks apply only through `full_clean()`/`clean_name()`
