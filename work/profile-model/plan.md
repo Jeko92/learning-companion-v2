@@ -143,7 +143,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(profile-mode
   - Posting the add form (username plus the password fields of Django 6.1's admin add form, to be confirmed on the red run) creates the user, with `Profile.objects.filter(user=new_user).count() == 1`.
 
   Expected red: `profile-TOTAL_FORMS` is present on the add page. Impl: `UserAdmin.get_inlines()` returns `[]` when `obj is None`. Covers: AC5 (the admin path) and AC9.
-- [ ] 17. Users who existed before get a profile through a data migration. Test: `src/profiles/tests/test_migrations.py`, a `TransactionTestCase`.
+- [x] 17. Users who existed before get a profile through a data migration. Test: `src/profiles/tests/test_migrations.py`, a `TransactionTestCase`.
   1. Assert `("profiles", "0002_create_missing_profiles")` is in the executor's graph nodes, so the red is an assertion.
   2. Migrate `profiles` to `0001_initial`.
   3. With historical models, create user `old` with no profile, and user `has` with a profile (created by hand, since historical models fire no signal).
