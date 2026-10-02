@@ -437,3 +437,34 @@ class GoalEditTests(TestCase):
                     (self.goal.title, self.goal.description, self.goal.status),
                     ("Learn Django", "Parts 1-7", Goal.Status.IN_PROGRESS),
                 )
+
+
+class GoalDeleteTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.path = f"/goals/{self.goal.pk}/delete/"
+        self.client.force_login(self.alice)
+
+    def test_delete_asks_for_confirmation_and_a_get_deletes_nothing(self):
+        response = self.client.get(self.path)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "goals/goal_confirm_delete.html")
+        self.assertEqual(reverse("goals:delete", args=[self.goal.pk]), self.path)
+        page = PageParser()
+        page.feed(response.content.decode())
+        self.assertIn("Delete “Learn Django”?", page.text("main"))
+        ((attrs, inputs),) = page.forms("main")
+        self.assertEqual(attrs.get("method"), "post")
+        self.assertEqual(attrs.get("action"), self.path)
+        self.assertIn("csrfmiddlewaretoken", {a.get("name") for a in inputs})
+        self.assertIn("button", [t for t, _ in page.elements])
+        self.assertIn("Delete", page.text("main"))
+        self.assertIn((self.goal.get_absolute_url(), "Cancel"), page.links("main"))
+        self.assertTrue(Goal.objects.filter(pk=self.goal.pk).exists())
+
+    def test_the_detail_page_links_to_delete(self):
+        links = get_page(self.client, self.goal.get_absolute_url()).links("main")
+
+        self.assertIn((self.path, "Delete goal"), links)

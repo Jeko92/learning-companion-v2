@@ -1,6 +1,13 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
-from django.views.generic import CreateView, DetailView, ListView, UpdateView
+from django.urls import reverse_lazy
+from django.views.generic import (
+    CreateView,
+    DeleteView,
+    DetailView,
+    ListView,
+    UpdateView,
+)
 
 from goals.forms import GoalForm
 from goals.models import Goal
@@ -39,3 +46,7 @@ class GoalCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
 class GoalUpdateView(OwnGoalsMixin, SuccessMessageMixin, UpdateView):
     form_class = GoalForm
     success_message = "Goal updated."
+
+
+class GoalDeleteView(OwnGoalsMixin, DeleteView):
+    success_url = reverse_lazy("goals:list")
