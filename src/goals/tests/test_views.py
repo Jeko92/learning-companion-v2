@@ -517,3 +517,45 @@ class GoalEditDeleteAccessTests(TestCase):
                 self.assertEqual(response.status_code, 404)
                 self.assertEqual(response.content, missing.content)
                 self.assert_untouched()
+
+
+class GoalEditDeleteCsrfTests(TestCase):
+    # The default test client skips CSRF checks; this one enforces them.
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=alice, title="Learn Django")
+        self.csrf_client = Client(enforce_csrf_checks=True)
+        self.csrf_client.force_login(alice)
+        self.data = {"edit": {"title": "Changed", "status": "done"}, "delete": {}}
+
+    def token_for(self, path):
+        # GET first: sets the CSRF cookie and yields the form's token.
+        page = PageParser()
+        page.feed(self.csrf_client.get(path).content.decode())
+        ((_, inputs),) = page.forms("main")
+        return [a["value"] for a in inputs if a.get("name") == "csrfmiddlewaretoken"]
+
+    def test_a_post_without_a_token_is_rejected(self):
+        for page in ("edit", "delete"):
+            with self.subTest(page=page):
+                path = reverse(f"goals:{page}", args=[self.goal.pk])
+                self.token_for(path)
+
+                response = self.csrf_client.post(path, self.data[page])
+
+                self.assertEqual(response.status_code, 403)
+                self.goal.refresh_from_db()
+                self.assertEqual(self.goal.title, "Learn Django")
+
+    def test_a_post_with_the_forms_token_succeeds(self):
+        for page in ("edit", "delete"):
+            with self.subTest(page=page):
+                path = reverse(f"goals:{page}", args=[self.goal.pk])
+                tokens = self.token_for(path)
+                self.assertEqual(len(tokens), 1, f"the {page} form has no CSRF token")
+
+                response = self.csrf_client.post(
+                    path, {**self.data[page], "csrfmiddlewaretoken": tokens[0]}
+                )
+
+                self.assertEqual(response.status_code, 302)
