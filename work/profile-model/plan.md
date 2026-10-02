@@ -171,7 +171,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(profile-mode
 ### Review findings (final-review 2026-10-02, verdict FAIL by the user's decision; see `review.md`)
 Each step is one cycle and one commit. Steps 21 and 22 are guards that pass on arrival, so each names a mutation that must turn it red and is then reverted.
 
-- [ ] 19. (Finding 1, AC3) `get_or_create_by_name` survives losing a creation race. Test: `tags/tests/test_models.py` `GetOrCreateByNameTests`, with `"Python"` saved and the manager's initial lookup forced to miss once (`unittest.mock.patch` on the lookup, so the code takes the create path). Assert:
+- [x] 19. (Finding 1, AC3) `get_or_create_by_name` survives losing a creation race. Test: `tags/tests/test_models.py` `GetOrCreateByNameTests`, with `"Python"` saved and the manager's initial lookup forced to miss once (`unittest.mock.patch` on the lookup, so the code takes the create path). Assert:
   - `get_or_create_by_name("python")` returns `(the existing tag, False)` and raises nothing
   - `Tag.objects.count() == 1`
   - when called inside an outer `transaction.atomic()`, a further query in that block still works, so the caller's transaction isn't broken
@@ -182,6 +182,9 @@ Each step is one cycle and one commit. Steps 21 and 22 are guards that pass on a
   - on `IntegrityError`, re-query `name__iexact` and return `(tag, False)`
 
   Covers: AC3.
+  - Done 2026-10-02: red as expected (`ValidationError: A tag with this name already exists.`), then green.
+  - The test forces the miss by patching `QuerySet.first` to return `None` once.
+  - Extra check: without the savepoint around `save()`, the test goes red (`TransactionManagementError` on the caller's next query). That proves the "transaction still usable" assertion matters.
 - [ ] 20. (Finding 2) Non-string names give a `ValidationError`, not an `AttributeError`.
   - `Tag(name=None).full_clean()` raises `ValidationError` with `"name"` in `error_dict`.
   - `get_or_create_by_name(None)` raises `ValidationError`.

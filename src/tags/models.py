@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.db.models.functions import Lower
 
 
@@ -6,14 +6,22 @@ class TagManager(models.Manager):
     def get_or_create_by_name(self, name):
         """Turn typed input into a tag: (tag, created), matched the way the
         unique constraint compares names (trimmed, ASCII case-insensitive), so
-        the first spelling is kept. A blank name raises ValidationError."""
+        the first spelling is kept. A blank name raises ValidationError.
+        Safe when another request creates the same name concurrently."""
         name = name.strip()
         tag = self.filter(name__iexact=name).first()
         if tag is not None:
             return tag, False
         tag = self.model(name=name)
-        tag.full_clean()
-        tag.save()
+        # Uniqueness is left to the database, so a lost race is an
+        # IntegrityError we can recover from, not a ValidationError.
+        tag.full_clean(validate_constraints=False)
+        try:
+            # Savepoint: a failed insert must not break the caller's transaction.
+            with transaction.atomic():
+                tag.save()
+        except IntegrityError:
+            return self.get(name__iexact=name), False
         return tag, True
 
 

@@ -1,5 +1,8 @@
+from unittest.mock import patch
+
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import QuerySet
 from django.test import TestCase
 
 from tags.models import Tag
@@ -59,3 +62,26 @@ class GetOrCreateByNameTests(TestCase):
             Tag.objects.get_or_create_by_name("   ")
 
         self.assertEqual(Tag.objects.count(), 1)
+
+    def test_losing_a_creation_race_returns_the_existing_tag(self):
+        # Make the initial lookup miss once, as if another request created
+        # "Python" right after it: the create must then find the winner.
+        real_first = QuerySet.first
+        missed = []
+
+        def first_missing_once(queryset):
+            if not missed:
+                missed.append(True)
+                return None
+            return real_first(queryset)
+
+        with (
+            patch.object(QuerySet, "first", first_missing_once),
+            transaction.atomic(),
+        ):
+            tag, created = Tag.objects.get_or_create_by_name("python")
+            # The caller's transaction must still be usable.
+            count = Tag.objects.count()
+
+        self.assertEqual((tag, created), (self.python, False))
+        self.assertEqual(count, 1)
