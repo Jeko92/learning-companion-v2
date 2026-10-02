@@ -33,3 +33,10 @@ class SignUpView(CreateView):
 
 class LogInView(auth_views.LoginView):
     template_name = "accounts/login.html"
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(
+            self.request, f"Welcome back, {form.get_user().get_username()}!"
+        )
+        return response

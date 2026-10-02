@@ -67,3 +67,10 @@ class LoginSubmitTests(TestCase):
         self.assertRedirects(
             response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
         )
+
+    def test_landing_page_welcomes_the_user_back(self):
+        response = self.client.post(
+            LOGIN_PATH, {"username": USERNAME, "password": PASSWORD}, follow=True
+        )
+
+        self.assertContains(response, f"Welcome back, {USERNAME}!")
