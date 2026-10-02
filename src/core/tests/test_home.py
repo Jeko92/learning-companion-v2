@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.messages.storage import default_storage
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.template.loader import render_to_string
 from django.test import RequestFactory, TestCase
 from django.urls import resolve
 
@@ -12,7 +13,11 @@ from core import views
 
 # Elements that never get an end tag, so they must not stay on the open stack.
 VOID_ELEMENTS = {"base", "br", "hr", "img", "input", "link", "meta", "source", "wbr"}
-SECTIONS = ("title", "header", "nav")
+SECTIONS = ("title", "header", "nav", "main")
+PITCH = (
+    "Track your learning goals and sessions, and get AI-powered summaries"
+    " and next steps."
+)
 
 
 class PageParser(HTMLParser):
@@ -100,3 +105,9 @@ class HomePageTests(TestCase):
         response = views.home(request)
 
         self.assertContains(response, "Profile saved.")
+
+    def test_home_fills_the_layout_content_block_with_the_pitch(self):
+        page = self.get_page()
+
+        self.assertIn(PITCH, " ".join(page.text["main"].split()))
+        self.assertNotIn(PITCH, render_to_string("base.html"))
