@@ -181,7 +181,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-signup)
   Test: `test_signup.py`, expected red `200 != 302` on the `GET`. Impl: `SignUpView.dispatch` returns `redirect(resolve_url(settings.LOGIN_REDIRECT_URL))` for authenticated users. Covers: AC8.
 - [x] 13. Sign-up `POST`s are marked as sensitive, so the passwords are hidden from error reports: after a `POST`, `response.wsgi_request.sensitive_post_parameters == ["password1", "password2"]`. Test: `test_signup.py`, expected red: an `AttributeError` turned into an assertion with `getattr(..., None)`. Impl: `@method_decorator(sensitive_post_parameters("password1", "password2"), name="dispatch")` on `SignUpView`. Covers: none (security hygiene beyond the ACs, mirroring `LoginView`).
   - Changed during implementation (2026-10-02): the decorator stores its `*parameters`, which is a tuple. The plan's `== ["password1", "password2"]` would therefore have stayed red against correct code. The test compares against `("password1", "password2")` instead, which was corrected while it was still red. The red reason (`None`) was unchanged.
-- [ ] 14. The nav depends on whether the visitor is logged in:
+- [x] 14. The nav depends on whether the visitor is logged in:
   - anonymous `GET /`: `page.links("nav") == [(reverse("accounts:signup"), "Sign up")]`, and "Goals" and "Log in" are in `page.text("nav")` but not in the link text
   - after `force_login`: `page.links("nav") == []`, "Goals" is in `page.text("nav")`, and "Log in" is not
 

@@ -44,6 +44,10 @@ class PageParser(HTMLParser):
         self.href_pieces = []
         # (tag, {attribute: value}) for every start tag, in document order.
         self.elements = []
+        # Per section, (href, text pieces) for each element with an href in it.
+        self.link_pieces = {section: [] for section in SECTIONS}
+        # (depth in open_tags, text pieces) for elements with an href still open.
+        self.open_links = []
 
     def text(self, section):
         return collapse(self.pieces[section])
@@ -51,16 +55,30 @@ class PageParser(HTMLParser):
     def href_text(self):
         return collapse(self.href_pieces)
 
+    def links(self, section):
+        """(href, text) for every element with an href inside the section."""
+        return [(href, collapse(pieces)) for href, pieces in self.link_pieces[section]]
+
     def handle_starttag(self, tag, attrs):
-        self.elements.append((tag, dict(attrs)))
-        if tag not in VOID_ELEMENTS:
-            has_href = any(name == "href" for name, _ in attrs)
-            self.open_tags.append((tag, has_href))
+        attrs = dict(attrs)
+        self.elements.append((tag, attrs))
+        if tag in VOID_ELEMENTS:
+            return
+        if "href" in attrs:
+            pieces = []
+            names = {name for name, _ in self.open_tags}
+            for section in SECTIONS:
+                if section in names:
+                    self.link_pieces[section].append((attrs["href"], pieces))
+            self.open_links.append((len(self.open_tags) + 1, pieces))
+        self.open_tags.append((tag, "href" in attrs))
 
     def handle_endtag(self, tag):
         names = [name for name, _ in self.open_tags]
         if tag in names:
             del self.open_tags[len(names) - 1 - names[::-1].index(tag) :]
+            depth = len(self.open_tags)
+            self.open_links = [(d, p) for d, p in self.open_links if d <= depth]
 
     def handle_data(self, data):
         names = {name for name, _ in self.open_tags}
@@ -69,3 +87,5 @@ class PageParser(HTMLParser):
                 self.pieces[section].append(data)
         if any(has_href for _, has_href in self.open_tags):
             self.href_pieces.append(data)
+        for _, pieces in self.open_links:
+            pieces.append(data)

@@ -12,7 +12,10 @@
       <span class="text-lg font-semibold">Learning Companion</span>
       <nav class="flex gap-6 text-sm text-slate-500">
         <span>Goals</span>
-        <span>Log in</span>
+        {% if not user.is_authenticated %}
+          <span>Log in</span>
+          <a href="{% url 'accounts:signup' %}" class="font-medium text-slate-800 hover:underline">Sign up</a>
+        {% endif %}
       </nav>
     </div>
   </header>
