@@ -72,4 +72,6 @@ Constraints and context:
 - The login template is `src/templates/accounts/login.html`, extending `base.html`, following the #2 and #3 convention.
 - `CLAUDE.md` and `README.md` get the login and logout URLs and the redirect settings. The plan includes this.
 
-Status: the user approved these acceptance criteria (AC1–AC15) on 2026-10-02. The next step is `plan-ticket`.
+- **Accepted risk: logged-in state is detectable cross-site** (final review, finding 13, accepted by the user on 2026-10-02). Because `redirect_authenticated_user = True` (AC8), a hostile page can tell whether a visitor has a session here, a known Django caveat. It reveals only logged-in yes/no, and sign-up already behaves the same way (#3 AC8).
+
+Status: the user approved AC1–AC15 on 2026-10-02. AC16 was added after the first final review, at the user's decision. The final review passed on 2026-10-02 (`review.md`).
