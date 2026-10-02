@@ -96,7 +96,7 @@ Test files: `src/core/tests/test_apps.py` (`SimpleTestCase`) for installed apps,
 | AC6 content block filled with the pitch | 8 |
 | AC7 `<footer>` | 9 |
 | AC8 stylesheet linked, no build needed for tests | 10, 11 |
-| AC9 `django_tailwind_cli` and `core` installed, home view in `core` via `core/urls.py` at `/` | 1, 2, 10 |
+| AC9 `django_tailwind_cli` and `core` installed, home view in `core` via `core/urls.py` at `/` | 1, 2, 10, 13 |
 
 The deliverables that tests can't verify (requirements, `.gitignore`, `README.md`, `CLAUDE.md`) are covered by steps 10 and 12.
 
