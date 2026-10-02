@@ -107,7 +107,7 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
   - **anonymous:** redirected to login with `next=/profile/`
 
   Expected red: `404 != 302`. Impl: `MyProfileView(LoginRequiredMixin, RedirectView)` with `get_or_create`, and the `mine` route. Covers: AC1 (mine), AC2 (mine), AC3.
-- [ ] 6. The edit page renders a pre-filled form. For alice, whose name is "Alice" and whose tags are "Python" and "Django":
+- [x] 6. The edit page renders a pre-filled form. For alice, whose name is "Alice" and whose tags are "Python" and "Django":
   - `GET /profile/<pk>/edit/` returns 200, **asserted first**, and `profiles/profile_form.html` is used.
   - `reverse("profiles:edit", args=[pk])` matches.
   - `forms("main")` has exactly one form, with `method="post"` and the edit URL as `action`.

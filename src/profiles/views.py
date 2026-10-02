@@ -1,7 +1,8 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse
-from django.views.generic import DetailView, RedirectView
+from django.views.generic import DetailView, RedirectView, UpdateView
 
+from profiles.forms import ProfileForm
 from profiles.models import Profile
 
 
@@ -26,3 +27,8 @@ class MyProfileView(LoginRequiredMixin, RedirectView):
         # get_or_create: users loaded from fixtures have no profile (CLAUDE.md).
         profile, _ = Profile.objects.get_or_create(user=self.request.user)
         return reverse("profiles:detail", args=[profile.pk])
+
+
+class ProfileUpdateView(OwnProfileMixin, UpdateView):
+    form_class = ProfileForm
+    template_name = "profiles/profile_form.html"

@@ -124,3 +124,38 @@ class MyProfileTests(TestCase):
         self.assertRedirects(
             response, login_redirect("/profile/"), fetch_redirect_response=False
         )
+
+
+class ProfileEditTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user(USERNAME, password=PASSWORD)
+        self.profile = self.alice.profile
+        self.profile.name = "Alice"
+        self.profile.save()
+        for name in ("Python", "Django"):
+            self.profile.focus_areas.add(Tag.objects.get_or_create_by_name(name)[0])
+        self.path = f"/profile/{self.profile.pk}/edit/"
+        self.client.force_login(self.alice)
+
+    def test_edit_page_renders_your_profile_in_a_form(self):
+        response = self.client.get(self.path)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "profiles/profile_form.html")
+        self.assertTemplateUsed(response, "base.html")
+        self.assertEqual(reverse("profiles:edit", args=[self.profile.pk]), self.path)
+        page = PageParser()
+        page.feed(response.content.decode())
+        ((attrs, inputs),) = page.forms("main")
+        self.assertEqual(attrs.get("method"), "post")
+        self.assertEqual(attrs.get("action"), self.path)
+        values = {a.get("name"): a.get("value") for a in inputs}
+        self.assertIn("csrfmiddlewaretoken", values)
+        self.assertEqual(values["name"], "Alice")
+        self.assertIn("cohort", values)
+        self.assertEqual(values["focus_areas"], "Django, Python")
+
+    def test_detail_page_links_to_the_edit_page(self):
+        page = get_page(self.client, f"/profile/{self.profile.pk}/")
+
+        self.assertIn((self.path, "Edit profile"), page.links("main"))
