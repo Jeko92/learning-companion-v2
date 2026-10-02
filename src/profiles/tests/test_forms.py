@@ -1,8 +1,10 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from profiles.forms import ProfileForm
-from tags.models import Tag
+from tags.models import Tag, TagManager
 
 PASSWORD = "Tr4ck-Learning!"
 
@@ -120,3 +122,28 @@ class ProfileFormTests(TestCase):
         self.assertFalse(profile.focus_areas.exists())
         form.save_m2m()
         self.assertEqual([t.name for t in profile.focus_areas.all()], ["Rust"])
+
+    def test_a_failure_while_saving_tags_rolls_the_whole_save_back(self):
+        profile = get_user_model().objects.create_user("alice").profile
+        form = ProfileForm(
+            {"name": "Alice", "cohort": "", "focus_areas": "Go, Rust"}, instance=profile
+        )
+        self.assertTrue(form.is_valid())
+        real = TagManager.get_or_create_by_name
+        calls = []
+
+        def fail_on_second_call(manager, name):
+            calls.append(name)
+            if len(calls) == 2:
+                raise RuntimeError("database went away")
+            return real(manager, name)
+
+        with (
+            patch.object(TagManager, "get_or_create_by_name", fail_on_second_call),
+            self.assertRaises(RuntimeError),
+        ):
+            form.save()
+
+        profile.refresh_from_db()
+        self.assertEqual(profile.name, "")
+        self.assertFalse(Tag.objects.filter(name="Go").exists())

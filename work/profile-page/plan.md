@@ -270,12 +270,15 @@ Each step is one cycle and one commit. Steps 21 and 23 are guards and test harde
     - `commit=False`: `True is not false`, because the tags were written at once.
     - The unbound form errored with `RelatedObjectDoesNotExist: Profile has no user`, not the planned `ValueError`. That `ValueError`'s message calls `str(profile)`, which fails first on an unsaved profile. It is the same root cause, fixed by guarding on `instance.pk`.
     - Then green, with `set()` moved into `_save_m2m()`.
-- [ ] 23. (Findings 5, 7 and 8, plus the security info item on errors) Test hardening. Commit `refactor(profile-page): tighten the profile tests`. Changes:
+- [x] 23. (Findings 5, 7 and 8, plus the security info item on errors) Test hardening. Commit `refactor(profile-page): tighten the profile tests`. Changes:
   - **Atomicity:** a test patches `Tag.objects.get_or_create_by_name` to raise on its second call. Saving `"Python, Rust"` then raises, alice's name is unchanged and no tag was created.
     - Guard mutation: remove the atomic wrapper, which must go red. Revert afterwards.
   - **404 bodies:** the AC5 "no data in the 404 body" checks become a comparison: the foreign-pk response content equals the missing-pk response content, for detail and for edit by GET and POST. The vacuous `assertNotContains` checks go.
   - **AC3 precondition:** the fixture-user test asserts there is no profile before the GET, and exactly one after.
   - **Escaped errors:** a test POSTs `focus_areas="<script>alert(1)</script>\u200b"`, and the error response contains the escaped entry and never the raw `<script>alert(1)</script>`.
+  - Done 2026-10-02: all four changes are in, and the suite is green.
+    - The atomicity guard went red under the mutation (`'Alice' != ''`, because the name save wasn't rolled back) and was restored.
+    - The new escaping test first errored on `self.path`, which isn't defined in `ProfileEscapingTests`. It now uses `reverse("profiles:edit", …)`.
 - [ ] 24. (Findings 6 and 9) Docs. No test. Commit `docs(profile-page): correct the tag and ownership notes`.
   - `CLAUDE.md` Tags bullet:
     - `save()` normalises (NFKC, trim, collapse)

@@ -79,11 +79,12 @@ class ProfileDetailTests(TestCase):
         self.client.force_login(bob)
 
         response = self.client.get(f"/profile/{self.profile.pk}/")
+        missing = self.client.get("/profile/999999/")
 
         self.assertEqual(response.status_code, 404)
-        self.assertNotContains(response, "Alice Smith", status_code=404)
-        self.assertNotContains(response, "Spring 2026", status_code=404)
-        self.assertEqual(self.client.get("/profile/999999/").status_code, 404)
+        self.assertEqual(missing.status_code, 404)
+        # Identical to a missing profile, so nothing about alice's leaks.
+        self.assertEqual(response.content, missing.content)
 
 
 class MyProfileTests(TestCase):
@@ -107,11 +108,13 @@ class MyProfileTests(TestCase):
         # loaddata saves users with raw=True, so the signal makes no profile.
         fixture_user = get_user_model()(username="fixture")
         fixture_user.save_base(raw=True)
+        self.assertFalse(Profile.objects.filter(user=fixture_user).exists())
         self.client.force_login(fixture_user)
 
         response = self.client.get("/profile/")
 
         self.assertEqual(response.status_code, 302)
+        self.assertEqual(Profile.objects.filter(user=fixture_user).count(), 1)
         profile = Profile.objects.get(user=fixture_user)
         self.assertRedirects(
             response, f"/profile/{profile.pk}/", fetch_redirect_response=False
@@ -182,9 +185,11 @@ class ProfileEditTests(TestCase):
                 # Only the POST carries data; on a GET it would land in `next`.
                 data = {"name": "hacked"} if method == "post" else None
                 response = getattr(self.client, method)(self.path, data)
+                missing = getattr(self.client, method)("/profile/999999/edit/", data)
 
                 self.assertEqual(response.status_code, 404)
-                self.assertNotContains(response, "Alice", status_code=404)
+                # Identical to a missing profile, so nothing about alice's leaks.
+                self.assertEqual(response.content, missing.content)
                 self.profile.refresh_from_db()
                 self.assertEqual(self.profile.name, "Alice")
 
@@ -346,3 +351,13 @@ class ProfileEscapingTests(TestCase):
 
                 self.assertNotContains(response, self.PAYLOAD)
                 self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
+
+    def test_a_rejected_entry_is_shown_escaped_in_the_error(self):
+        response = self.client.post(
+            reverse("profiles:edit", args=[self.profile.pk]),
+            {"name": "Alice", "cohort": "", "focus_areas": f"{self.PAYLOAD}\u200b"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, self.PAYLOAD)
+        self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
