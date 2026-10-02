@@ -99,3 +99,16 @@ Test files: `src/core/tests/test_apps.py` (`SimpleTestCase`) for installed apps,
 | AC9 `django_tailwind_cli` and `core` installed, home view in `core` via `core/urls.py` at `/` | 1, 2, 10 |
 
 The deliverables that tests can't verify (requirements, `.gitignore`, `README.md`, `CLAUDE.md`) are covered by steps 10 and 12.
+
+## Review findings (review.md, 2026-10-02)
+The verdict was FAIL because part of AC9 (the `include` at `/`) is not proven. Findings 6 and 7 (security, low) are out of scope for this ticket. They belong to the `docker` and `ci-tests` tickets, so they are not steps here.
+
+- [ ] 13. The root URLconf includes `core.urls` at `/`: `get_resolver().url_patterns` contains a `URLResolver` whose `urlconf_name == "core.urls"` and whose `str(pattern) == ""`. Test: `src/core/tests/test_home.py`, extending `test_home_is_served_by_core_through_core_urls` or as a sibling test. Impl: none. Covers: AC9 (finding 1, medium).
+  - This is a guard test that passes on arrival, because step 2 already added the include. Confirm that it guards: temporarily replace `include("core.urls")` in `src/config/urls.py` with `path("", views.home, name="home")`. The new assertion must go red while the existing ones stay green. Then restore the include.
+  - Commit: `feat(setup-layout-tailwind): prove the home view is routed through the core.urls include`.
+- [ ] 14. Make `PageParser` robust, as a test-only refactor on green. Test: `src/core/tests/test_home.py`. Impl: none. Covers: AC3, AC4, AC6, AC7 (findings 2–5, low).
+  - Use the full HTML void-element list: `area`, `base`, `br`, `col`, `embed`, `hr`, `img`, `input`, `link`, `meta`, `param`, `source`, `track`, `wbr`.
+  - Join text pieces with a space, and collapse whitespace in one place, for example on a parser accessor. Use it for every section and for the href text, so the `<main>` check no longer collapses whitespace on its own.
+  - Add `footer` to `SECTIONS`. AC7 then asserts that the footer section has text ("Learning Companion"), instead of checking `seen_tags`. This aligns the code with the design decision; it is the deviation in finding 3.
+  - Confirm that the tests still guard after the change. Re-run the step 6 mutation (`<a href>` around "Goals") and wrap "Learning Companion" across two lines in the header: the first must go red and the second must stay green. Then restore both.
+  - Commit: `refactor(setup-layout-tailwind): make the page parser tests whitespace- and void-element-safe`.
