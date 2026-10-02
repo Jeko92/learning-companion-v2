@@ -31,3 +31,12 @@ class GoalListTests(TestCase):
         self.assertTemplateUsed(response, "goals/goal_list.html")
         self.assertTemplateUsed(response, "base.html")
         self.assertEqual(reverse("goals:list"), "/goals/")
+
+    def test_anonymous_visitors_are_sent_to_log_in(self):
+        self.client.logout()
+
+        response = self.client.get("/goals/")
+
+        self.assertRedirects(
+            response, login_redirect("/goals/"), fetch_redirect_response=False
+        )
