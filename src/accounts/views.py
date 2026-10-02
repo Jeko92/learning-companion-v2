@@ -47,7 +47,10 @@ class LogInView(auth_views.LoginView):
 class LogOutView(auth_views.LogoutView):
     # POST only (Django's LogoutView answers GET with 405).
     def post(self, request, *args, **kwargs):
+        # Read before logout() swaps in AnonymousUser: confirm real logouts only.
+        was_logged_in = request.user.is_authenticated
         response = super().post(request, *args, **kwargs)
-        # Messages are written at response time, so this survives the flush.
-        messages.info(request, "You have been logged out.")
+        if was_logged_in:
+            # Messages are written at response time, so this survives the flush.
+            messages.info(request, "You have been logged out.")
         return response

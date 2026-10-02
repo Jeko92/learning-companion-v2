@@ -235,7 +235,7 @@ Each step is still one cycle and one commit. Steps 18–21 are guard tests that 
 #### Review finding 12: the user decided to fix both logout edge cases (AC16, 2026-10-02)
 Django's `LogoutView.post` renders `registration/logged_out.html` only when `get_success_url()` equals `request.get_full_path()`. Otherwise it redirects. The "You have been logged out." message is currently added unconditionally after `super().post()`.
 
-- [ ] 23. An anonymous logout shows no "logged out" message. In `LogoutTests`, an anonymous POST to `/accounts/logout/` must redirect to `settings.LOGOUT_REDIRECT_URL`. With `follow=True`, the page must not contain "You have been logged out.". Expected red: the message is present. Impl: in `LogOutView.post`, read `request.user.is_authenticated` before `super().post()`, and add the message only if it was true. Covers: AC16 (anonymous).
+- [x] 23. An anonymous logout shows no "logged out" message. In `LogoutTests`, an anonymous POST to `/accounts/logout/` must redirect to `settings.LOGOUT_REDIRECT_URL`. With `follow=True`, the page must not contain "You have been logged out.". Expected red: the message is present. Impl: in `LogOutView.post`, read `request.user.is_authenticated` before `super().post()`, and add the message only if it was true. Covers: AC16 (anonymous).
 - [ ] 24. Logout never renders the admin "Logged out" page. In `LogoutTests`, a logged-in user POSTs `next=/accounts/logout/` (`reverse("accounts:logout")`). Assert:
   - the user is anonymous
   - a redirect to `settings.LOGOUT_REDIRECT_URL` (`fetch_redirect_response=False`)

@@ -33,6 +33,18 @@ class LogoutTests(TestCase):
 
         self.assertContains(response, "You have been logged out.")
 
+    def test_anonymous_logout_redirects_without_the_message(self):
+        self.client.logout()
+
+        response = self.client.post(LOGOUT_PATH)
+
+        self.assertRedirects(
+            response, settings.LOGOUT_REDIRECT_URL, fetch_redirect_response=False
+        )
+        self.assertNotContains(
+            self.client.get(response["Location"]), "You have been logged out."
+        )
+
     def test_unsafe_next_is_never_followed(self):
         # LogoutView honours a posted next only after the same same-site check
         # as login.
