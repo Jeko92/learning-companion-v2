@@ -13,3 +13,9 @@ class HomePageTests(TestCase):
         self.assertIs(match.func, views.home)
         self.assertEqual(match.url_name, "home")
         self.assertIs(resolve("/", urlconf="core.urls").func, views.home)
+
+    def test_home_renders_home_template_extending_base(self):
+        response = self.client.get("/")
+
+        self.assertTemplateUsed(response, "home.html")
+        self.assertTemplateUsed(response, "base.html")
