@@ -81,3 +81,59 @@ class SignUpSubmitTests(TestCase):
 
         self.assertEqual(response.request["PATH_INFO"], "/")
         self.assertContains(response, f"Welcome, {USERNAME}!")
+
+
+class SignUpInvalidTests(TestCase):
+    # (case, submitted data, field with the error, error message). Only the two
+    # duplicate cases collide with the existing user, so each case triggers
+    # exactly the one error it is named after.
+    CASES = (
+        (
+            "mismatched passwords",
+            signup_data("bob", PASSWORD, "Different-Pass9!"),
+            "password2",
+            "The two password fields didn’t match.",
+        ),
+        (
+            "existing username",
+            signup_data(USERNAME),
+            "username",
+            "A user with that username already exists.",
+        ),
+        (
+            "username differing only in case",
+            signup_data("Alice"),
+            "username",
+            "A user with that username already exists.",
+        ),
+        (
+            "common password",
+            signup_data("bob", "password123", "password123"),
+            "password2",
+            "This password is too common.",
+        ),
+        (
+            "short password",
+            signup_data("bob", "Xq7#vB", "Xq7#vB"),
+            "password2",
+            "This password is too short. It must contain at least 8 characters.",
+        ),
+    )
+
+    def setUp(self):
+        get_user_model().objects.create_user(USERNAME, password=PASSWORD)
+
+    def test_invalid_signup_rerenders_the_form_with_the_field_error(self):
+        for case, data, field, message in self.CASES:
+            with self.subTest(case=case):
+                response = self.client.post(SIGNUP_PATH, data)
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "accounts/signup.html")
+                form = response.context["form"]
+                self.assertFormError(form, field, message)
+                self.assertEqual(list(form.errors), [field])
+                self.assertEqual(get_user_model().objects.count(), 1)
+                self.assertNotIn("_auth_user_id", self.client.session)
+                for password in {data["password1"], data["password2"]}:
+                    self.assertNotContains(response, password)

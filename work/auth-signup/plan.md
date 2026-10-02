@@ -146,7 +146,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-signup)
 
   Covers: AC5.
 - [x] 10. Following the redirect, the home page shows "Welcome, alice!": a `POST` with `follow=True` lands on `/`, and that page contains the message. Test: `test_signup.py`. Impl: `messages.success(...)` in `form_valid`. Covers: AC6.
-- [ ] 11. An invalid `POST` re-renders the form with the error on the right field, creates no user, logs no one in, and doesn't echo the submitted passwords. It uses one `subTest` per case. Each case asserts:
+- [x] 11. An invalid `POST` re-renders the form with the error on the right field, creates no user, logs no one in, and doesn't echo the submitted passwords. It uses one `subTest` per case. Each case asserts:
   - status 200 and `accounts/signup.html` used
   - `assertFormError(response.context["form"], <field>, <message>)`
   - the user count is unchanged
@@ -170,6 +170,10 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-signup)
   - Confirm that it guards with two temporary mutations, then revert both:
     1. Base `SignUpForm` on `BaseUserCreationForm`, which has no case-insensitive check. The case-only subtest must go red.
     2. Give `password1` a `PasswordInput(render_value=True)`. The no-echo assertion must go red.
+  - Done 2026-10-02: green on arrival, with all five subtests in one test method.
+    - Mutation 1 (`BaseUserCreationForm`): the case-only subtest went red (`302 != 200`, because `Alice` was created). As a knock-on, the common-password subtest also went red (`2 != 1`), since subtests share one test's database. That only happens after an earlier subtest has already failed.
+    - Mutation 2 (`render_value=True`): went red with `'Tr4ck-Learning!' unexpectedly found`.
+    - Both mutations were reverted. `CASES` is a tuple (ruff `RUF012`).
 - [ ] 12. A logged-in user is redirected away from sign-up. After `force_login(existing_user)`:
   - `GET /accounts/signup/` redirects to `settings.LOGIN_REDIRECT_URL` (`fetch_redirect_response=False`), and `accounts/signup.html` is not used
   - a valid `POST` for a new username also redirects there, and the user count is unchanged
