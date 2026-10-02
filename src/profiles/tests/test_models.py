@@ -23,3 +23,14 @@ class ProfileFieldTests(TestCase):
         self.assertIs(focus_areas.related_model, Tag)
         self.assertIs(focus_areas.blank, True)
         self.assertEqual(focus_areas.remote_field.related_name, "profiles")
+
+
+class ProfileTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user("alice")
+        self.profile = self.user.profile
+
+    def test_deleting_the_user_deletes_the_profile(self):
+        self.user.delete()
+
+        self.assertFalse(Profile.objects.filter(pk=self.profile.pk).exists())
