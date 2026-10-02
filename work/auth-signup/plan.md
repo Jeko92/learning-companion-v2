@@ -145,7 +145,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-signup)
   - `get_success_url` returns `resolve_url(settings.LOGIN_REDIRECT_URL)`, which replaces the hard-coded `success_url`
 
   Covers: AC5.
-- [ ] 10. Following the redirect, the home page shows "Welcome, alice!": a `POST` with `follow=True` lands on `/`, and that page contains the message. Test: `test_signup.py`. Impl: `messages.success(...)` in `form_valid`. Covers: AC6.
+- [x] 10. Following the redirect, the home page shows "Welcome, alice!": a `POST` with `follow=True` lands on `/`, and that page contains the message. Test: `test_signup.py`. Impl: `messages.success(...)` in `form_valid`. Covers: AC6.
 - [ ] 11. An invalid `POST` re-renders the form with the error on the right field, creates no user, logs no one in, and doesn't echo the submitted passwords. It uses one `subTest` per case. Each case asserts:
   - status 200 and `accounts/signup.html` used
   - `assertFormError(response.context["form"], <field>, <message>)`

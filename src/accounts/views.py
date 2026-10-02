@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import login
 from django.shortcuts import resolve_url
 from django.views.generic import CreateView
@@ -16,4 +17,5 @@ class SignUpView(CreateView):
     def form_valid(self, form):
         response = super().form_valid(form)
         login(self.request, self.object)
+        messages.success(self.request, f"Welcome, {self.object.get_username()}!")
         return response

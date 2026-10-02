@@ -75,3 +75,9 @@ class SignUpSubmitTests(TestCase):
         self.assertRedirects(
             response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
         )
+
+    def test_home_welcomes_the_new_user_after_signup(self):
+        response = self.client.post(SIGNUP_PATH, signup_data(), follow=True)
+
+        self.assertEqual(response.request["PATH_INFO"], "/")
+        self.assertContains(response, f"Welcome, {USERNAME}!")
