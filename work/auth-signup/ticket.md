@@ -5,23 +5,23 @@ Issue: #3 · Branch: feature/auth-signup
 As a visitor to the Learning Companion, I want to create an account with a username and password and be logged in straight away, so that I can start tracking my learning without a separate log-in step.
 
 ## Acceptance criteria
-- [ ] AC1 A new `accounts` app is in `INSTALLED_APPS`. Its URLs are included under `/accounts/` with the namespace `accounts`, and `reverse("accounts:signup")` is `/accounts/signup/`.
-- [ ] AC2 The project uses a custom user model:
+- [x] AC1 A new `accounts` app is in `INSTALLED_APPS`. Its URLs are included under `/accounts/` with the namespace `accounts`, and `reverse("accounts:signup")` is `/accounts/signup/`.
+- [x] AC2 The project uses a custom user model:
   - `settings.AUTH_USER_MODEL == "accounts.User"`
   - `get_user_model()` is `accounts.models.User`, a subclass of `AbstractUser` that adds no fields
   - it is registered in the admin with `django.contrib.auth.admin.UserAdmin` (or a subclass of it)
-- [ ] AC3 An anonymous `GET /accounts/signup/` returns 200 and renders `accounts/signup.html`, which extends `base.html`. The page contains a `method="post"` form whose `action` is `reverse("accounts:signup")`. The form has the fields `username`, `password1` and `password2`, plus a CSRF token (`csrfmiddlewaretoken`).
-- [ ] AC4 A valid `POST` creates exactly one `accounts.User` with the submitted username. The password is stored hashed: `check_password` succeeds, and the raw password is not stored.
-- [ ] AC5 After a valid `POST`, the new user is logged in (the session's authenticated user is the new user), and the response redirects to `settings.LOGIN_REDIRECT_URL`, which is set to `"/"`.
-- [ ] AC6 Following that redirect, the home page shows the message "Welcome, <username>!".
-- [ ] AC7 An invalid `POST` re-renders the form with status 200. It creates no user, logs no one in, and doesn't echo the submitted passwords: neither submitted password value appears in the response. Each error is attached to the field it belongs to, which `assertFormError` can check:
+- [x] AC3 An anonymous `GET /accounts/signup/` returns 200 and renders `accounts/signup.html`, which extends `base.html`. The page contains a `method="post"` form whose `action` is `reverse("accounts:signup")`. The form has the fields `username`, `password1` and `password2`, plus a CSRF token (`csrfmiddlewaretoken`).
+- [x] AC4 A valid `POST` creates exactly one `accounts.User` with the submitted username. The password is stored hashed: `check_password` succeeds, and the raw password is not stored.
+- [x] AC5 After a valid `POST`, the new user is logged in (the session's authenticated user is the new user), and the response redirects to `settings.LOGIN_REDIRECT_URL`, which is set to `"/"`.
+- [x] AC6 Following that redirect, the home page shows the message "Welcome, <username>!".
+- [x] AC7 An invalid `POST` re-renders the form with status 200. It creates no user, logs no one in, and doesn't echo the submitted passwords: neither submitted password value appears in the response. Each error is attached to the field it belongs to, which `assertFormError` can check:
   - mismatched passwords: error on `password2`
   - a username that already exists with the same spelling: error on `username`
   - a username that differs from an existing one only in case (e.g. `Alice` when `alice` exists): error on `username`
   - a password rejected by the configured password validators (e.g. too short or too common): error on `password2`
-- [ ] AC8 For a logged-in user, both `GET` and `POST` to `/accounts/signup/` redirect to `settings.LOGIN_REDIRECT_URL`. The form is not rendered and no user is created.
-- [ ] AC9 For anonymous visitors, the nav shows "Goals" and "Log in" as non-link placeholders and a "Sign up" link to `reverse("accounts:signup")`. For logged-in users, the nav shows "Goals" (still a non-link placeholder) and neither "Log in" nor the "Sign up" link.
-- [ ] AC10 For a logged-in user, the nav shows their username (`user.get_username()`), which signals that they are signed in. Anonymous visitors see no username in the nav.
+- [x] AC8 For a logged-in user, both `GET` and `POST` to `/accounts/signup/` redirect to `settings.LOGIN_REDIRECT_URL`. The form is not rendered and no user is created.
+- [x] AC9 For anonymous visitors, the nav shows "Goals" and "Log in" as non-link placeholders and a "Sign up" link to `reverse("accounts:signup")`. For logged-in users, the nav shows "Goals" (still a non-link placeholder) and neither "Log in" nor the "Sign up" link.
+- [x] AC10 For a logged-in user, the nav shows their username (`user.get_username()`), which signals that they are signed in. Anonymous visitors see no username in the nav.
 
 ## Out of scope
 - Email at sign-up, email verification, password reset, social login.
