@@ -80,6 +80,15 @@ class LoginSubmitTests(TestCase):
 
 
 SAFE_NEXT = "/some/page/?a=1"
+# Open-redirect payloads, including tricks that bypass naive checks.
+UNSAFE_NEXTS = (
+    "https://evil.example/",
+    "//evil.example/",
+    "/\\evil.example/",
+    "\\\\evil.example",
+    "javascript:alert(1)",
+    "https://testserver.evil.example/",
+)
 
 
 class LoginNextTests(TestCase):
@@ -101,17 +110,10 @@ class LoginNextTests(TestCase):
         self.assertRedirects(response, SAFE_NEXT, fetch_redirect_response=False)
 
     def test_unsafe_next_is_never_followed(self):
-        # Open-redirect payloads, including tricks that bypass naive checks.
-        payloads = (
-            "https://evil.example/",
-            "//evil.example/",
-            "/\\evil.example/",
-            "\\\\evil.example",
-            "javascript:alert(1)",
-            "https://testserver.evil.example/",
-        )
+        # "query" pins that LoginView also validates a GET next; the browser
+        # flow (the form posts only its hidden field) is covered below.
         credentials = {"username": USERNAME, "password": PASSWORD}
-        for payload in payloads:
+        for payload in UNSAFE_NEXTS:
             for via in ("post", "query"):
                 with self.subTest(payload=payload, via=via):
                     self.client.logout()
@@ -132,6 +134,35 @@ class LoginNextTests(TestCase):
                     location = response["Location"]
                     self.assertTrue(location.startswith("/"))
                     self.assertFalse(location.startswith(("//", "/\\")))
+
+    def test_unsafe_next_is_dropped_from_the_form_a_browser_submits(self):
+        # The form's action has no query string, so a browser sends next only
+        # through the hidden field: it must render empty for an unsafe value.
+        for payload in UNSAFE_NEXTS:
+            with self.subTest(payload=payload):
+                self.client.logout()
+                page = get_page(
+                    self.client, f"{LOGIN_PATH}?{urlencode({'next': payload})}"
+                )
+                ((_, inputs),) = page.forms("main")
+                next_values = [
+                    a.get("value") for a in inputs if a.get("name") == "next"
+                ]
+                self.assertEqual(next_values, [""])
+
+                response = self.client.post(
+                    LOGIN_PATH,
+                    {
+                        "username": USERNAME,
+                        "password": PASSWORD,
+                        "next": next_values[0],
+                    },
+                )
+
+                self.assertIn("_auth_user_id", self.client.session)
+                self.assertRedirects(
+                    response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
+                )
 
     def test_next_cannot_inject_markup_into_the_login_page(self):
         script = "<script>alert(1)</script>"

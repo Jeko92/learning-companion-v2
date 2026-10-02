@@ -111,7 +111,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-login-l
   Test: `test_login.py`, expected red: no `next` input in the form. Impl: `<input type="hidden" name="next" value="{{ next }}">` in `login.html`. Covers: AC6.
 - [x] 8. An unsafe `next` is never followed. One `subTest` per payload: `https://evil.example/`, `//evil.example/`, `/\evil.example/`, `\\evil.example`, `javascript:alert(1)` and `https://testserver.evil.example/`. Each payload is sent both as POST `next` and as `GET ?next=` followed by a POST. Every case logs the user in, redirects to `settings.LOGIN_REDIRECT_URL`, and has a `Location` header that starts with `/` and not with `//` or `/\`. Test: `test_login.py`. Impl: none. Covers: AC7.
   - This is a guard. Mutation: override `LogInView.get_redirect_url` to return the raw POST or GET value, unvalidated. Every subtest must go red. Revert afterwards.
-  - Done 2026-10-02: green on arrival. The "query" variant posts to `/accounts/login/?next=<payload>`, which is how a browser submits a form opened from a link carrying `next`. With an unvalidated `get_redirect_url`, all 12 subtests (6 payloads × POST and query) went red. The view was then restored.
+  - Done 2026-10-02: green on arrival. The "query" variant posts to `/accounts/login/?next=<payload>`. This pins that `LoginView` validates a GET `next`. (Corrected in review: it is *not* how a browser submits the form, because the form's `action` has no query string. Step 19 covers the browser flow.) With an unvalidated `get_redirect_url`, all 12 subtests (6 payloads × POST and query) went red. The view was then restored.
 - [x] 9. `next` can't inject markup. There are two payloads:
   - the AC's literal `"><script>alert(1)</script>`
   - the safe-path `/x/?q="><script>alert(1)</script>`, which passes validation and reaches the template
@@ -208,7 +208,7 @@ Each step is still one cycle and one commit. Steps 18–21 are guard tests that 
   This is a deliberate fix of a test that couldn't fail, not a weakened one. Impl: none.
   - Guard. Mutation: `redirect_authenticated_user = False` must turn the test red (200 with the form re-rendered). Revert afterwards.
   - Done 2026-10-02: green on arrival. The test was renamed to `test_logged_in_post_redirects_without_logging_in_again`. Under the mutation it went red (`200 != 302`), and so did the GET test. The view was then restored.
-- [ ] 19. (Finding 2, AC7) The real browser flow for an unsafe `next`. In `LoginNextTests`, add a test with one `subTest` per AC7 payload:
+- [x] 19. (Finding 2, AC7) The real browser flow for an unsafe `next`. In `LoginNextTests`, add a test with one `subTest` per AC7 payload:
   1. `GET /accounts/login/?next=<payload>`
   2. assert that the `next` input in `forms("main")` has the value `""`
   3. POST credentials plus that form's `next` value to `/accounts/login/`
@@ -216,6 +216,7 @@ Each step is still one cycle and one commit. Steps 18–21 are guard tests that 
 
   Keep the existing direct-query variant, which pins that `LoginView` reads GET `next`. Correct step 8's note: a browser does *not* post to the query URL, because the form's `action` has no query string. Impl: none.
   - Guard. Mutation: `value="{{ request.GET.next }}"` in `login.html`. The hidden-value assertion must go red for every payload. Revert afterwards.
+  - Done 2026-10-02: green on arrival, as `test_unsafe_next_is_dropped_from_the_form_a_browser_submits`. The payloads moved to a module constant, `UNSAFE_NEXTS`, which steps 20 and 21 reuse. Under the mutation, all 6 subtests went red. The template was then restored.
 - [ ] 20. (Finding 3) An unsafe `next` on logout is ignored. In `test_logout.py`, add a test with one `subTest` per AC7 payload: a logged-in user (`force_login`) POSTs `next=<payload>` to `/accounts/logout/`. Assert the user is anonymous and the redirect goes to `settings.LOGOUT_REDIRECT_URL`. Impl: none.
   - Guard. Mutation: override `LogOutView.get_redirect_url` to return the raw POST `next`. Every subtest must go red. Revert afterwards.
 - [ ] 21. (Finding 4) A logged-in user opening the login page with an unsafe `next` is sent to `LOGIN_REDIRECT_URL`. In `LoginLoggedInTests`, GET `?next=https://evil.example/` and `?next=//evil.example/` (one `subTest` each), and assert a redirect to `settings.LOGIN_REDIRECT_URL`. Impl: none.
