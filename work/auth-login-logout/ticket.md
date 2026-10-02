@@ -68,3 +68,5 @@ Constraints and context:
 - **This ticket deliberately changes earlier ACs.** #2's AC4 ("Log in" is a non-link placeholder) and #3's AC9 (the anonymous nav "Goals · Log in · Sign up" with only the Sign up link) assumed "Log in" stays a placeholder until this ticket. Their tests are updated deliberately in their own step (`.claude/rules/tdd.md`: fix a test deliberately, never weaken it). "Goals" stays a non-link placeholder.
 - The login template is `src/templates/accounts/login.html`, extending `base.html`, following the #2 and #3 convention.
 - `CLAUDE.md` and `README.md` get the login and logout URLs and the redirect settings. The plan includes this.
+
+Status: the user approved these acceptance criteria (AC1–AC15) on 2026-10-02. The next step is `plan-ticket`.
