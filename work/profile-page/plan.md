@@ -228,6 +228,57 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
     - mc-bob got 404 for alice's detail, for her edit page and for a POST to it, and alice's name was unchanged.
     - The throwaway users and their two tags were deleted (0 users, 0 tags left).
 
+### Review findings (final-review 2026-10-02, verdict FAIL; see `review.md`)
+Each step is one cycle and one commit. Steps 21 and 23 are guards and test hardening, so they name their mutations.
+
+- [ ] 19. (Finding 1, high; AC13) Focus-area input is bounded before any database work. Test: `profiles/tests/test_forms.py`. Subtests on alice's edit URL:
+  - `focus_areas` of 1,001 characters gives "Ensure this value has at most 1000 characters (it has 1001)."
+  - 21 distinct entries (`"t1, t2, …, t21"`) give "You can have at most 20 focus areas."
+
+  Each subtest asserts:
+  - status 200 and `assertFormError` on `focus_areas`
+  - the profile is unchanged and `Tag.objects.count()` is unchanged
+
+  It also asserts that 20 entries are accepted (302, 20 tags). Expected red: 21 entries are accepted (`302 != 200`). Impl:
+  - `max_length=1000` on the form field
+  - in `clean_focus_areas`, after de-duplication and before returning, raise the count error when there are more than `MAX_FOCUS_AREAS = 20` names. `clean_name` does no DB work, so nothing touches the DB before this check.
+
+  Covers: AC13.
+- [ ] 20. (Finding 2, medium; AC7, AC9) Full-width commas separate entries, and tag names can't contain commas.
+  - **Test:** in `test_forms.py`, POSTing `focus_areas="Python\uff0cDjango"` gives exactly the tags ["Django", "Python"].
+  - **Test:** in `tags/tests/test_models.py`, `get_or_create_by_name("a,b")` raises `ValidationError` "Tag names can't contain commas." and creates nothing.
+
+  Expected red: one tag "Python,Django". Impl:
+  - `clean_focus_areas` applies `unicodedata.normalize("NFKC", …)` to the whole text before splitting on `","`
+  - a `reject_commas` validator on `Tag.name`, with `makemigrations tags` creating `0004`
+
+  Covers: AC7, AC9.
+- [ ] 21. (Finding 3, medium; AC7) Entries that differ only in non-ASCII case are merged in the form. Test: in `test_forms.py`, POSTing `focus_areas="\u00c9lan, \u00e9lan"` gives exactly one tag, "Élan", and exactly one new `Tag` row. Impl: none, because `casefold` de-duplication already exists.
+  - Guard. Mutation: replace `if name.casefold() not in seen:` with `if True:`. It must go red (two tags). Revert afterwards.
+- [ ] 22. (Finding 4) `ProfileForm` behaves as a normal `ModelForm`. Test: `test_forms.py`.
+  - `ProfileForm()` with no instance renders: `str(form)` doesn't raise, and the initial `focus_areas` is `""`.
+  - For alice's profile, a bound valid form with `save(commit=False)` doesn't change her tags until `form.save_m2m()` is called. After that call the tags are set.
+
+  Expected red: `ValueError` from the unbound form (`…needs to have a value for field "id"…`). Impl:
+  - compute the initial `focus_areas` only when `self.instance.pk` is set
+  - move the `set()` into an override of `_save_m2m()`, which Django calls on `save(commit=True)` or from `save_m2m()`
+  - keep `save()` atomic
+
+  Covers: AC7.
+- [ ] 23. (Findings 5, 7 and 8, plus the security info item on errors) Test hardening. Commit `refactor(profile-page): tighten the profile tests`. Changes:
+  - **Atomicity:** a test patches `Tag.objects.get_or_create_by_name` to raise on its second call. Saving `"Python, Rust"` then raises, alice's name is unchanged and no tag was created.
+    - Guard mutation: remove the atomic wrapper, which must go red. Revert afterwards.
+  - **404 bodies:** the AC5 "no data in the 404 body" checks become a comparison: the foreign-pk response content equals the missing-pk response content, for detail and for edit by GET and POST. The vacuous `assertNotContains` checks go.
+  - **AC3 precondition:** the fixture-user test asserts there is no profile before the GET, and exactly one after.
+  - **Escaped errors:** a test POSTs `focus_areas="<script>alert(1)</script>\u200b"`, and the error response contains the escaped entry and never the raw `<script>alert(1)</script>`.
+- [ ] 24. (Findings 6 and 9) Docs. No test. Commit `docs(profile-page): correct the tag and ownership notes`.
+  - `CLAUDE.md` Tags bullet:
+    - `save()` normalises (NFKC, trim, collapse)
+    - the 50-character limit and the Cc/Cf and comma checks apply only through `full_clean()`/`clean_name()`
+    - rows written before this ticket, or through `update()`/`bulk_create()`, aren't renormalised (no data migration, as there is no production data)
+    - profiles take at most 20 focus areas
+  - `CLAUDE.md` auth bullet: "scope the queryset to `request.user`, as `profiles.views.OwnProfileMixin` does for profiles".
+
 ## Coverage
 | AC | Steps |
 |---|---|
@@ -237,9 +288,10 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
 | AC4 detail content, placeholders, Edit link | 1, 2, 6 |
 | AC5 others' and missing ids are 404, nothing leaked or changed | 4, 7 |
 | AC6 edit form, pre-filled, CSRF | 6, 14 |
-| AC7 valid save: trimmed, focus-area parsing, redirect and message | 8, 9 |
+| AC7 valid save: trimmed, focus-area parsing, redirect and message | 8, 9, 20, 21, 22 |
 | AC8 invalid input: field errors, nothing saved | 10, 12 |
 | AC9 tag normalisation: NFKC, whitespace, control characters, validation before lookup | 11, 12, 13 |
 | AC10 no other users' data, no tag list | 15 |
 | AC11 nav username link | 17 |
 | AC12 escaping | 16 |
+| AC13 focus-area input bounded | 19 |
