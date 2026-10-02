@@ -57,7 +57,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(session-mode
   - Test: `test_apps.py`, `InstalledAppsTests.test_learning_sessions_app_is_installed` (`SimpleTestCase`, `apps.is_installed("learning_sessions")`). Expected red: `False is not True`.
   - Impl: `src/learning_sessions/__init__.py`, `apps.py` (`LearningSessionsConfig`), `migrations/__init__.py`, `tests/__init__.py`, and the `INSTALLED_APPS` entry after `"goals"`.
   - Covers: AC1.
-- [ ] 2. **A session belongs to a goal and goes with it.**
+- [x] 2. **A session belongs to a goal and goes with it.**
   - Test (`test_models.py`):
     - `"learning_sessions.LearningSession"` is in `{m._meta.label for m in apps.get_models()}` (the expected red: an assertion).
     - `goal` is a `ForeignKey` to `Goal`, with `CASCADE` and `related_name == "sessions"`.
