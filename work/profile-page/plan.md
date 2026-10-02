@@ -128,12 +128,13 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
   - Guard. Mutation: the update view uses `LoginRequiredMixin, UpdateView` with `model = Profile` (unscoped) instead of `OwnProfileMixin`. The bob subtests must go red. Revert afterwards.
   - Done 2026-10-02: green on arrival, after one deliberate test fix. The first draft sent `{"name": "hacked"}` with the GET too, which put it in the query string and so in `next`. Now only the POST carries data.
   - Under the mutation, both bob subtests went red: GET `200 != 404`, and the POST errored because the unscoped view accepted the save. The view was then restored.
-- [ ] 8. A valid save stores trimmed values and redirects with a message. POST `name="  Alice Smith "`, `cohort=" Spring 2026 "` and `focus_areas=""`. Assert:
+- [x] 8. A valid save stores trimmed values and redirects with a message. POST `name="  Alice Smith "`, `cohort=" Spring 2026 "` and `focus_areas=""`. Assert:
   - a redirect to the detail URL
   - the stored values are trimmed
   - with `follow=True`, the page shows "Profile saved."
 
   Expected red: `ImproperlyConfigured` (no URL to redirect to). Impl: `get_success_url` set to the detail URL, and `form_valid` adding the message. Covers: AC7.
+  - Done 2026-10-02: red as `AttributeError: 'Profile' object has no attribute 'get_absolute_url'`. That is Django 6.1's form of "no URL to redirect to", not the `ImproperlyConfigured` the plan named, but it is the same missing behaviour. Then green.
 - [ ] 9. The focus areas are set from the comma-separated text. With an existing tag "Python" and alice's profile holding "Django", POST `focus_areas=" python , Machine Learning,, MACHINE learning , "`. Assert:
   - alice's tags are exactly ["Machine Learning", "Python"]
   - the existing "Python" row is reused, and its spelling is kept

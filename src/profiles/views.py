@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse
 from django.views.generic import DetailView, RedirectView, UpdateView
@@ -32,3 +33,11 @@ class MyProfileView(LoginRequiredMixin, RedirectView):
 class ProfileUpdateView(OwnProfileMixin, UpdateView):
     form_class = ProfileForm
     template_name = "profiles/profile_form.html"
+
+    def get_success_url(self):
+        return reverse("profiles:detail", args=[self.object.pk])
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, "Profile saved.")
+        return response

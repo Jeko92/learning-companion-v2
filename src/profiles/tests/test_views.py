@@ -187,3 +187,16 @@ class ProfileEditTests(TestCase):
                 self.assertNotContains(response, "Alice", status_code=404)
                 self.profile.refresh_from_db()
                 self.assertEqual(self.profile.name, "Alice")
+
+    def test_a_valid_save_stores_trimmed_values_and_redirects(self):
+        data = {"name": "  Alice Smith ", "cohort": " Spring 2026 ", "focus_areas": ""}
+
+        response = self.client.post(self.path, data)
+
+        detail = f"/profile/{self.profile.pk}/"
+        self.assertRedirects(response, detail, fetch_redirect_response=False)
+        self.profile.refresh_from_db()
+        self.assertEqual(
+            (self.profile.name, self.profile.cohort), ("Alice Smith", "Spring 2026")
+        )
+        self.assertContains(self.client.get(detail), "Profile saved.")
