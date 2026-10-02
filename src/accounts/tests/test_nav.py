@@ -35,8 +35,8 @@ class NavTests(TestCase):
         page = self.get_page()
 
         self.assertEqual(page.links("nav"), [])
-        self.assertIn("Goals", page.text("nav"))
-        self.assertNotIn("Log in", page.text("nav"))
+        # Exact text: the Goals placeholder and the username, and nothing else.
+        self.assertEqual(page.text("nav"), f"Goals {USERNAME}")
 
     def test_logged_in_nav_shows_the_username(self):
         self.log_in()

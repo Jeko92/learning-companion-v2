@@ -256,9 +256,10 @@ The verdict was FAIL because AC2's "adds no fields" was only partly proven (find
   - First check in a shell that `AbstractUser._meta.many_to_many` lists `groups` and `user_permissions`.
   - Commit: `feat(auth-signup): prove the user model adds no many-to-many fields either`.
   - Done 2026-10-02: a shell check confirmed that both `AbstractUser` and `accounts.User` have exactly the many-to-many fields `groups` and `user_permissions`. The guard was green on arrival. A temporary `friends = ManyToManyField("self")` turned it red. The field was then removed, and no migration was written.
-- [ ] 21. Pin the logged-in nav exactly: `page.text("nav") == "Goals alice"` in `test_logged_in_nav_has_no_login_placeholder_and_no_signup_link`. Test: `src/accounts/tests/test_nav.py`. Impl: none. Covers: AC9, AC10 (finding 8, low).
+- [x] 21. Pin the logged-in nav exactly: `page.text("nav") == "Goals alice"` in `test_logged_in_nav_has_no_login_placeholder_and_no_signup_link`. Test: `src/accounts/tests/test_nav.py`. Impl: none. Covers: AC9, AC10 (finding 8, low).
   - This is a guard that passes on arrival. Confirm that it guards: temporarily add `<span>Profile</span>` to the logged-in branch of the nav. The test must go red. Then remove it.
   - Commit: `feat(auth-signup): pin the logged-in nav text exactly`.
+  - Done 2026-10-02: green on arrival. The exact pin replaces the `assertIn("Goals")` and `assertNotIn("Log in")` pair, and covers both. A temporary `<span>Profile</span>` in the logged-in nav went red (`'Goals alice Profile' != 'Goals alice'`), and was then removed.
 - [ ] 22. A refactor, on green, with no behaviour change. Test: the whole suite stays green (50). Impl:
   - `src/config/settings.py`: move `AUTH_USER_MODEL` and `LOGIN_REDIRECT_URL` into their own "# Authentication" section, with the auth settings docs link (finding 10).
   - `src/accounts/views.py`: `redirect(settings.LOGIN_REDIRECT_URL)` replaces `redirect(resolve_url(...))` in `dispatch` (finding 11). `get_success_url` keeps `resolve_url`, because it must return a URL.
