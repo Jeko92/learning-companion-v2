@@ -19,7 +19,7 @@ Styling uses Tailwind through `django-tailwind-cli`, a standalone binary with no
 
 Users sign up at `/accounts/signup/`, log in at `/accounts/login/` and log out with the nav's Log out button (a POST to `/accounts/logout/`). The project uses a custom user model, `accounts.User`. If your `src/db.sqlite3` was created before that change (before the `auth-signup` ticket), `migrate` fails with `InconsistentMigrationHistory`. Delete `src/db.sqlite3` once and run `migrate` again.
 
-Every user gets a profile (name, cohort, focus areas), created automatically when the user is created through sign-up, `createsuperuser` or the admin. Users loaded from fixtures don't get one automatically. Running `migrate` gives users who existed before that a profile too. Logged-in users see their profile at `/profile/` (the username in the nav links there) and edit it at `/profile/<id>/edit/`, entering focus areas as comma-separated text. Nobody can open another user's profile. Admins can also edit profiles on each user's page in the admin. Logged-in users see their own goals at `/goals/` (the Goals link in the nav), newest first and 20 per page, and add goals at `/goals/new/`.
+Every user gets a profile (name, cohort, focus areas), created automatically when the user is created through sign-up, `createsuperuser` or the admin. Users loaded from fixtures don't get one automatically. Running `migrate` gives users who existed before that a profile too. Logged-in users see their profile at `/profile/` (the username in the nav links there) and edit it at `/profile/<id>/edit/`, entering focus areas as comma-separated text. Nobody can open another user's profile. Admins can also edit profiles on each user's page in the admin. Logged-in users see their own goals at `/goals/` (the Goals link in the nav), newest first and 20 per page, add goals at `/goals/new/`, and open, edit or delete a goal from its page at `/goals/<id>/`. Nobody can open another user's goal.
 
 Settings come from the environment via `django-environ`, read in `src/config/env.py`:
 
@@ -47,7 +47,7 @@ Values are read from the process environment first. `.env` at the repo root only
 - `src/accounts/`: the custom user model (`accounts.User`), and sign-up, log-in and log-out under `/accounts/`
 - `src/tags/`: shared tags (case-insensitive unique names), used for focus areas
 - `src/profiles/`: each user's profile (name, cohort, focus areas), created automatically for new users, and the profile pages under `/profile/`
-- `src/goals/`: learning goals (title, description, status planned / in-progress / done), each owned by one user; listed at `/goals/` and created at `/goals/new/`
+- `src/goals/`: learning goals (title, description, status planned / in-progress / done), each owned by one user; listed at `/goals/`, created at `/goals/new/`, and viewed, edited or deleted at `/goals/<id>/`
 - `src/templates/`: project-wide templates (`base.html` layout, pages that extend it, `accounts/`, `profiles/` and `goals/` pages)
 - `src/assets/`: static source files; the built `css/tailwind.css` is git-ignored
 - `work/`: workflow artifacts per ticket (`ticket.md`, `plan.md`, `review.md`)

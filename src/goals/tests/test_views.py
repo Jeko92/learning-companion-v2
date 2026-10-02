@@ -3,12 +3,15 @@ from datetime import UTC, datetime
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ImproperlyConfigured
 from django.shortcuts import resolve_url
-from django.test import Client, TestCase
+from django.test import Client, RequestFactory, TestCase
 from django.urls import reverse
+from django.views.generic import DetailView
 
 from core.tests.html import PageParser
 from goals.models import Goal
+from goals.views import OwnGoalsMixin
 
 PASSWORD = "Tr4ck-Learning!"
 
@@ -77,6 +80,15 @@ class GoalListTests(TestCase):
         self.assertNotContains(response, payload)
         self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
 
+    def test_each_title_links_to_its_goal(self):
+        goals = [Goal.objects.create(owner=self.alice, title=t) for t in ("A", "B")]
+
+        links = get_page(self.client, "/goals/").links("main")
+
+        for goal in goals:
+            with self.subTest(goal=goal.title):
+                self.assertIn((goal.get_absolute_url(), goal.title), links)
+
 
 class GoalCreatePageTests(TestCase):
     def setUp(self):
@@ -125,22 +137,22 @@ class GoalCreateTests(TestCase):
             "status": "in-progress",
         }
 
-    def test_a_valid_create_saves_your_goal_and_returns_to_the_list(self):
+    def test_a_valid_create_saves_your_goal_and_opens_it(self):
+        # goal-edit-delete: a new goal now opens its detail page (#8 AC6
+        # returned to the list).
         response = self.client.post("/goals/new/", self.data)
 
-        self.assertRedirects(response, "/goals/", fetch_redirect_response=False)
         goal = Goal.objects.get()
+        self.assertRedirects(
+            response, goal.get_absolute_url(), fetch_redirect_response=False
+        )
         self.assertEqual(
             (goal.owner, goal.title, goal.status),
             (self.alice, "Learn Django", Goal.Status.IN_PROGRESS),
         )
-        followed = self.client.get("/goals/")
+        followed = self.client.get(goal.get_absolute_url())
         self.assertContains(followed, "Goal created.")
-        page = PageParser()
-        page.feed(followed.content.decode())
-        self.assertTrue(
-            page.text("main").startswith("Your goals New goal Learn Django")
-        )
+        self.assertContains(followed, "Learn Django")
 
     def test_a_posted_owner_is_ignored(self):
         bob = get_user_model().objects.create_user("bob")
@@ -264,3 +276,326 @@ class GoalListPaginationTests(TestCase):
 
     def test_an_out_of_range_page_is_not_found(self):
         self.assertEqual(self.client.get("/goals/?page=99").status_code, 404)
+
+
+class GoalDetailTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(
+            owner=self.alice,
+            title="Learn Django",
+            description="Parts 1-3\nParts 4-7",
+            status=Goal.Status.IN_PROGRESS,
+        )
+        self.path = f"/goals/{self.goal.pk}/"
+        self.client.force_login(self.alice)
+
+    def test_the_detail_page_is_served(self):
+        response = self.client.get(self.path)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "goals/goal_detail.html")
+        self.assertTemplateUsed(response, "base.html")
+        self.assertEqual(reverse("goals:detail", args=[self.goal.pk]), self.path)
+
+    def test_shows_the_goal(self):
+        page = get_page(self.client, self.path)
+        main = page.text("main")
+
+        for text in ("Learn Django", "In progress", "Parts 1-3", "Parts 4-7"):
+            with self.subTest(text=text):
+                self.assertIn(text, main)
+        self.assertIn("br", [tag for tag, _ in page.elements])
+        self.assertIn("Created", main)
+        self.assertIn("Updated", main)
+        self.assertIn(("/goals/", "Back to goals"), page.links("main"))
+
+    def test_shows_a_placeholder_without_a_description(self):
+        self.goal.description = ""
+        self.goal.save()
+
+        self.assertIn("No description.", get_page(self.client, self.path).text("main"))
+
+    def test_anonymous_visitors_are_sent_to_log_in(self):
+        self.client.logout()
+
+        response = self.client.get(self.path)
+
+        self.assertRedirects(
+            response, login_redirect(self.path), fetch_redirect_response=False
+        )
+
+    def test_another_users_goal_is_not_found_like_a_missing_one(self):
+        self.client.force_login(get_user_model().objects.create_user("bob"))
+
+        response = self.client.get(self.path)
+        missing = self.client.get("/goals/999999/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.content, missing.content)
+
+
+class GoalEditTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(
+            owner=self.alice,
+            title="Learn Django",
+            description="Parts 1-7",
+            status=Goal.Status.IN_PROGRESS,
+        )
+        self.path = f"/goals/{self.goal.pk}/edit/"
+        self.client.force_login(self.alice)
+
+    def test_the_edit_page_renders_your_goal_in_a_form(self):
+        response = self.client.get(self.path)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "goals/goal_form.html")
+        self.assertEqual(reverse("goals:edit", args=[self.goal.pk]), self.path)
+        page = PageParser()
+        page.feed(response.content.decode())
+        ((attrs, inputs),) = page.forms("main")
+        self.assertEqual(attrs.get("method"), "post")
+        self.assertEqual(attrs.get("action"), self.path)
+        values = {a.get("name"): a.get("value") for a in inputs}
+        self.assertIn("csrfmiddlewaretoken", values)
+        self.assertEqual(values["title"], "Learn Django")
+        self.assertIn("Parts 1-7", page.text("main"))  # the textarea's content
+        selected = [
+            a.get("value")
+            for t, a in page.elements
+            if t == "option" and "selected" in a
+        ]
+        self.assertEqual(selected, ["in-progress"])
+        self.assertNotIn("owner", {a.get("name") for _, a in page.elements})
+        self.assertIn("Edit goal", page.text("main"))
+        self.assertNotIn("New goal", page.text("main"))
+        self.assertIn((self.goal.get_absolute_url(), "Cancel"), page.links("main"))
+
+    def test_the_detail_page_links_to_the_edit_page(self):
+        links = get_page(self.client, self.goal.get_absolute_url()).links("main")
+
+        self.assertIn((self.path, "Edit goal"), links)
+
+    def test_a_valid_edit_saves_and_returns_to_the_goal(self):
+        bob = get_user_model().objects.create_user("bob")
+        data = {
+            "title": "  Learn Django well ",
+            "description": "All parts",
+            "status": "done",
+            "owner": bob.pk,
+        }
+
+        response = self.client.post(self.path, data)
+
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        self.goal.refresh_from_db()
+        self.assertEqual(
+            (self.goal.title, self.goal.description, self.goal.status, self.goal.owner),
+            ("Learn Django well", "All parts", Goal.Status.DONE, self.alice),
+        )
+        self.assertContains(
+            self.client.get(self.goal.get_absolute_url()), "Goal updated."
+        )
+
+    def test_an_invalid_edit_rerenders_the_form_and_changes_nothing(self):
+        valid = {"title": "Changed", "description": "Changed", "status": "done"}
+        cases = (
+            ("blank title", {"title": ""}, "title", "This field is required."),
+            ("whitespace title", {"title": "   "}, "title", "This field is required."),
+            (
+                "long title",
+                {"title": "t" * 201},
+                "title",
+                "Ensure this value has at most 200 characters (it has 201).",
+            ),
+            (
+                "long description",
+                {"description": "d" * 2001},
+                "description",
+                "Ensure this value has at most 2000 characters (it has 2001).",
+            ),
+            (
+                "unknown status",
+                {"status": "bogus"},
+                "status",
+                "Select a valid choice. bogus is not one of the available choices.",
+            ),
+        )
+        for case, changes, field, message in cases:
+            with self.subTest(case=case):
+                response = self.client.post(self.path, {**valid, **changes})
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "goals/goal_form.html")
+                self.assertFormError(response.context["form"], field, message)
+                page = PageParser()
+                page.feed(response.content.decode())
+                self.assertIn(message, page.text("main"))
+                self.goal.refresh_from_db()
+                self.assertEqual(
+                    (self.goal.title, self.goal.description, self.goal.status),
+                    ("Learn Django", "Parts 1-7", Goal.Status.IN_PROGRESS),
+                )
+
+
+class GoalDeleteTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.path = f"/goals/{self.goal.pk}/delete/"
+        self.client.force_login(self.alice)
+
+    def test_delete_asks_for_confirmation_and_a_get_deletes_nothing(self):
+        response = self.client.get(self.path)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "goals/goal_confirm_delete.html")
+        self.assertEqual(reverse("goals:delete", args=[self.goal.pk]), self.path)
+        page = PageParser()
+        page.feed(response.content.decode())
+        self.assertIn("Delete “Learn Django”?", page.text("main"))
+        ((attrs, inputs),) = page.forms("main")
+        self.assertEqual(attrs.get("method"), "post")
+        self.assertEqual(attrs.get("action"), self.path)
+        self.assertIn("csrfmiddlewaretoken", {a.get("name") for a in inputs})
+        self.assertIn("button", [t for t, _ in page.elements])
+        self.assertIn("Delete", page.text("main"))
+        self.assertIn((self.goal.get_absolute_url(), "Cancel"), page.links("main"))
+        self.assertTrue(Goal.objects.filter(pk=self.goal.pk).exists())
+
+    def test_the_detail_page_links_to_delete(self):
+        links = get_page(self.client, self.goal.get_absolute_url()).links("main")
+
+        self.assertIn((self.path, "Delete goal"), links)
+
+    def test_confirming_deletes_the_goal(self):
+        response = self.client.post(self.path)
+
+        self.assertRedirects(response, "/goals/", fetch_redirect_response=False)
+        self.assertFalse(Goal.objects.filter(pk=self.goal.pk).exists())
+        followed = self.client.get("/goals/")
+        self.assertContains(followed, "Goal deleted.")
+        self.assertNotContains(followed, "Learn Django")
+
+
+class GoalEditDeleteAccessTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.cases = [
+            (page, method) for page in ("edit", "delete") for method in ("get", "post")
+        ]
+
+    def request(self, page, method, pk):
+        path = reverse(f"goals:{page}", args=[pk])
+        # Only the POSTs carry data; on a GET it would land in `next`.
+        data = {"title": "hacked", "status": "done"} if method == "post" else None
+        return path, getattr(self.client, method)(path, data)
+
+    def assert_untouched(self):
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.title, "Learn Django")
+
+    def test_anonymous_visitors_are_sent_to_log_in(self):
+        for page, method in self.cases:
+            with self.subTest(page=page, method=method):
+                path, response = self.request(page, method, self.goal.pk)
+
+                self.assertRedirects(
+                    response, login_redirect(path), fetch_redirect_response=False
+                )
+                self.assert_untouched()
+
+    def test_another_user_gets_the_same_404_as_for_a_missing_goal(self):
+        self.client.force_login(get_user_model().objects.create_user("bob"))
+        for page, method in self.cases:
+            with self.subTest(page=page, method=method):
+                _, response = self.request(page, method, self.goal.pk)
+                _, missing = self.request(page, method, 999999)
+
+                self.assertEqual(response.status_code, 404)
+                self.assertEqual(response.content, missing.content)
+                self.assert_untouched()
+
+
+class GoalEditDeleteCsrfTests(TestCase):
+    # The default test client skips CSRF checks; this one enforces them.
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=alice, title="Learn Django")
+        self.csrf_client = Client(enforce_csrf_checks=True)
+        self.csrf_client.force_login(alice)
+        self.data = {"edit": {"title": "Changed", "status": "done"}, "delete": {}}
+
+    def token_for(self, path):
+        # GET first: sets the CSRF cookie and yields the form's token.
+        page = PageParser()
+        page.feed(self.csrf_client.get(path).content.decode())
+        ((_, inputs),) = page.forms("main")
+        return [a["value"] for a in inputs if a.get("name") == "csrfmiddlewaretoken"]
+
+    def test_a_post_without_a_token_is_rejected(self):
+        for page in ("edit", "delete"):
+            with self.subTest(page=page):
+                path = reverse(f"goals:{page}", args=[self.goal.pk])
+                self.token_for(path)
+
+                response = self.csrf_client.post(path, self.data[page])
+
+                self.assertEqual(response.status_code, 403)
+                self.goal.refresh_from_db()
+                self.assertEqual(self.goal.title, "Learn Django")
+
+    def test_a_post_with_the_forms_token_succeeds(self):
+        for page in ("edit", "delete"):
+            with self.subTest(page=page):
+                path = reverse(f"goals:{page}", args=[self.goal.pk])
+                tokens = self.token_for(path)
+                self.assertEqual(len(tokens), 1, f"the {page} form has no CSRF token")
+
+                response = self.csrf_client.post(
+                    path, {**self.data[page], "csrfmiddlewaretoken": tokens[0]}
+                )
+
+                self.assertEqual(response.status_code, 302)
+
+
+class GoalPagesEscapingTests(TestCase):
+    PAYLOAD = "<script>alert(1)</script>"
+
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(
+            owner=alice, title=self.PAYLOAD, description=self.PAYLOAD
+        )
+        self.client.force_login(alice)
+
+    def test_goal_values_are_escaped_on_every_goal_page(self):
+        for page in ("detail", "edit", "delete"):
+            with self.subTest(page=page):
+                response = self.client.get(
+                    reverse(f"goals:{page}", args=[self.goal.pk])
+                )
+
+                self.assertNotContains(response, self.PAYLOAD)
+                self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
+
+
+class OwnGoalsMixinOrderTests(TestCase):
+    def test_a_wrongly_ordered_mixin_fails_loudly(self):
+        # Listed after the generic view, the mixin's scoped get_queryset() is
+        # shadowed; with no model to fall back on, Django must refuse to serve.
+        class WronglyOrdered(DetailView, OwnGoalsMixin):
+            pass
+
+        alice = get_user_model().objects.create_user("alice")
+        goal = Goal.objects.create(owner=alice, title="Learn Django")
+        request = RequestFactory().get("/")
+        request.user = alice
+
+        with self.assertRaises(ImproperlyConfigured):
+            WronglyOrdered.as_view()(request, pk=goal.pk)

@@ -27,3 +27,12 @@ class GoalAdminTests(TestCase):
         response = self.client.get(reverse("admin:goals_goal_changelist"))
 
         self.assertContains(response, "Learn Django")
+
+    def test_the_change_page_links_to_the_goal_on_the_site(self):
+        User = get_user_model()
+        self.client.force_login(User.objects.create_superuser("admin", password="x"))
+        goal = Goal.objects.create(owner=User.objects.create_user("alice"), title="x")
+
+        response = self.client.get(reverse("admin:goals_goal_change", args=[goal.pk]))
+
+        self.assertContains(response, 'class="viewsitelink"')
