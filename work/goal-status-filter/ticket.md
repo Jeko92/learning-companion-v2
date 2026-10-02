@@ -47,4 +47,4 @@ Constraints and context:
 - **The list** is paginated at 20 per page (#8). An out-of-range page stays a 404.
 - **Docs:** `CLAUDE.md` (Goals bullet) and `README.md` get the filter. The plan includes this.
 
-Status: waiting for the user to approve the acceptance criteria.
+Status: the user approved these acceptance criteria (AC1–AC8) on 2026-10-02. The next step is `plan-ticket`.
