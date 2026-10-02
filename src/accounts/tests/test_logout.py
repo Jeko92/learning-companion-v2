@@ -4,6 +4,7 @@ from django.contrib.sessions.models import Session
 from django.test import Client, TestCase
 from django.urls import reverse
 
+from accounts.tests.test_login import UNSAFE_NEXTS
 from core.tests.html import PageParser
 
 LOGOUT_PATH = "/accounts/logout/"
@@ -31,6 +32,22 @@ class LogoutTests(TestCase):
         response = self.client.post(LOGOUT_PATH, follow=True)
 
         self.assertContains(response, "You have been logged out.")
+
+    def test_unsafe_next_is_never_followed(self):
+        # LogoutView honours a posted next only after the same same-site check
+        # as login.
+        for payload in UNSAFE_NEXTS:
+            with self.subTest(payload=payload):
+                self.client.force_login(self.user)
+
+                response = self.client.post(LOGOUT_PATH, {"next": payload})
+
+                self.assertNotIn("_auth_user_id", self.client.session)
+                self.assertRedirects(
+                    response,
+                    settings.LOGOUT_REDIRECT_URL,
+                    fetch_redirect_response=False,
+                )
 
     def test_get_is_not_allowed_and_keeps_the_user_logged_in(self):
         response = self.client.get(LOGOUT_PATH)
