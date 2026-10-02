@@ -37,16 +37,16 @@ class TagManager(models.Manager):
     def get_or_create_by_name(self, name):
         """Turn typed input into a tag: (tag, created), matched the way the
         unique constraint compares names (normalised, ASCII case-insensitive), so
-        the first spelling is kept. A blank name raises ValidationError.
+        the first spelling is kept. An invalid name raises ValidationError.
         Safe when another request creates the same name concurrently."""
-        name = normalize_name(name)
+        # Validate first: an over-long name must never reach SQLite's LIKE.
+        # Uniqueness is left to the database, so a lost race is an
+        # IntegrityError we can recover from, not a ValidationError.
+        name = self.clean_name(name)
         tag = self.filter(name__iexact=name).first()
         if tag is not None:
             return tag, False
         tag = self.model(name=name)
-        # Uniqueness is left to the database, so a lost race is an
-        # IntegrityError we can recover from, not a ValidationError.
-        tag.full_clean(validate_constraints=False)
         try:
             # Savepoint: a failed insert must not break the caller's transaction.
             with transaction.atomic():

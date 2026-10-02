@@ -130,3 +130,11 @@ class NameNormalisationTests(TestCase):
 
                 self.assertIn(message, caught.exception.messages)
                 self.assertEqual(Tag.objects.count(), 1)
+
+    def test_a_huge_name_is_a_validation_error_not_a_database_error(self):
+        # SQLite rejects LIKE patterns over 50,000 bytes, so the name must be
+        # validated before the iexact lookup ever runs.
+        with self.assertRaises(ValidationError):
+            Tag.objects.get_or_create_by_name("x" * 50_001)
+
+        self.assertEqual(Tag.objects.count(), 1)
