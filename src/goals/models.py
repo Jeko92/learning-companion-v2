@@ -2,6 +2,7 @@ from django.conf import settings
 from django.core.validators import MaxLengthValidator
 from django.db import models
 from django.db.models import Q
+from django.urls import reverse
 
 
 def strip(value):
@@ -53,6 +54,9 @@ class Goal(models.Model):
 
     def __str__(self):
         return self.title
+
+    def get_absolute_url(self):
+        return reverse("goals:detail", args=[self.pk])
 
     def clean_fields(self, exclude=None):
         # Model CharFields don't strip: trim first so "   " fails as blank.

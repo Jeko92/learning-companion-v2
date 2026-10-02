@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="text-2xl font-bold">{{ goal.title }}</h1>
+  <p class="mt-2 text-sm text-slate-500">{{ goal.get_status_display }}</p>
+  <div class="mt-6">
+    {% if goal.description %}
+      <p>{{ goal.description|linebreaksbr }}</p>
+    {% else %}
+      <p class="text-slate-500">No description.</p>
+    {% endif %}
+  </div>
+  <dl class="mt-6 grid grid-cols-[auto_1fr] gap-x-4 text-sm text-slate-500">
+    <dt>Created</dt><dd>{{ goal.created_at|date:"j M Y, H:i" }}</dd>
+    <dt>Updated</dt><dd>{{ goal.updated_at|date:"j M Y, H:i" }}</dd>
+  </dl>
+  <div class="mt-6 flex gap-6">
+    <a href="{% url 'goals:edit' goal.pk %}" class="font-medium hover:underline">Edit goal</a>
+    <a href="{% url 'goals:delete' goal.pk %}" class="font-medium text-red-700 hover:underline">Delete goal</a>
+    <a href="{% url 'goals:list' %}" class="font-medium hover:underline">Back to goals</a>
+  </div>
+{% endblock %}

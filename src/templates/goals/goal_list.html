@@ -6,7 +6,7 @@
   <ul class="mt-6 space-y-3">
     {% for goal in goal_list %}
       <li class="flex justify-between rounded border border-slate-200 bg-white px-4 py-3">
-        <span>{{ goal.title }}</span>
+        <a href="{{ goal.get_absolute_url }}" class="hover:underline">{{ goal.title }}</a>
         <span class="text-sm text-slate-500">{{ goal.get_status_display }}</span>
       </li>
     {% empty %}
