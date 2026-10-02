@@ -71,7 +71,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-status-
   - Done 2026-10-02. **Correction to the plan:** the planned check `view_class.get_queryset is OwnGoalsMixin.get_queryset` failed for `list`. Since step 1, `GoalListView` overrides `get_queryset` to filter, calling `super()`.
     - The real rule is the MRO order: `OwnGoalsMixin` must come before Django's `SingleObjectMixin`/`MultipleObjectMixin`. The test now asserts exactly that, together with `model is None` and the exact set of routes `{list, detail, edit, delete}`.
     - Both mutations on `GoalDetailView` went red: `model = Goal` (`Goal is not None`) and the reversed bases (`8 not less than 5`). The view was then restored.
-- [ ] 9. Docs. No test. Commit `docs(goal-status-filter): document the status filter`.
+- [x] 9. Docs. No test. Commit `docs(goal-status-filter): document the status filter`.
   - `CLAUDE.md` Goals bullet:
     - `/goals/?status=<planned|in-progress|done>` filters the list (invalid values show all)
     - pagination uses `{% querystring %}` so it keeps the filter
@@ -81,6 +81,12 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-status-
     - `?status=done` lists only her done goal
     - `?status=bogus` lists all
     - the active filter is marked
+
+  - Done 2026-10-02. Results against `runserver` with curl as alice:
+    - `/goals/` listed all 3 goals, with All active
+    - `?status=done` listed only "Read Two Scoops of Django", with Done active
+    - `?status=in-progress` listed only "Finish the Django tutorial", with In progress active
+    - `?status=bogus` listed all 3, with All active
 
 ## Coverage
 | AC | Steps |
