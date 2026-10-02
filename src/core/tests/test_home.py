@@ -66,13 +66,12 @@ class HomePageTests(TestCase):
         self.assertIn("Learning Companion", page.text("header"))
         self.assertIn("Learning Companion", page.text("title"))
 
-    def test_nav_shows_goals_as_a_placeholder_that_is_not_a_link(self):
-        # "Log in" was a placeholder too until auth-login-logout made it a link
-        # (covered in accounts.tests.test_nav).
+    def test_anonymous_nav_has_no_goals_link(self):
+        # "Goals" was a placeholder for everyone until goal-list-create made it
+        # a link for logged-in users only (covered in accounts.tests.test_nav).
         page = self.get_page()
 
-        self.assertIn("Goals", page.text("nav"))
-        self.assertNotIn("Goals", page.href_text())
+        self.assertNotIn("Goals", page.text("nav"))
 
     def test_layout_renders_messages_added_for_the_request(self):
         # No view adds messages yet, so attach the storage to a request by hand
