@@ -175,7 +175,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-login-l
   Test: `test_logout.py`. Impl: none. Covers: AC11.
   - This is a guard. Mutation: `LogOutView.post` returns a redirect without calling `super().post()`. The test must go red. Revert afterwards.
   - Done 2026-10-02: green on arrival. Under the mutation, the test went red (`'_auth_user_id' unexpectedly found` after the logout POST). The view was then restored.
-- [ ] 17. Docs. No test. Commit `docs(auth-login-logout): document log-in and log-out`.
+- [x] 17. Docs. No test. Commit `docs(auth-login-logout): document log-in and log-out`.
   - In `CLAUDE.md`, the Stack auth bullet should cover:
     - log-in at `/accounts/login/` and log-out at `/accounts/logout/`, through `LoginView` and `LogoutView` subclasses
     - `LOGIN_URL = "accounts:login"`, `LOGIN_REDIRECT_URL = "/"` and `LOGOUT_REDIRECT_URL = "/"`
@@ -188,6 +188,14 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-login-l
     - the nav shows the username and "Log out", then a POST to logout shows the message
     - `GET /accounts/logout/` returns 405
     - delete the throwaway user afterwards
+  - Done 2026-10-02. Results against `runserver` with a cookie jar and real CSRF tokens:
+    - the anonymous nav showed Goals plus links to `/accounts/login/` and `/accounts/signup/`
+    - login with `next=/accounts/signup/` returned 302 to that page, which then sent the now logged-in user to `/`, where "Welcome back, manualcheck!" was shown
+    - the logged-in nav showed the username and a Log out form posting to `/accounts/logout/`
+    - logout returned 302 to `/`, which showed "You have been logged out." and the Log in link again
+    - login with `next=https://evil.example/` and with `next=//evil.example/` both returned 302 to `/`
+    - `GET /accounts/logout/` returned 405, and a login POST without a CSRF token returned 403
+    - the throwaway user was deleted (0 users left)
 
 ## Coverage
 | AC | Steps |
