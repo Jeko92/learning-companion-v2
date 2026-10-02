@@ -303,3 +303,21 @@ class GoalDetailTests(TestCase):
         self.goal.save()
 
         self.assertIn("No description.", get_page(self.client, self.path).text("main"))
+
+    def test_anonymous_visitors_are_sent_to_log_in(self):
+        self.client.logout()
+
+        response = self.client.get(self.path)
+
+        self.assertRedirects(
+            response, login_redirect(self.path), fetch_redirect_response=False
+        )
+
+    def test_another_users_goal_is_not_found_like_a_missing_one(self):
+        self.client.force_login(get_user_model().objects.create_user("bob"))
+
+        response = self.client.get(self.path)
+        missing = self.client.get("/goals/999999/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.content, missing.content)

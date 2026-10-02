@@ -69,12 +69,13 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-edit-de
   - **empty description:** "No description."
 
   Expected red: the title is missing from `main`. Impl: the detail template. Covers: AC4.
-- [ ] 4. The detail page requires login, and another user's goal is a 404 identical to a missing one. Tests:
+- [x] 4. The detail page requires login, and another user's goal is a 404 identical to a missing one. Tests:
   - an anonymous GET redirects to login with `next=/goals/<pk>/`
   - bob GETs alice's goal: 404, and the content equals that of `GET /goals/999999/`
 
   Impl: none, since `OwnGoalsMixin` covers it. Covers: AC2 (detail), AC3 (detail).
   - Guard. Mutation: `GoalDetailView(LoginRequiredMixin, DetailView)` with `model = Goal` (unscoped). Bob's request must go red (200). Revert afterwards.
+  - Done 2026-10-02: green on arrival. Under the mutation, bob's request went red (`200 != 404`). The view was then restored.
 - [ ] 5. List titles link to the goal. `links("main")` on `/goals/` includes `(goal.get_absolute_url(), goal.title)` for each goal. Expected red: the link is missing. Impl: `<a href="{{ goal.get_absolute_url }}">` in `goal_list.html`. Covers: AC5, AC15 (templates).
 - [ ] 6. Creating a goal now opens it.
   - **Test change:** #8's `test_a_valid_create_saves_your_goal_and_returns_to_the_list` is rewritten deliberately to expect a redirect to `goal.get_absolute_url()`, with "Goal created." on the followed page.
