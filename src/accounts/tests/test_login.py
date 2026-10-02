@@ -76,6 +76,28 @@ class LoginSubmitTests(TestCase):
         self.assertContains(response, f"Welcome back, {USERNAME}!")
 
 
+SAFE_NEXT = "/some/page/?a=1"
+
+
+class LoginNextTests(TestCase):
+    def setUp(self):
+        get_user_model().objects.create_user(USERNAME, password=PASSWORD)
+
+    def test_safe_next_is_carried_in_the_form_and_followed(self):
+        response = self.client.get(LOGIN_PATH, {"next": SAFE_NEXT})
+        page = PageParser()
+        page.feed(response.content.decode())
+        ((_, inputs),) = page.forms("main")
+        next_values = [a.get("value") for a in inputs if a.get("name") == "next"]
+        self.assertEqual(next_values, [SAFE_NEXT])
+
+        response = self.client.post(
+            LOGIN_PATH, {"username": USERNAME, "password": PASSWORD, "next": SAFE_NEXT}
+        )
+
+        self.assertRedirects(response, SAFE_NEXT, fetch_redirect_response=False)
+
+
 INVALID_LOGIN = (
     "Please enter a correct username and password. Note that both fields may be"
     " case-sensitive."

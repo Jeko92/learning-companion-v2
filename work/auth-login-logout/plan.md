@@ -104,7 +104,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-login-l
 - [x] 6. A deactivated account can't log in, and the page doesn't reveal it. A user `alice` with `is_active=False` posts the correct password. The page shows the same `invalid_login` text, not "This account is inactive.", and no one is logged in. Test: `test_login.py`. Impl: none. Covers: AC14.
   - This is a guard. Mutation: `@override_settings(AUTHENTICATION_BACKENDS=["django.contrib.auth.backends.AllowAllUsersModelBackend"])` on the test, run in a scratch edit. It must go red, because the "inactive" message appears instead. Revert afterwards.
   - Done 2026-10-02: green on arrival. With `AllowAllUsersModelBackend` the test went red, because the page showed "This account is inactive." instead of the generic error. The test was then restored.
-- [ ] 7. A safe `next` is carried and honoured:
+- [x] 7. A safe `next` is carried and honoured:
   - `GET /accounts/login/?next=/some/page/?a=1` renders a hidden input `next` with that value inside the login form (`forms("main")`)
   - a valid `POST` with `next=/some/page/?a=1` redirects there
 
