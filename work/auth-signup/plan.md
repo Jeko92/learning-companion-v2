@@ -114,12 +114,13 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-signup)
 - [x] 4. The user model is registered in the admin with `UserAdmin`: `isinstance(admin.site._registry[get_user_model()], UserAdmin)`. Test: `test_models.py`, `assertIsInstance(admin.site._registry.get(get_user_model()), UserAdmin)`, expected red `None is not an instance of <class 'UserAdmin'>`. Impl: `src/accounts/admin.py`. Covers: AC2.
 - [x] 5. Test-only refactor: move `VOID_ELEMENTS`, `SECTIONS`, `collapse` and `PageParser` from `src/core/tests/test_home.py` to `src/core/tests/html.py`, and import them in `test_home.py` from there. Test: the whole suite stays green, with the same number of tests (33). No new test. Impl: none. Covers: AC3, AC9 and AC10 (prerequisite). Commit: `refactor(auth-signup): share the page parser between apps' tests`.
   - Done 2026-10-02: moved, and still 38 tests green. While moving it, `collapse()`'s docstring was corrected to "text from adjacent elements isn't glued together" (#2 review finding 9).
-- [ ] 6. An anonymous `GET /accounts/signup/` returns 200 and is routed through the `accounts.urls` include:
+- [x] 6. An anonymous `GET /accounts/signup/` returns 200 and is routed through the `accounts.urls` include:
   - `reverse("accounts:signup") == "/accounts/signup/"`
   - the root URLconf has a `URLResolver` with `urlconf_name is accounts.urls`, `namespace == "accounts"` and `str(pattern) == "accounts/"`
   - `accounts/signup.html` and `base.html` are both used
 
   Test: `src/accounts/tests/test_signup.py`. Its first assertion is the status on the literal path `/accounts/signup/`, so the red is `404 != 200`, not a `NoReverseMatch` error. Impl: `src/accounts/urls.py` (`app_name`, `signup`); `SignUpView` as a minimal `TemplateView(template_name="accounts/signup.html")`; `src/templates/accounts/signup.html`, which extends `base.html` with an empty content block; and the `include` in `config/urls.py`. Covers: AC1, AC3 (status, templates).
+  - Done 2026-10-02: one test, as planned. A first draft split the include check into its own test, and that test errored with an `ImportError` instead of failing an assertion, so the two were merged back, with the status assertion first.
 - [ ] 7. The page renders the sign-up form:
   - `list(response.context["form"].fields) == ["username", "password1", "password2"]`
   - `response.context["form"]._meta.model is get_user_model()`
