@@ -44,6 +44,8 @@ class GoalListView(OwnGoalsMixin, ListView):
         context = super().get_context_data(**kwargs)
         context["active_status"] = self.active_status()
         context["statuses"] = Goal.Status.choices
+        # Before filtering: tells "filter hides everything" from "no goals".
+        context["has_goals"] = super().get_queryset().exists()
         return context
 
 

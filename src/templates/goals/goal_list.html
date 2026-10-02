@@ -24,7 +24,7 @@
         <span class="text-sm text-slate-500">{{ goal.get_status_display }}</span>
       </li>
     {% empty %}
-      <li>No goals yet.</li>
+      <li>{% if active_status and has_goals %}No goals with this status.{% else %}No goals yet.{% endif %}</li>
     {% endfor %}
   </ul>
   {% if is_paginated %}

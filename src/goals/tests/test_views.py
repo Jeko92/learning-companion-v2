@@ -698,3 +698,24 @@ class GoalFilteredPaginationTests(TestCase):
         filter_links = [h for h, _ in second.links("main") if h.startswith("/goals/")]
         self.assertTrue(filter_links)
         self.assertFalse([h for h in filter_links if "page=" in h])
+
+
+class GoalFilterEmptyStateTests(TestCase):
+    def test_an_empty_filter_says_so(self):
+        alice = get_user_model().objects.create_user("alice")
+        Goal.objects.create(owner=alice, title="Only planned")
+        self.client.force_login(alice)
+
+        main = get_page(self.client, "/goals/?status=done").text("main")
+
+        self.assertIn("No goals with this status.", main)
+        self.assertNotIn("No goals yet.", main)
+
+    def test_no_goals_at_all_says_no_goals_yet(self):
+        self.client.force_login(get_user_model().objects.create_user("carol"))
+        for path in ("/goals/", "/goals/?status=done"):
+            with self.subTest(path=path):
+                main = get_page(self.client, path).text("main")
+
+                self.assertIn("No goals yet.", main)
+                self.assertNotIn("No goals with this status.", main)

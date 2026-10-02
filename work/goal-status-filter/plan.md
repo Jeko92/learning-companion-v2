@@ -58,7 +58,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-status-
   - #8's `GoalListPaginationTests` stays green.
 
   Expected red: the Next link is `?page=2`. Impl: `{% querystring page=… %}` in the pagination links. Covers: AC5.
-- [ ] 6. The two empty states.
+- [x] 6. The two empty states.
   - Alice has only `planned` goals: `?status=done` shows "No goals with this status." and not "No goals yet.".
   - Carol has no goals: `/goals/` and `?status=done` both show "No goals yet.".
 
