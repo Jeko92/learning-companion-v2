@@ -53,7 +53,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-model):
 
   Expected red: `'goals.Goal' not found`. Impl: `src/goals/models.py`, with `status` a plain `CharField(max_length=20)` for now; `makemigrations goals` creates `0001`. Refactor: direct import. Covers: AC2, AC5.
   - Done 2026-10-02: red as expected (`'goals.Goal' not found`), then green. `status` got a plain `default="planned"` here, because AC5's `full_clean()` test would otherwise fail on a blank status. Step 3 still fails first on `hasattr(Goal, "Status")`.
-- [ ] 3. The status is a `TextChoices` defaulting to planned. Test:
+- [x] 3. The status is a `TextChoices` defaulting to planned. Test:
   - `hasattr(Goal, "Status")` is asserted first.
   - `Goal.Status.values == ["planned", "in-progress", "done"]` and `.labels == ["Planned", "In progress", "Done"]`.
   - A new `Goal(owner=…, title="x")` has `status == Goal.Status.PLANNED`.
@@ -61,6 +61,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-model):
   - `Goal.objects.filter(pk=goal.pk).update(status="bogus")` inside `transaction.atomic()` raises `IntegrityError`.
 
   Expected red: `False is not True`. Impl: the nested `Status`, `choices` and `default` on the field, and the `CheckConstraint` in `Meta.constraints`; `makemigrations` creates `0002`. Covers: AC3.
+  - Done 2026-10-02: red as expected (`False is not true`, and `ValidationError not raised`), then green. The `CheckConstraint` lists the values literally, because `Meta`'s body can't see the nested `Status`. A test that every `Goal.Status` value passes the constraint keeps the two in step.
 - [ ] 4. The title is required and stored trimmed. Test:
   - `Goal.objects.create(owner=…, title="  Learn Django ")`, then `refresh_from_db()`, gives "Learn Django".
   - With `subTest` for `""` and `"   "`, `full_clean()` fails on `title`.
