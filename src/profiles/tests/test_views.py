@@ -69,3 +69,17 @@ class ProfileDetailTests(TestCase):
         self.assertRedirects(
             response, login_redirect(path), fetch_redirect_response=False
         )
+
+    def test_another_users_profile_or_a_missing_one_is_not_found(self):
+        self.profile.name = "Alice Smith"
+        self.profile.cohort = "Spring 2026"
+        self.profile.save()
+        bob = get_user_model().objects.create_user("bob", password=PASSWORD)
+        self.client.force_login(bob)
+
+        response = self.client.get(f"/profile/{self.profile.pk}/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertNotContains(response, "Alice Smith", status_code=404)
+        self.assertNotContains(response, "Spring 2026", status_code=404)
+        self.assertEqual(self.client.get("/profile/999999/").status_code, 404)
