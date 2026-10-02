@@ -82,7 +82,7 @@ Guard steps (7, 8, 10, 12) name their mutation.
   - `/goals/`'s `links("main")` includes `("/goals/new/", "New goal")`
 
   Expected red: `404 != 200`. Impl: `GoalForm`, `GoalCreateView(LoginRequiredMixin, CreateView)` without `form_valid` yet, the `create` route, `goal_form.html`, and the list's "New goal" link. Covers: AC1 (create), AC4 (link), AC5.
-- [ ] 6. A valid create saves the goal for you and returns to the list. POST `title="  Learn Django "`, `description="Parts 1-7"`, `status="in-progress"`. Assert:
+- [x] 6. A valid create saves the goal for you and returns to the list. POST `title="  Learn Django "`, `description="Parts 1-7"`, `status="in-progress"`. Assert:
   - a redirect to `/goals/`
   - one goal, with owner alice, title "Learn Django", status in-progress
   - with `follow=True`, "Goal created." appears and the goal is first in `main`

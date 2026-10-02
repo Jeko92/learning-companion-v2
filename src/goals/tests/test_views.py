@@ -103,3 +103,31 @@ class GoalCreatePageTests(TestCase):
         page = get_page(self.client, "/goals/")
 
         self.assertIn(("/goals/new/", "New goal"), page.links("main"))
+
+
+class GoalCreateTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.client.force_login(self.alice)
+        self.data = {
+            "title": "  Learn Django ",
+            "description": "Parts 1-7",
+            "status": "in-progress",
+        }
+
+    def test_a_valid_create_saves_your_goal_and_returns_to_the_list(self):
+        response = self.client.post("/goals/new/", self.data)
+
+        self.assertRedirects(response, "/goals/", fetch_redirect_response=False)
+        goal = Goal.objects.get()
+        self.assertEqual(
+            (goal.owner, goal.title, goal.status),
+            (self.alice, "Learn Django", Goal.Status.IN_PROGRESS),
+        )
+        followed = self.client.get("/goals/")
+        self.assertContains(followed, "Goal created.")
+        page = PageParser()
+        page.feed(followed.content.decode())
+        self.assertTrue(
+            page.text("main").startswith("Your goals New goal Learn Django")
+        )
