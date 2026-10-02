@@ -137,6 +137,15 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-edit-de
   - Guard. Mutation: `{{ object.description|safe|linebreaksbr }}`, or `|safe` on the description, in `goal_detail.html`. The detail subtest must go red. Revert afterwards.
   - Done 2026-10-02: green on arrival. Under the mutation (`|safe|linebreaksbr` on the description), the detail subtest went red. The template was then restored. This finally pins the description escaping that #8's list couldn't cover.
 - [x] 15. A wrongly ordered ownership mixin fails loudly. Define a class inside the test, `class WronglyOrdered(DetailView, OwnGoalsMixin)`, then call `WronglyOrdered.as_view()` on a `RequestFactory` GET with `request.user = alice` and `pk=goal.pk`. It must raise `ImproperlyConfigured`. Expected red: no exception, because the mixin still sets `model` and the view serves the goal. Impl: remove `model = Goal` from `OwnGoalsMixin`, which all the correctly ordered views keep working without. Covers: AC14.
+  - **Done 2026-10-02, with a correction to the plan and to the #8 security note behind AC14:**
+    - **The test was green on arrival, not red.** A diagnosis with `model = Goal` restored on the mixin showed `WronglyOrdered(DetailView, OwnGoalsMixin)` *already* raised `ImproperlyConfigured`.
+    - **The reason:** Django's `SingleObjectMixin` defines `model = None`, and in a wrongly ordered class it comes before `OwnGoalsMixin` in the MRO. The mixin's `model` was never visible there, so the "silent unscoped fallback" could not happen through the mixin.
+    - **What the step leaves behind:**
+      - removing `model` from the mixin is harmless tidying
+      - the test pins Django's loud failure for a wrongly ordered view
+      - the docstring explains the rule
+    - **The real remaining risk** is a goal view that sets `model = Goal` on *itself* and lists the mixin second, which would be unscoped. The defences are the docs rule (list `OwnGoalsMixin` first, never set `model` on goal views) and the per-view 404 tests (steps 4 and 12).
+    - This was committed before the green-on-arrival was noticed; the commit message overstates the change.
 - [ ] 16. Docs. No test. Commit `docs(goal-edit-delete): document the goal detail, edit and delete pages`.
   - `CLAUDE.md`, Goals bullet:
     - the detail, edit and delete pages
