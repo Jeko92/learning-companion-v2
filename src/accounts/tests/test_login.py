@@ -2,6 +2,7 @@ from urllib.parse import urlencode
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.contrib.messages import get_messages
 from django.shortcuts import resolve_url
 from django.test import TestCase
 from django.urls import NoReverseMatch, reverse
@@ -215,11 +216,13 @@ class LoginLoggedInTests(TestCase):
         )
         self.assertTemplateNotUsed(response, "accounts/login.html")
 
-    def test_logged_in_post_redirects(self):
-        response = self.client.post(
-            LOGIN_PATH, {"username": USERNAME, "password": PASSWORD}
-        )
+    def test_logged_in_post_redirects_without_logging_in_again(self):
+        # Empty data: a re-login with valid credentials would redirect to the
+        # same place, so only the logged-in short-circuit can pass this.
+        response = self.client.post(LOGIN_PATH, {})
 
         self.assertRedirects(
             response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
         )
+        self.assertTemplateNotUsed(response, "accounts/login.html")
+        self.assertEqual(list(get_messages(response.wsgi_request)), [])

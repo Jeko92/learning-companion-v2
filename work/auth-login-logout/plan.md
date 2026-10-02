@@ -200,13 +200,14 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-login-l
 ### Review findings (final-review 2026-10-02, verdict FAIL; see `review.md`)
 Each step is still one cycle and one commit. Steps 18–21 are guard tests that pass on arrival, so each one names a mutation that must turn it red and is then reverted. Step 22 changes tests only and is committed as `refactor(auth-login-logout): …`.
 
-- [ ] 18. (Finding 1, AC8) A logged-in POST to the login page is redirected without logging in again. In `LoginLoggedInTests`, rewrite `test_logged_in_post_redirects` to post empty data (`{}`), then assert:
+- [x] 18. (Finding 1, AC8) A logged-in POST to the login page is redirected without logging in again. In `LoginLoggedInTests`, rewrite `test_logged_in_post_redirects` to post empty data (`{}`), then assert:
   - a redirect to `settings.LOGIN_REDIRECT_URL`
   - `assertTemplateNotUsed(response, "accounts/login.html")`
   - no "Welcome back" message was queued (`get_messages`)
 
   This is a deliberate fix of a test that couldn't fail, not a weakened one. Impl: none.
   - Guard. Mutation: `redirect_authenticated_user = False` must turn the test red (200 with the form re-rendered). Revert afterwards.
+  - Done 2026-10-02: green on arrival. The test was renamed to `test_logged_in_post_redirects_without_logging_in_again`. Under the mutation it went red (`200 != 302`), and so did the GET test. The view was then restored.
 - [ ] 19. (Finding 2, AC7) The real browser flow for an unsafe `next`. In `LoginNextTests`, add a test with one `subTest` per AC7 payload:
   1. `GET /accounts/login/?next=<payload>`
   2. assert that the `next` input in `forms("main")` has the value `""`
