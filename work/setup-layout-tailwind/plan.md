@@ -72,7 +72,7 @@ Test files: `src/core/tests/test_apps.py` (`SimpleTestCase`) for installed apps,
 
   Covers: AC9, AC8 (setup).
 - [x] 11. The page links the Tailwind stylesheet without a built CSS file: `GET /` contains `<link rel="stylesheet" href="/static/css/tailwind.css">`. Test: `test_home.py`. It passes on a fresh checkout with no `tailwind build`, because nothing checks that the file exists. Impl: `{% load tailwind_cli %}` and `{% tailwind_css %}` in the `<head>` of `base.html`, plus the Tailwind utility classes for the simple layout. Covers: AC8.
-- [ ] 12. Docs. No test. Commit `docs(setup-layout-tailwind): document the Tailwind build and the core app layout`.
+- [x] 12. Docs. No test. Commit `docs(setup-layout-tailwind): document the Tailwind build and the core app layout`.
   - In `CLAUDE.md`, add to Commands, next to `runserver`:
     - `./.venv/bin/python src/manage.py tailwind build`, the required build step after checkout (downloads the pinned binary into `src/.django_tailwind_cli/`)
     - `./.venv/bin/python src/manage.py tailwind runserver`, the watcher plus the dev server for everyday development
@@ -83,6 +83,7 @@ Test files: `src/core/tests/test_apps.py` (`SimpleTestCase`) for installed apps,
     - `tailwind build` writes `src/assets/css/tailwind.css`
     - `git status` doesn't list that file
     - with `tailwind runserver`, `/` serves the styled page
+  - Done 2026-10-02: `tailwind build` downloaded `tailwindcss-macos-arm64-4.3.3` and built `src/assets/css/tailwind.css` (7156 B, containing the layout's classes such as `.bg-slate-50` and `.max-w-3xl`). `git status` stayed clean. `runserver` and `tailwind runserver` both served `/` (200) and `/static/css/tailwind.css` (200, `text/css`).
 
 ## Coverage
 | AC | Steps |

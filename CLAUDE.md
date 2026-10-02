@@ -5,7 +5,7 @@ A learning companion for tracking goals and learning sessions, attaching resourc
 ## Stack
 
 - Python 3.14, Django 6.1, SQLite (dev, tests and container)
-- Server-rendered Django templates, Tailwind via `django-tailwind-cli` (standalone binary, no Node)
+- Server-rendered Django templates, Tailwind via `django-tailwind-cli` (standalone binary, no Node). The Tailwind version is pinned in `settings.py` (`TAILWIND_CLI_VERSION`), and the built CSS is git-ignored, so run `tailwind build` after checkout. Tests don't need the build.
 - Django's built-in test runner (`django.test`), ruff for lint and formatting
 - Settings from the environment via `django-environ` (`src/config/env.py`). `SECRET_KEY` is required, `DEBUG` defaults to `False` and `ALLOWED_HOSTS` to `localhost,127.0.0.1`. The process environment beats `.env`, and `.env.example` documents every variable.
 - OpenAI Chat Completions for the AI features; API key from `.env`, never hardcoded
@@ -20,7 +20,9 @@ Run from the repo root.
 python3 -m venv .venv && ./.venv/bin/pip install -r requirements-dev.txt   # setup
 cp .env.example .env   # then set SECRET_KEY; required by runserver and the test suite
 ./.venv/bin/python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"   # generate a SECRET_KEY
-./.venv/bin/python src/manage.py runserver                                   # dev server
+./.venv/bin/python src/manage.py tailwind build                              # build the CSS (required after checkout; downloads the pinned binary into src/.django_tailwind_cli/)
+./.venv/bin/python src/manage.py tailwind runserver                          # dev server plus Tailwind watcher (everyday development)
+./.venv/bin/python src/manage.py runserver                                   # dev server only
 ./.venv/bin/python src/manage.py test src                                    # full suite (what the hooks run)
 ./.venv/bin/python src/manage.py test <app>.tests.test_<x> --verbosity 2     # one test module
 ./.venv/bin/ruff check .                                                     # lint (what the hooks run)
@@ -33,6 +35,9 @@ python3 .claude/scripts/board.py sync                                        # m
 
 - `src/manage.py`, `src/config/`: Django project (settings, root URLs, ASGI/WSGI)
 - `src/<app>/`: one Django app per domain area, tests in `src/<app>/tests/` (`test_*.py`)
+- `src/core/`: the home page and other site-wide views
+- `src/templates/`: project-wide templates (`base.html` layout, pages that extend it)
+- `src/assets/`: static source directory (`STATICFILES_DIRS`); the built `css/tailwind.css` is git-ignored
 - `work/<ticket-id>/`: workflow artifacts per ticket (`ticket.md`, `plan.md`, `review.md`, `activity.log`)
 - `work/backlog.md`: git-ignored local mirror of the GitHub project board
 - `.claude/`: workflow rules, skills, hooks, the board sync script
