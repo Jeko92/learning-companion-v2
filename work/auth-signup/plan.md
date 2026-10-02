@@ -121,7 +121,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-signup)
 
   Test: `src/accounts/tests/test_signup.py`. Its first assertion is the status on the literal path `/accounts/signup/`, so the red is `404 != 200`, not a `NoReverseMatch` error. Impl: `src/accounts/urls.py` (`app_name`, `signup`); `SignUpView` as a minimal `TemplateView(template_name="accounts/signup.html")`; `src/templates/accounts/signup.html`, which extends `base.html` with an empty content block; and the `include` in `config/urls.py`. Covers: AC1, AC3 (status, templates).
   - Done 2026-10-02: one test, as planned. A first draft split the include check into its own test, and that test errored with an `ImportError` instead of failing an assertion, so the two were merged back, with the status assertion first.
-- [ ] 7. The page renders the sign-up form:
+- [x] 7. The page renders the sign-up form:
   - `list(response.context["form"].fields) == ["username", "password1", "password2"]`
   - `response.context["form"]._meta.model is get_user_model()`
   - the HTML has a `<form>` with `method="post"` and `action == reverse("accounts:signup")`, an `<input name="csrfmiddlewaretoken">`, and an `<input name=...>` for each of the three fields

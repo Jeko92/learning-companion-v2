@@ -33,15 +33,17 @@ def collapse(pieces):
 
 
 class PageParser(HTMLParser):
-    """Collects the text inside each of SECTIONS and the text inside any element
-    with an href, so tests check structure, not just that a string appears
-    somewhere on the page."""
+    """Collects the text inside each of SECTIONS, the text inside any element
+    with an href, and every start tag with its attributes, so tests check
+    structure, not just that a string appears somewhere on the page."""
 
     def __init__(self):
         super().__init__()
         self.open_tags = []
         self.pieces = {section: [] for section in SECTIONS}
         self.href_pieces = []
+        # (tag, {attribute: value}) for every start tag, in document order.
+        self.elements = []
 
     def text(self, section):
         return collapse(self.pieces[section])
@@ -50,6 +52,7 @@ class PageParser(HTMLParser):
         return collapse(self.href_pieces)
 
     def handle_starttag(self, tag, attrs):
+        self.elements.append((tag, dict(attrs)))
         if tag not in VOID_ELEMENTS:
             has_href = any(name == "href" for name, _ in attrs)
             self.open_tags.append((tag, has_href))
