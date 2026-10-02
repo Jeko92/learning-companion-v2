@@ -52,7 +52,7 @@ As a logged-in learner, I want to view and edit my own profile (name, cohort and
   - This deliberately changes #4's AC10 ("no links" when logged in), and its nav test is updated in the same step.
 - [x] AC12 Profile values are shown escaped. A name, cohort and focus area containing `<script>alert(1)</script>` appear only escaped on the detail page and in the edit form, never as raw markup.
 
-- [ ] AC13 Focus-area input is bounded before any database work. Added after the first final review on 2026-10-02 (security finding 1, high).
+- [x] AC13 Focus-area input is bounded before any database work. Added after the first final review on 2026-10-02 (security finding 1, high).
   - The `focus_areas` text is at most 1,000 characters. Longer input gives the standard length error on `focus_areas`.
   - At most 20 distinct focus areas are allowed. More gives "You can have at most 20 focus areas." on `focus_areas`.
   - In both cases the form is re-rendered (200), and nothing is saved: no field changes and no new tags.
