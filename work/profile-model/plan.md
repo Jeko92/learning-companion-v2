@@ -101,7 +101,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(profile-mode
   - `get_or_create_by_name("   ")` raises `ValidationError` and creates nothing
 
   Expected red: `AttributeError` (no such manager method). Impl: `TagManager` with `get_or_create_by_name`, and `objects = TagManager()`. Covers: AC3.
-- [ ] 7. The `profiles` app is installed. Test: `src/profiles/tests/test_apps.py`. Expected red: `False is not True`. Impl: the `profiles` package, `apps.py` (`ProfilesConfig`, no `ready()` yet), `tests/__init__.py`, and `"profiles"` added to `INSTALLED_APPS` after `"tags"`. Covers: AC1.
+- [x] 7. The `profiles` app is installed. Test: `src/profiles/tests/test_apps.py`. Expected red: `False is not True`. Impl: the `profiles` package, `apps.py` (`ProfilesConfig`, no `ready()` yet), `tests/__init__.py`, and `"profiles"` added to `INSTALLED_APPS` after `"tags"`. Covers: AC1.
 - [ ] 8. `Profile` has the agreed fields. Test: `src/profiles/tests/test_models.py`. `profiles.Profile` is registered, and introspection with `_meta.get_field` shows:
   - `user`: a `OneToOneField` to `get_user_model()`, with `on_delete` `CASCADE` and `related_name` `"profile"`
   - `name`: `max_length` 100, `blank` true
