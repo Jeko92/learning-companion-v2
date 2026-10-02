@@ -197,6 +197,37 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-login-l
     - `GET /accounts/logout/` returned 405, and a login POST without a CSRF token returned 403
     - the throwaway user was deleted (0 users left)
 
+### Review findings (final-review 2026-10-02, verdict FAIL; see `review.md`)
+Each step is still one cycle and one commit. Steps 18–21 are guard tests that pass on arrival, so each one names a mutation that must turn it red and is then reverted. Step 22 changes tests only and is committed as `refactor(auth-login-logout): …`.
+
+- [ ] 18. (Finding 1, AC8) A logged-in POST to the login page is redirected without logging in again. In `LoginLoggedInTests`, rewrite `test_logged_in_post_redirects` to post empty data (`{}`), then assert:
+  - a redirect to `settings.LOGIN_REDIRECT_URL`
+  - `assertTemplateNotUsed(response, "accounts/login.html")`
+  - no "Welcome back" message was queued (`get_messages`)
+
+  This is a deliberate fix of a test that couldn't fail, not a weakened one. Impl: none.
+  - Guard. Mutation: `redirect_authenticated_user = False` must turn the test red (200 with the form re-rendered). Revert afterwards.
+- [ ] 19. (Finding 2, AC7) The real browser flow for an unsafe `next`. In `LoginNextTests`, add a test with one `subTest` per AC7 payload:
+  1. `GET /accounts/login/?next=<payload>`
+  2. assert that the `next` input in `forms("main")` has the value `""`
+  3. POST credentials plus that form's `next` value to `/accounts/login/`
+  4. assert the user is logged in and redirected to `settings.LOGIN_REDIRECT_URL`
+
+  Keep the existing direct-query variant, which pins that `LoginView` reads GET `next`. Correct step 8's note: a browser does *not* post to the query URL, because the form's `action` has no query string. Impl: none.
+  - Guard. Mutation: `value="{{ request.GET.next }}"` in `login.html`. The hidden-value assertion must go red for every payload. Revert afterwards.
+- [ ] 20. (Finding 3) An unsafe `next` on logout is ignored. In `test_logout.py`, add a test with one `subTest` per AC7 payload: a logged-in user (`force_login`) POSTs `next=<payload>` to `/accounts/logout/`. Assert the user is anonymous and the redirect goes to `settings.LOGOUT_REDIRECT_URL`. Impl: none.
+  - Guard. Mutation: override `LogOutView.get_redirect_url` to return the raw POST `next`. Every subtest must go red. Revert afterwards.
+- [ ] 21. (Finding 4) A logged-in user opening the login page with an unsafe `next` is sent to `LOGIN_REDIRECT_URL`. In `LoginLoggedInTests`, GET `?next=https://evil.example/` and `?next=//evil.example/` (one `subTest` each), and assert a redirect to `settings.LOGIN_REDIRECT_URL`. Impl: none.
+  - Guard. Mutation: override `LogInView.get_redirect_url` to return the raw GET `next`. Both subtests must go red. Revert afterwards.
+- [ ] 22. (Findings 5–11) Test hardening, with no behaviour change. Commit `refactor(auth-login-logout): harden the login and logout tests`. The suite must stay green throughout. Changes:
+  - `test_login.py:37-39` and `test_nav.py:49-52`: assert exactly one form, and compare only its `method` and `action` (not the whole attribute dict)
+  - rename `test_logged_in_nav_has_no_login_placeholder_and_no_signup_link` to `test_logged_in_nav_has_username_and_logout_form_and_no_auth_links`
+  - `LoginFailureTests.test_failed_login_shows_one_generic_error`: assert `len(main_texts) == 2` before comparing
+  - `SessionLifecycleTests.test_login_replaces_the_session_key`: assert `_auth_user_id` is in the session after the login POST
+  - `CsrfTests` "no token" tests: GET a page first so the CSRF cookie is set, then POST without a token (still 403, and the user's state is unchanged)
+  - `core/tests/html.py`: the class docstring mentions forms; the `forms()` docstring says only `<input>` is collected and nested forms aren't collapsed the way browsers do
+  - this plan's design section: the settings checks live in `test_login.py` and `test_logout.py`, not `test_apps.py`
+
 ## Coverage
 | AC | Steps |
 |---|---|
