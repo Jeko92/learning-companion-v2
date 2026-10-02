@@ -8,8 +8,11 @@ from django.shortcuts import resolve_url
 from django.test import Client, RequestFactory, TestCase
 from django.urls import reverse
 from django.views.generic import DetailView
+from django.views.generic.detail import SingleObjectMixin
+from django.views.generic.list import MultipleObjectMixin
 
 from core.tests.html import PageParser
+from goals import urls as goal_urls
 from goals.models import Goal
 from goals.views import OwnGoalsMixin
 
@@ -599,3 +602,180 @@ class OwnGoalsMixinOrderTests(TestCase):
 
         with self.assertRaises(ImproperlyConfigured):
             WronglyOrdered.as_view()(request, pk=goal.pk)
+
+
+class GoalStatusFilterTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.alice = User.objects.create_user("alice", password=PASSWORD)
+        bob = User.objects.create_user("bob")
+        self.titles = {}
+        for status in Goal.Status.values:
+            Goal.objects.create(
+                owner=self.alice, title=f"alice-{status}", status=status
+            )
+            Goal.objects.create(owner=bob, title=f"bob-{status}", status=status)
+            self.titles[status] = f"alice-{status}"
+        self.client.force_login(self.alice)
+
+    def listed(self, path):
+        main = get_page(self.client, path).text("main")
+        return {t for t in re.findall(r"\b(?:alice|bob)-[a-z-]+\b", main)}
+
+    def test_a_status_filters_the_list(self):
+        for status in Goal.Status.values:
+            with self.subTest(status=status):
+                self.assertEqual(
+                    self.listed(f"/goals/?status={status}"), {self.titles[status]}
+                )
+
+    def test_a_missing_empty_or_invalid_status_shows_all(self):
+        for path in ("/goals/", "/goals/?status=", "/goals/?status=bogus"):
+            with self.subTest(path=path):
+                self.assertEqual(self.client.get(path).status_code, 200)
+                self.assertEqual(self.listed(path), set(self.titles.values()))
+
+    def test_the_filter_never_shows_other_users_goals(self):
+        for status in Goal.Status.values:
+            with self.subTest(status=status):
+                listed = self.listed(f"/goals/?status={status}")
+
+                self.assertFalse({t for t in listed if t.startswith("bob-")})
+
+    def active_filter(self, path):
+        """The text of the one aria-current="page" span (the active filter)."""
+        html = self.client.get(path).content.decode()
+        return re.findall(r'<span[^>]*aria-current="page"[^>]*>([^<]*)</span>', html)
+
+    def test_filter_links_mark_the_active_filter(self):
+        filters = [
+            ("/goals/?status=planned", "Planned"),
+            ("/goals/?status=in-progress", "In progress"),
+            ("/goals/?status=done", "Done"),
+        ]
+        page = get_page(self.client, "/goals/")
+        links = page.links("main")
+        for link in filters:
+            with self.subTest(link=link):
+                self.assertIn(link, links)
+        self.assertNotIn(("/goals/", "All"), links)
+        self.assertEqual(self.active_filter("/goals/"), ["All"])
+
+        done = get_page(self.client, "/goals/?status=done")
+        self.assertIn(("/goals/", "All"), done.links("main"))
+        self.assertNotIn(("/goals/?status=done", "Done"), done.links("main"))
+        self.assertEqual(self.active_filter("/goals/?status=done"), ["Done"])
+
+        self.assertEqual(self.active_filter("/goals/?status=bogus"), ["All"])
+
+
+class GoalFilteredPaginationTests(TestCase):
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        for n in range(1, 22):  # d01 (oldest) .. d21 (newest), all done
+            goal = Goal.objects.create(
+                owner=alice, title=f"d{n:02}", status=Goal.Status.DONE
+            )
+            Goal.objects.filter(pk=goal.pk).update(
+                created_at=datetime(2026, 1, n, tzinfo=UTC)
+            )
+        for n in range(5):
+            Goal.objects.create(owner=alice, title=f"p{n}", status=Goal.Status.PLANNED)
+        self.client.force_login(alice)
+
+    def titles(self, page):
+        return re.findall(r"\b[dp]\d\d?\b", page.text("main"))
+
+    def test_pagination_keeps_the_filter(self):
+        first = get_page(self.client, "/goals/?status=done")
+        second = get_page(self.client, "/goals/?status=done&page=2")
+
+        self.assertEqual(self.titles(first), [f"d{n:02}" for n in range(21, 1, -1)])
+        self.assertIn(("?status=done&page=2", "Next"), first.links("main"))
+        self.assertEqual(self.titles(second), ["d01"])
+        self.assertIn(("?status=done&page=1", "Previous"), second.links("main"))
+
+    def test_filter_links_start_at_page_one(self):
+        second = get_page(self.client, "/goals/?status=done&page=2")
+
+        filter_links = [h for h, _ in second.links("main") if h.startswith("/goals/")]
+        self.assertTrue(filter_links)
+        self.assertFalse([h for h in filter_links if "page=" in h])
+
+    def test_query_parameters_are_never_reflected_raw(self):
+        payload = "<script>alert(1)</script>"
+        # 21 done goals, so the pagination links (which carry the query) render.
+        response = self.client.get("/goals/", {"status": "done", "x": payload})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Next")
+        self.assertNotContains(response, payload)
+
+
+class GoalFilterEmptyStateTests(TestCase):
+    def test_an_empty_filter_says_so(self):
+        alice = get_user_model().objects.create_user("alice")
+        Goal.objects.create(owner=alice, title="Only planned")
+        self.client.force_login(alice)
+
+        main = get_page(self.client, "/goals/?status=done").text("main")
+
+        self.assertIn("No goals with this status.", main)
+        self.assertNotIn("No goals yet.", main)
+
+    def test_no_goals_at_all_says_no_goals_yet(self):
+        self.client.force_login(get_user_model().objects.create_user("carol"))
+        for path in ("/goals/", "/goals/?status=done"):
+            with self.subTest(path=path):
+                main = get_page(self.client, path).text("main")
+
+                self.assertIn("No goals yet.", main)
+                self.assertNotIn("No goals with this status.", main)
+
+
+class GoalViewsScopingTests(TestCase):
+    def test_every_goal_lookup_view_scopes_through_own_goals_mixin(self):
+        User = get_user_model()
+        alice = User.objects.create_user("alice")
+        alices_goal = Goal.objects.create(owner=alice, title="Alice's goal")
+        bobs_goal = Goal.objects.create(
+            owner=User.objects.create_user("bob"), title="x"
+        )
+        # Create looks no goal up (it sets the owner in form_valid).
+        views = {
+            p.name: p.callback.view_class
+            for p in goal_urls.urlpatterns
+            if p.name != "create"
+        }
+
+        # A new route must be added here deliberately, not slip past the check.
+        self.assertEqual(set(views), {"list", "detail", "edit", "delete"})
+        for name, view in views.items():
+            with self.subTest(view=name):
+                # A model on the view plus a wrong base order would serve
+                # every user's goals silently (see CLAUDE.md, Goals).
+                self.assertIsNone(view.model)
+                # OwnGoalsMixin must precede Django's own get_queryset, so it
+                # (or a super() chain through it, as the list's filter uses)
+                # is what scopes the lookup.
+                mro = view.__mro__
+                django_qs = [
+                    c for c in (SingleObjectMixin, MultipleObjectMixin) if c in mro
+                ]
+                self.assertTrue(django_qs)
+                self.assertLess(
+                    mro.index(OwnGoalsMixin), min(mro.index(c) for c in django_qs)
+                )
+                # Without an override, the lookup is the mixin's own.
+                if "get_queryset" not in view.__dict__:
+                    self.assertIs(view.get_queryset, OwnGoalsMixin.get_queryset)
+                # With one (the list's filter) or without: only alice's goals.
+                request = RequestFactory().get("/")
+                request.user = alice
+                instance = view()
+                instance.setup(
+                    request, **({} if name == "list" else {"pk": alices_goal.pk})
+                )
+                goals = set(instance.get_queryset())
+                self.assertIn(alices_goal, goals)
+                self.assertNotIn(bobs_goal, goals)
