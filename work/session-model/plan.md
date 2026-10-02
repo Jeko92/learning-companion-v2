@@ -89,7 +89,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(session-mode
   - Test: the field is a `TextField` with `blank=True`. `full_clean()` accepts an empty value and `"n" * 2000`, and rejects `"n" * 2001` with an error on `notes`. Expected red: the field name is missing.
   - Impl: the field with `MaxLengthValidator(2000)`, plus a migration.
   - Covers: AC5.
-- [ ] 8. **Sessions carry shared tags.**
+- [x] 8. **Sessions carry shared tags.**
   - Test:
     - Introspection: `tags` is a `ManyToManyField` to `Tag`, with `blank=True` and `related_name == "sessions"`.
     - Behaviour: one session gets two tags. A session of bob's shares one of them, and `tag.sessions` holds both sessions. Deleting a tag removes only the link, and the sessions remain.

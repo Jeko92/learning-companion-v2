@@ -8,6 +8,7 @@ from django.test import TestCase
 
 from goals.models import Goal
 from learning_sessions.models import LearningSession
+from tags.models import Tag
 
 
 class LearningSessionGoalTests(TestCase):
@@ -158,3 +159,43 @@ class LearningSessionNotesTests(TestCase):
             self.session("n" * 2001).full_clean()
 
         self.assertIn("notes", caught.exception.error_dict)
+
+
+class LearningSessionTagTests(TestCase):
+    def setUp(self):
+        self.assertIn("tags", {f.name for f in LearningSession._meta.get_fields()})
+
+    def test_tags_are_shared_tags(self):
+        tags = LearningSession._meta.get_field("tags")
+
+        self.assertIsInstance(tags, models.ManyToManyField)
+        self.assertIs(tags.related_model, Tag)
+        self.assertIs(tags.blank, True)
+        self.assertEqual(tags.remote_field.related_name, "sessions")
+
+    def test_a_tag_is_shared_across_sessions_and_users(self):
+        User = get_user_model()
+        mine, theirs = (
+            LearningSession.objects.create(
+                goal=Goal.objects.create(
+                    owner=User.objects.create_user(name), title="G"
+                ),
+                duration_minutes=30,
+            )
+            for name in ("alice", "bob")
+        )
+        python, django = (
+            Tag.objects.create(name="python"),
+            Tag.objects.create(name="django"),
+        )
+
+        mine.tags.add(python, django)
+        theirs.tags.add(python)
+
+        self.assertQuerySetEqual(mine.tags.all(), [django, python], ordered=False)
+        self.assertQuerySetEqual(python.sessions.all(), [mine, theirs], ordered=False)
+
+        python.delete()
+
+        self.assertQuerySetEqual(mine.tags.all(), [django])
+        self.assertTrue(LearningSession.objects.filter(pk=theirs.pk).exists())

@@ -30,6 +30,7 @@ class LearningSession(models.Model):
     # A TextField's max_length only shapes the form widget; the validator
     # holds the limit for forms, full_clean() and the admin alike.
     notes = models.TextField(blank=True, validators=[MaxLengthValidator(2000)])
+    tags = models.ManyToManyField("tags.Tag", blank=True, related_name="sessions")
 
     class Meta:
         constraints = (
