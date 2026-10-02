@@ -110,7 +110,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(session-mode
   - Test: `str(LearningSession(goal=<"Learn Django">, date=date(2026, 3, 10), duration_minutes=45)) == "Learn Django · 2026-03-10 · 45 min"`. Expected red: the default `LearningSession object (None)`.
   - Impl: `__str__`.
   - Covers: AC8.
-- [ ] 11. **`owned_by(user)` returns only the user's sessions.**
+- [x] 11. **`owned_by(user)` returns only the user's sessions.**
   - Test:
     - Setup: alice has two goals with sessions, and bob has one goal with sessions. A tag `shared` is on sessions of both users, and a tag `alice-only` is only on alice's.
     - `hasattr(LearningSession.objects, "owned_by")` holds (the expected red: an assertion).
@@ -118,6 +118,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(session-mode
     - `Tag.objects.filter(sessions__in=LearningSession.objects.owned_by(bob)).distinct()` is `{shared}`, never `alice-only`.
   - Impl: `LearningSessionQuerySet.owned_by` and `objects = LearningSessionQuerySet.as_manager()`.
   - Covers: AC7.
+  - Done 2026-10-03. The red came from the `hasattr` check in `setUp`. Mutation check once green: with `owned_by` returning `self.all()`, both tests went red, including the tag leak. The model was then restored.
 - [ ] 12. **`LearningSession` is in the admin.**
   - Test (`test_admin.py`):
     - `assertIn(LearningSession, admin.site._registry)` (the expected red).

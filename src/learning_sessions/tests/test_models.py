@@ -252,3 +252,42 @@ class LearningSessionStrTests(TestCase):
         )
 
         self.assertEqual(str(session), "Learn Django · 2026-03-10 · 45 min")
+
+
+class OwnedByTests(TestCase):
+    def setUp(self):
+        self.assertTrue(hasattr(LearningSession.objects, "owned_by"))
+        User = get_user_model()
+        self.alice, self.bob = (User.objects.create_user(n) for n in ("alice", "bob"))
+        self.django, self.docker = (
+            Goal.objects.create(owner=self.alice, title=t) for t in ("Django", "Docker")
+        )
+        bobs_goal = Goal.objects.create(owner=self.bob, title="Rust")
+        self.alices = [
+            LearningSession.objects.create(goal=goal, duration_minutes=30)
+            for goal in (self.django, self.django, self.docker)
+        ]
+        self.bobs = [
+            LearningSession.objects.create(goal=bobs_goal, duration_minutes=30)
+            for _ in range(2)
+        ]
+        self.shared = Tag.objects.create(name="shared")
+        self.alice_only = Tag.objects.create(name="alice-only")
+        self.alices[0].tags.add(self.shared, self.alice_only)
+        self.bobs[0].tags.add(self.shared)
+
+    def test_owned_by_returns_only_that_users_sessions(self):
+        owned_by = LearningSession.objects.owned_by
+
+        self.assertEqual(set(owned_by(self.alice)), set(self.alices))
+        self.assertEqual(set(owned_by(self.bob)), set(self.bobs))
+        self.assertEqual(
+            set(owned_by(self.alice).filter(goal=self.docker)), {self.alices[2]}
+        )
+
+    def test_tags_reached_through_owned_by_never_leak_another_users(self):
+        bobs_sessions = LearningSession.objects.owned_by(self.bob)
+
+        tags = Tag.objects.filter(sessions__in=bobs_sessions).distinct()
+
+        self.assertQuerySetEqual(tags, [self.shared])

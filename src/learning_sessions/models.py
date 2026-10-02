@@ -15,6 +15,12 @@ def reject_future_dates(value):
         raise ValidationError("A session can't be in the future.", code="future")
 
 
+class LearningSessionQuerySet(models.QuerySet):
+    def owned_by(self, user):
+        """The one way views look up sessions: only those on the user's goals."""
+        return self.filter(goal__owner=user)
+
+
 class LearningSession(models.Model):
     """Time spent learning towards one goal."""
 
@@ -33,6 +39,8 @@ class LearningSession(models.Model):
     tags = models.ManyToManyField("tags.Tag", blank=True, related_name="sessions")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = LearningSessionQuerySet.as_manager()
 
     class Meta:
         # Newest first: by the day it happened, then by when it was logged;
