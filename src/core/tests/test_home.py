@@ -9,31 +9,37 @@ from core import views
 
 # Elements that never get an end tag, so they must not stay on the open stack.
 VOID_ELEMENTS = {"base", "br", "hr", "img", "input", "link", "meta", "source", "wbr"}
-SECTIONS = ("title", "header")
+SECTIONS = ("title", "header", "nav")
 
 
 class PageParser(HTMLParser):
-    """Collects the text inside each of SECTIONS, so tests check structure, not
-    just that a string appears somewhere on the page."""
+    """Collects the text inside each of SECTIONS and the text inside any element
+    with an href, so tests check structure, not just that a string appears
+    somewhere on the page."""
 
     def __init__(self):
         super().__init__()
         self.open_tags = []
         self.text = dict.fromkeys(SECTIONS, "")
+        self.href_text = ""
 
     def handle_starttag(self, tag, attrs):
         if tag not in VOID_ELEMENTS:
-            self.open_tags.append(tag)
+            has_href = any(name == "href" for name, _ in attrs)
+            self.open_tags.append((tag, has_href))
 
     def handle_endtag(self, tag):
-        if tag in self.open_tags:
-            last = len(self.open_tags) - 1 - self.open_tags[::-1].index(tag)
-            del self.open_tags[last:]
+        names = [name for name, _ in self.open_tags]
+        if tag in names:
+            del self.open_tags[len(names) - 1 - names[::-1].index(tag) :]
 
     def handle_data(self, data):
+        names = {name for name, _ in self.open_tags}
         for section in SECTIONS:
-            if section in self.open_tags:
+            if section in names:
                 self.text[section] += data
+        if any(has_href for _, has_href in self.open_tags):
+            self.href_text += data
 
 
 class HomePageTests(TestCase):
@@ -71,3 +77,11 @@ class HomePageTests(TestCase):
 
         self.assertIn("Learning Companion", page.text["header"])
         self.assertIn("Learning Companion", page.text["title"])
+
+    def test_nav_shows_placeholders_that_are_not_links(self):
+        page = self.get_page()
+
+        for placeholder in ("Goals", "Log in"):
+            with self.subTest(placeholder=placeholder):
+                self.assertIn(placeholder, page.text["nav"])
+                self.assertNotIn(placeholder, page.href_text)
