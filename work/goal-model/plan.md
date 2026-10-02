@@ -68,12 +68,13 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-model):
   - A 201-character title fails with "Ensure this value has at most 200 characters (it has 201)."; 200 characters passes.
 
   Expected red: `'  Learn Django ' != 'Learn Django'`. Impl: strip in `save()` and `clean_fields()`. Covers: AC4.
-- [ ] 5. The timestamps are maintained automatically. Test, with `patch("django.utils.timezone.now")`:
+- [x] 5. The timestamps are maintained automatically. Test, with `patch("django.utils.timezone.now")`:
   1. create at t1: `created_at == updated_at == t1`
   2. change the title and save at t2: `created_at == t1` and `updated_at == t2`
 
   Impl: none, since step 2 defines the fields. Covers: AC6.
   - Guard. Mutation: `updated_at = DateTimeField(auto_now_add=True)`. It must go red (`updated_at` stays at t1). Revert afterwards.
+  - Done 2026-10-02: green on arrival. Under the mutation it went red (`updated_at` stayed at t1). The model was then restored.
 - [ ] 6. Goals are ordered newest first. Test:
   - Create goals a, b and c.
   - Set a's `created_at` to an older time, and b's and c's to the same newer time, via `QuerySet.update`.

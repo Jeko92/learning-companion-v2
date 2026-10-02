@@ -1,3 +1,6 @@
+from datetime import UTC, datetime
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
@@ -83,3 +86,20 @@ class GoalTitleTests(TestCase):
 
                 self.assertIn("title", caught.exception.error_dict)
         Goal(owner=self.owner, title="x" * 200).full_clean()
+
+
+class GoalTimestampTests(TestCase):
+    def test_created_at_is_set_once_and_updated_at_on_every_save(self):
+        owner = get_user_model().objects.create_user("alice")
+        t1 = datetime(2026, 1, 1, 12, 0, tzinfo=UTC)
+        t2 = datetime(2026, 1, 2, 12, 0, tzinfo=UTC)
+
+        with patch("django.utils.timezone.now", return_value=t1):
+            goal = Goal.objects.create(owner=owner, title="Learn Django")
+        self.assertEqual((goal.created_at, goal.updated_at), (t1, t1))
+
+        with patch("django.utils.timezone.now", return_value=t2):
+            goal.title = "Learn Django well"
+            goal.save()
+        goal.refresh_from_db()
+        self.assertEqual((goal.created_at, goal.updated_at), (t1, t2))
