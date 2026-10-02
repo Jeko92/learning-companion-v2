@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.shortcuts import resolve_url
 from django.test import TestCase
 from django.urls import NoReverseMatch, reverse
@@ -6,6 +7,8 @@ from django.urls import NoReverseMatch, reverse
 from core.tests.html import PageParser
 
 LOGIN_PATH = "/accounts/login/"
+USERNAME = "alice"
+PASSWORD = "Tr4ck-Learning!"
 
 
 def get_page(client, path):
@@ -47,3 +50,20 @@ class LoginPageTests(TestCase):
         ):
             with self.subTest(name=name), self.assertRaises(NoReverseMatch):
                 reverse(name)
+
+
+class LoginSubmitTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(USERNAME, password=PASSWORD)
+
+    def log_in(self, **extra):
+        data = {"username": USERNAME, "password": PASSWORD, **extra}
+        return self.client.post(LOGIN_PATH, data)
+
+    def test_valid_login_logs_the_user_in_and_redirects(self):
+        response = self.log_in()
+
+        self.assertEqual(self.client.session.get("_auth_user_id"), str(self.user.pk))
+        self.assertRedirects(
+            response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
+        )

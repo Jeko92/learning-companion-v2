@@ -1,11 +1,11 @@
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import views as auth_views
 from django.shortcuts import redirect, resolve_url
 from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
-from django.views.generic import CreateView, TemplateView
+from django.views.generic import CreateView
 
 from accounts.forms import SignUpForm
 
@@ -31,8 +31,5 @@ class SignUpView(CreateView):
         return response
 
 
-class LogInView(TemplateView):
+class LogInView(auth_views.LoginView):
     template_name = "accounts/login.html"
-
-    def get_context_data(self, **kwargs):
-        return super().get_context_data(form=AuthenticationForm(self.request), **kwargs)
