@@ -87,11 +87,14 @@ Each step is one red–green–refactor cycle and one commit, `feat(profile-mode
   Expected red: `'tags.Tag' not found in {…}`. Impl: `src/tags/models.py`; `makemigrations tags` creates `0001_initial`. Refactor: the test imports `from tags.models import Tag` directly. Covers: AC2.
 - [x] 3. The name is stored trimmed. `Tag.objects.create(name="  Python ")`, then `refresh_from_db()`, gives `name == "Python"`. Expected red: `'  Python ' != 'Python'`. Impl: `Tag.save()` strips `name`. Covers: AC2.
 - [x] 4. A blank or whitespace-only name fails validation. With `subTest` for `""` and `"   "`, `Tag(name=…).full_clean()` raises `ValidationError` with `"name"` in `error_dict`. Expected red: the `"   "` subtest doesn't raise. Impl: `Tag.clean_fields()` strips `name` before `super()`. Covers: AC2.
-- [ ] 5. Names are unique regardless of case, enforced by the database:
+- [x] 5. Names are unique regardless of case, enforced by the database:
   - with `"Python"` saved, `Tag.objects.create(name="python")` inside `transaction.atomic()` raises `IntegrityError`
   - `Tag(name="PYTHON").full_clean()` raises `ValidationError` whose messages include "A tag with this name already exists."
 
   Expected red: no `IntegrityError`. Impl: the `UniqueConstraint(Lower("name"), …)` with `violation_error_message`; `makemigrations tags` creates `0002`. Covers: AC3.
+  - Done 2026-10-02: red as expected (`IntegrityError not raised`). `ordering = ("name",)` from the design landed here as well.
+  - `Meta.ordering` and `Meta.constraints` are **tuples**, not lists. Ruff 0.16's defaults include RUF012, which flags mutable class attributes, and this is the project's first `Meta`.
+  - `0002` was regenerated before committing, so the migration state matches the tuples. `makemigrations --check` is clean.
 - [ ] 6. Get-or-create by name, which is case- and whitespace-insensitive. With `"Python"` saved:
   - `Tag.objects.get_or_create_by_name(" PYTHON ")` returns `(that tag, False)`, its name stays `"Python"`, and the count stays at 1
   - `get_or_create_by_name(" Django ")` returns `(new tag, True)` with name `"Django"`

@@ -1,4 +1,5 @@
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 
 from tags.models import Tag
@@ -24,3 +25,13 @@ class TagModelTests(TestCase):
                     Tag(name=name).full_clean()
 
                 self.assertIn("name", caught.exception.error_dict)
+
+    def test_names_are_unique_regardless_of_case(self):
+        Tag.objects.create(name="Python")
+
+        # Enforced by the database, not only by validation.
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Tag.objects.create(name="python")
+        with self.assertRaises(ValidationError) as caught:
+            Tag(name="PYTHON").full_clean()
+        self.assertIn("A tag with this name already exists.", caught.exception.messages)
