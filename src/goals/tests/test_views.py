@@ -699,6 +699,15 @@ class GoalFilteredPaginationTests(TestCase):
         self.assertTrue(filter_links)
         self.assertFalse([h for h in filter_links if "page=" in h])
 
+    def test_query_parameters_are_never_reflected_raw(self):
+        payload = "<script>alert(1)</script>"
+        # 21 done goals, so the pagination links (which carry the query) render.
+        response = self.client.get("/goals/", {"status": "done", "x": payload})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Next")
+        self.assertNotContains(response, payload)
+
 
 class GoalFilterEmptyStateTests(TestCase):
     def test_an_empty_filter_says_so(self):

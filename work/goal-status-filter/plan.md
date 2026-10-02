@@ -63,8 +63,9 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-status-
   - Carol has no goals: `/goals/` and `?status=done` both show "No goals yet.".
 
   Expected red: "No goals with this status." is missing. Impl: `has_goals` in the context, and the template's two-way empty state. Covers: AC6.
-- [ ] 7. Query parameters are never reflected as raw markup. With 21 goals (so pagination links render), `GET /goals/?status=done&x=<script>alert(1)</script>` returns 200, and the response doesn't contain `<script>alert(1)</script>`. Impl: none, because `querystring` percent-encodes and escapes. Covers: AC7.
+- [x] 7. Query parameters are never reflected as raw markup. With 21 goals (so pagination links render), `GET /goals/?status=done&x=<script>alert(1)</script>` returns 200, and the response doesn't contain `<script>alert(1)</script>`. Impl: none, because `querystring` percent-encodes and escapes. Covers: AC7.
   - Guard. Mutation: the Next link built as `href="?{{ request.META.QUERY_STRING|safe }}&page=…"`, which with an unencoded test query would reflect raw. It must go red. If the test client sends the query percent-encoded, use `{{ request.GET.x|safe }}` in the link instead, noted in the step. Revert afterwards.
+  - Done 2026-10-02: green on arrival. The test client percent-encodes the query, so the mutation used `{{ request.GET.x|safe }}` (as a `data-x` attribute on the Next link). It went red (the raw payload was reflected). The template was then restored.
 - [ ] 8. Every goal view is pinned to `OwnGoalsMixin`. A test walks `goals.urls.urlpatterns`; for every route except `create`, `view_class.model is None` and `view_class.get_queryset is OwnGoalsMixin.get_queryset`, with a subtest per route name. It also asserts the walked names are exactly `{"list", "detail", "edit", "delete"}`, so a new route can't slip past the check unnoticed. Impl: none. Covers: AC8.
   - Guard. Mutation: `model = Goal` on `GoalDetailView`. It must go red. Revert afterwards. Then reorder its bases to `(DetailView, OwnGoalsMixin)`, which must go red too.
 - [ ] 9. Docs. No test. Commit `docs(goal-status-filter): document the status filter`.
