@@ -127,10 +127,15 @@ Each step is one red–green–refactor cycle and one commit, `feat(session-mode
     - On `admin:learning_sessions_learningsession_add`, the `<select name="goal">` and `<select name="tags">` both carry class `admin-autocomplete` (via `PageParser`).
   - Impl: `src/learning_sessions/admin.py`.
   - Covers: AC9.
-- [ ] 13. **Refactor: ship the app with one initial migration.** No new test. Commit `refactor(session-model): ship learning_sessions with one initial migration`.
+- [x] 13. **Refactor: ship the app with one initial migration.** No new test. Commit `refactor(session-model): ship learning_sessions with one initial migration`.
   - Run `migrate learning_sessions zero` if the dev database applied any. Delete the generated migrations, then run `makemigrations learning_sessions`. The single `0001_initial` must hold the `CheckConstraint`.
   - The suite stays green, including `MigrationsTests` (`makemigrations --check`). Then run `migrate`.
   - Covers: AC1.
+  - Done 2026-10-03: no change needed. Steps 3–9 regenerated `0001_initial` each time (see step 3), so it was already the only migration.
+    - It holds every field, the ordering and the `CheckConstraint`.
+    - `makemigrations --check` reports no changes, and the dev database had never applied it, so no `migrate … zero` was needed. `migrate learning_sessions` applied it cleanly.
+    - With no source change, the commit only ticks this step: `docs(session-model): confirm one initial migration`, not the planned `refactor(...)`.
+    - The migration refers to `learning_sessions.models.reject_future_dates`, so renaming that validator needs a migration. Step 14 documents this.
 - [ ] 14. **Docs.** No test. Commit `docs(session-model): document the learning_sessions app`.
   - `CLAUDE.md`:
     - A "Learning sessions" Stack bullet after Goals, covering:
