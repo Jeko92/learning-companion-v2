@@ -121,7 +121,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(profile-mode
 - [x] 11. Deleting a user deletes their profile. `user.delete()`, then `Profile.objects.filter(pk=profile_pk).exists()` is false. Test: `test_models.py`. Impl: none, because `CASCADE` comes from step 8. Covers: AC6.
   - Guard. Mutation: `on_delete=models.PROTECT` in a scratch edit, with a matching migration not needed for the run. It must go red (`ProtectedError`). Revert afterwards.
   - Done 2026-10-02: green on arrival. Under the mutation it went red (`ProtectedError: Cannot delete some instances of model 'User'…`). The model was then restored.
-- [ ] 12. `str(profile)` is the name, or the username when the name is blank. Subtests: blank gives `"alice"`; `name="Alice Smith"` gives `"Alice Smith"`. Test: `test_models.py`. Expected red: `'Profile object (1)' != 'alice'`. Impl: `Profile.__str__`. Covers: AC7.
+- [x] 12. `str(profile)` is the name, or the username when the name is blank. Subtests: blank gives `"alice"`; `name="Alice Smith"` gives `"Alice Smith"`. Test: `test_models.py`. Expected red: `'Profile object (1)' != 'alice'`. Impl: `Profile.__str__`. Covers: AC7.
 - [ ] 13. Focus areas are shared tags. Alice's profile gets `Python` and `Django`, and Bob's gets `Python`. Assert:
   - Alice has both tags, and `Tag.objects.count() == 2` (one shared `Python` row)
   - `python.profiles` contains both profiles

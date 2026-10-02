@@ -34,3 +34,10 @@ class ProfileTests(TestCase):
         self.user.delete()
 
         self.assertFalse(Profile.objects.filter(pk=self.profile.pk).exists())
+
+    def test_shows_the_name_or_else_the_username(self):
+        for name, expected in (("", "alice"), ("Alice Smith", "Alice Smith")):
+            with self.subTest(name=name):
+                self.profile.name = name
+
+                self.assertEqual(str(self.profile), expected)
