@@ -139,3 +139,18 @@ class GoalCreateTests(TestCase):
 
         self.assertEqual(Goal.objects.get().owner, self.alice)
         self.assertFalse(bob.goals.exists())
+
+    def test_anonymous_visitors_are_sent_to_log_in_and_nothing_is_created(self):
+        self.client.logout()
+        for method in ("get", "post"):
+            with self.subTest(method=method):
+                # Only the POST carries data; on a GET it would land in `next`.
+                data = self.data if method == "post" else None
+                response = getattr(self.client, method)("/goals/new/", data)
+
+                self.assertRedirects(
+                    response,
+                    login_redirect("/goals/new/"),
+                    fetch_redirect_response=False,
+                )
+                self.assertFalse(Goal.objects.exists())
