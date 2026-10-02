@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.shortcuts import resolve_url
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from core.tests.html import PageParser
@@ -189,3 +189,35 @@ class GoalCreateTests(TestCase):
                 page.feed(response.content.decode())
                 self.assertIn(message, page.text("main"))
                 self.assertFalse(Goal.objects.exists())
+
+
+class GoalCreateCsrfTests(TestCase):
+    # The default test client skips CSRF checks; this one enforces them.
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.csrf_client = Client(enforce_csrf_checks=True)
+        self.csrf_client.force_login(alice)
+        # GET first so the CSRF cookie is set: a 403 must come from the token.
+        page = PageParser()
+        page.feed(self.csrf_client.get("/goals/new/").content.decode())
+        ((_, inputs),) = page.forms("main")
+        self.tokens = [
+            a["value"] for a in inputs if a.get("name") == "csrfmiddlewaretoken"
+        ]
+        self.data = {"title": "Learn Django", "description": "", "status": "planned"}
+
+    def test_a_create_without_a_token_is_rejected(self):
+        response = self.csrf_client.post("/goals/new/", self.data)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Goal.objects.exists())
+
+    def test_a_create_with_the_forms_token_succeeds(self):
+        self.assertEqual(len(self.tokens), 1, "the goal form has no CSRF token")
+
+        response = self.csrf_client.post(
+            "/goals/new/", {**self.data, "csrfmiddlewaretoken": self.tokens[0]}
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Goal.objects.exists())

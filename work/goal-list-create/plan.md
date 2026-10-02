@@ -108,12 +108,13 @@ Guard steps (7, 8, 10, 12) name their mutation.
   - `status="bogus"` → `status` "Select a valid choice. bogus is not one of the available choices."
 
   Expected red: the 2,001-character description is accepted (`302 != 200`). Impl: `validators=[MaxLengthValidator(2000)]` on `Goal.description`; `makemigrations goals` creates `0002`. Covers: AC8.
-- [ ] 10. CSRF is enforced on create. With `Client(enforce_csrf_checks=True)` and alice logged in, after a GET of `/goals/new/`:
+- [x] 10. CSRF is enforced on create. With `Client(enforce_csrf_checks=True)` and alice logged in, after a GET of `/goals/new/`:
   - a POST without a token returns 403 and creates nothing
   - a POST with the form's `csrfmiddlewaretoken` (asserting `len(tokens) == 1`) returns 302 and creates the goal
 
   Impl: none. Covers: AC9.
   - Guard. Mutation: `@method_decorator(csrf_exempt, name="dispatch")` on `GoalCreateView`. The first case must go red. Revert afterwards.
+  - Done 2026-10-02: green on arrival. Under the mutation, the no-token case went red (`302 != 403`). The view was then restored.
 - [ ] 11. The logged-in nav links to the goals list; anonymous visitors see no "Goals". Rewrite `accounts/tests/test_nav.py`:
   - **Anonymous:** `text("nav") == "Log in Sign up"`, with links `[(login, "Log in"), (signup, "Sign up")]`.
   - **Logged in:** `text("nav") == "Goals alice Log out"`, with `links("nav") == [(reverse("goals:list"), "Goals"), (reverse("profiles:mine"), "alice")]`; the logout-form checks are unchanged.
