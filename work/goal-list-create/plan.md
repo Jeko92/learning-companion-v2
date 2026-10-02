@@ -55,7 +55,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-list-cr
 
 Guard steps (7, 8, 10, 12) name their mutation.
 
-- [ ] 1. `Goal.objects.owned_by(user)` returns exactly that user's goals, newest first, and chains. Test: in `test_models.py`, assert `hasattr(Goal.objects, "owned_by")` first. Then alice has 2 goals and bob 1:
+- [x] 1. `Goal.objects.owned_by(user)` returns exactly that user's goals, newest first, and chains. Test: in `test_models.py`, assert `hasattr(Goal.objects, "owned_by")` first. Then alice has 2 goals and bob 1:
   - `list(Goal.objects.owned_by(alice))` is alice's two, newest first
   - `.owned_by(alice).filter(status=Goal.Status.DONE)` chains
 

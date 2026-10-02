@@ -137,3 +137,21 @@ class GoalOwnershipTests(TestCase):
 
         self.assertFalse(Goal.objects.filter(pk__in=[g.pk for g in mine]).exists())
         self.assertTrue(Goal.objects.filter(pk=theirs.pk).exists())
+
+
+class OwnedByTests(TestCase):
+    def test_owned_by_returns_only_that_users_goals_newest_first(self):
+        self.assertTrue(hasattr(Goal.objects, "owned_by"))
+        User = get_user_model()
+        alice, bob = User.objects.create_user("alice"), User.objects.create_user("bob")
+        older = Goal.objects.create(owner=alice, title="Older")
+        newer = Goal.objects.create(owner=alice, title="Newer", status=Goal.Status.DONE)
+        Goal.objects.create(owner=bob, title="Bob's")
+        Goal.objects.filter(pk=older.pk).update(
+            created_at=datetime(2026, 1, 1, tzinfo=UTC)
+        )
+
+        self.assertEqual(list(Goal.objects.owned_by(alice)), [newer, older])
+        self.assertEqual(
+            list(Goal.objects.owned_by(alice).filter(status=Goal.Status.DONE)), [newer]
+        )

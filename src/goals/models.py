@@ -8,6 +8,12 @@ def strip(value):
     return value.strip() if isinstance(value, str) else value
 
 
+class GoalQuerySet(models.QuerySet):
+    def owned_by(self, user):
+        """The one way views look up goals: only the given user's own."""
+        return self.filter(owner=user)
+
+
 class Goal(models.Model):
     """A learning goal, owned by one user."""
 
@@ -27,6 +33,8 @@ class Goal(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = GoalQuerySet.as_manager()
 
     class Meta:
         # Newest first; the id breaks ties between goals created together.
