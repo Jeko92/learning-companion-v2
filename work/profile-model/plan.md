@@ -109,7 +109,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(profile-mode
   - `focus_areas`: a `ManyToManyField` to `Tag`, `blank` true, `related_name` `"profiles"`
 
   The existing `test_custom_user_model_adds_no_fields` must stay green. Expected red: `'profiles.Profile' not found`. Impl: `src/profiles/models.py`; `makemigrations profiles` creates `0001_initial`. Refactor: direct import. Covers: AC4.
-- [ ] 9. Every new user gets exactly one empty profile. Test: `src/profiles/tests/test_signals.py`, one `subTest` per path:
+- [x] 9. Every new user gets exactly one empty profile. Test: `src/profiles/tests/test_signals.py`, one `subTest` per path:
   - `create_user`
   - `create_superuser`
   - a successful `POST /accounts/signup/`
