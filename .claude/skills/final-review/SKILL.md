@@ -17,13 +17,17 @@ Read `.claude/state/workflow.json`. The phase must be `reviewing`. All plan step
 
    Then run `git diff --stat <base>..HEAD`.
 
-   Also write the full diff to a temporary file **outside the repo**, so it never lands in a `work/` commit: `git diff <base>..HEAD > <scratchpad>/review-<id>.diff`. The security reviewer has no shell and reads that file.
-2. **Verification fan-out.** Spawn both reviewers in parallel, each with its own lens and a clean context. Both review only new code: their agent definitions limit them to `<base>..HEAD`. Don't ask either to review the whole branch again.
-   - `code-reviewer` agent: correctness, plan conformance, test quality of the changed files. Pass it the ticket id, the review base and the changed files. On a re-review, also tell it to confirm the previous `review.md` findings are resolved.
-   - `security-reviewer` agent: OWASP Top 10, authn/authz, secrets in the changed files. Pass it the ticket id, the review base, the changed files and the diff file's path. On a re-review, also tell it to confirm the previous `review.md` security findings are resolved.
+   Also write the full diff to a temporary file **outside the repo**, so it never lands in a `work/` commit: `git diff <base>..HEAD > <scratchpad>/review-<id>.diff`. **Both reviewers read that file instead of whole files.**
 
-   The reviewers are read-only by design. They report findings; they do not fix anything.
-3. **Acceptance check** (main session): for each acceptance criterion in `work/<id>/ticket.md`, name the test that proves it and confirm the test passes. Run the full suite and lint once more.
+   Note which plan steps are in scope: the whole plan on a first review, or the fix steps on a re-review.
+2. **Verification fan-out.** Spawn both reviewers in parallel, each with its own lens and a clean context. Both review only new code: their agent definitions limit them to `<base>..HEAD`.
+   - **Keep the briefs short.** Give each reviewer the ticket id, the review base, the changed files, the diff file's path and the plan steps in scope. Add the few risks worth targeting, if any.
+   - **Don't ask them to review the whole branch again, or to run the full suite, lint or migration checks.** This skill runs those itself, in step 3.
+   - `code-reviewer` agent: correctness, plan conformance, test quality. It runs on a cheaper model and is capped at about 5 targeted mutations, on a scratch copy of `src/`. On a re-review, also tell it to confirm the previous `review.md` findings are resolved.
+   - `security-reviewer` agent: OWASP Top 10, authn/authz, secrets. On a re-review, also tell it to confirm the previous `review.md` security findings are resolved.
+
+   The reviewers are read-only by design. They report terse findings; they do not fix anything.
+3. **Acceptance check** (main session): for each acceptance criterion in `work/<id>/ticket.md`, name the test that proves it and confirm the test passes. Run the full suite, lint and `makemigrations --check` once more. This is the only place they run during review.
 4. Write `work/<id>/review.md`:
 
    ```markdown
