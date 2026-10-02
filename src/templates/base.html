@@ -15,7 +15,7 @@
         {% if user.is_authenticated %}
           <span class="font-medium text-slate-800">{{ user.get_username }}</span>
         {% else %}
-          <span>Log in</span>
+          <a href="{% url 'accounts:login' %}" class="hover:underline">Log in</a>
           <a href="{% url 'accounts:signup' %}" class="font-medium text-slate-800 hover:underline">Sign up</a>
         {% endif %}
       </nav>

@@ -19,17 +19,22 @@ class NavTests(TestCase):
         user = get_user_model().objects.create_user(USERNAME, password=PASSWORD)
         self.client.force_login(user)
 
-    def test_anonymous_nav_has_placeholders_and_a_signup_link(self):
+    def test_anonymous_nav_has_goals_and_login_and_signup_links(self):
+        # auth-login-logout made "Log in" a real link; it was a placeholder
+        # until then (#2 AC4, #3 AC9). "Goals" stays a non-link placeholder.
         page = self.get_page()
 
-        self.assertEqual(page.links("nav"), [(reverse("accounts:signup"), "Sign up")])
-        # Exact text guards against stray nav text. AC10's "no username for
-        # anonymous visitors" holds by construction: AnonymousUser.get_username()
-        # is "", so the username can never reach this nav.
+        self.assertEqual(
+            page.links("nav"),
+            [
+                (reverse("accounts:login"), "Log in"),
+                (reverse("accounts:signup"), "Sign up"),
+            ],
+        )
+        # Exact text guards against stray nav text. "No username for anonymous
+        # visitors" holds by construction: AnonymousUser.get_username() is "".
         self.assertEqual(page.text("nav"), "Goals Log in Sign up")
-        for placeholder in ("Goals", "Log in"):
-            with self.subTest(placeholder=placeholder):
-                self.assertNotIn(placeholder, page.href_text())
+        self.assertNotIn("Goals", page.href_text())
 
     def test_logged_in_nav_has_no_login_placeholder_and_no_signup_link(self):
         self.log_in()

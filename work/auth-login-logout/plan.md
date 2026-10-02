@@ -139,13 +139,17 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-login-l
     - Changed during implementation: the logout half also asserts that the old key's row is gone from `Session.objects`. Under the planned mutation (deleting only `_auth_user_id`), a reused old cookie is *already* anonymous, so the planned "reused cookie is anonymous" check alone would not have caught it.
     - The login half's "old row gone" assertion also keeps that half from passing vacuously, in case the planted session were never used.
     - Mutation result: the logout half went red (`True is not false`, because the old row survived). The login half stayed green, as expected. The view was then restored.
-- [ ] 13. "Log in" in the nav becomes a real link for anonymous visitors. Assertions:
+- [x] 13. "Log in" in the nav becomes a real link for anonymous visitors. Assertions:
   - `links("nav") == [(reverse("accounts:login"), "Log in"), (reverse("accounts:signup"), "Sign up")]`
   - `text("nav") == "Goals Log in Sign up"`
   - "Goals" is not link text
 
   Test: `test_nav.py` (anonymous test rewritten) and `core/tests/test_home.py` (the placeholder test now checks only "Goals"). The expected red is the new `links` list. Impl: `<a href="{% url 'accounts:login' %}">Log in</a>` in `base.html`. Covers: AC10 (anonymous).
   - This is a deliberate change of #2 AC4 and #3 AC9, made in the same commit, and recorded in the step note and the commit body.
+  - Done 2026-10-02.
+    - `accounts.tests.test_nav` was renamed to `test_anonymous_nav_has_goals_and_login_and_signup_links`. It now pins both links, the exact text, and "Goals" not being a link.
+    - `core.tests.test_home` was renamed to `test_nav_shows_goals_as_a_placeholder_that_is_not_a_link`, so it now covers only "Goals".
+    - Red: the old one-link list. Green after the `<a href>` change.
 - [ ] 14. The logged-in nav has a "Log out" button in a POST form:
   - `text("nav") == "Goals alice Log out"`
   - `links("nav") == []`
