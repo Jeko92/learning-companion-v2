@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
+from django.contrib.auth import views as auth_views
 from django.shortcuts import redirect, resolve_url
 from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
@@ -28,3 +29,36 @@ class SignUpView(CreateView):
         login(self.request, self.object)
         messages.success(self.request, f"Welcome, {self.object.get_username()}!")
         return response
+
+
+class LogInView(auth_views.LoginView):
+    template_name = "accounts/login.html"
+    # Signed-in users go to LOGIN_REDIRECT_URL, as on sign-up.
+    redirect_authenticated_user = True
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(
+            self.request, f"Welcome back, {form.get_user().get_username()}!"
+        )
+        return response
+
+
+class LogOutView(auth_views.LogoutView):
+    # POST only (Django's LogoutView answers GET with 405).
+    def post(self, request, *args, **kwargs):
+        # Read before logout() swaps in AnonymousUser: confirm real logouts only.
+        was_logged_in = request.user.is_authenticated
+        response = super().post(request, *args, **kwargs)
+        if was_logged_in:
+            # Messages are written at response time, so this survives the flush.
+            messages.info(request, "You have been logged out.")
+        return response
+
+    def get_success_url(self):
+        # LogoutView renders the admin's logged_out.html when the target is the
+        # logout URL itself; send that case to LOGOUT_REDIRECT_URL instead.
+        url = super().get_success_url()
+        if url == self.request.get_full_path():
+            return resolve_url(settings.LOGOUT_REDIRECT_URL)
+        return url

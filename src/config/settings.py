@@ -90,8 +90,12 @@ DATABASES = {
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth
 
 AUTH_USER_MODEL = "accounts.User"
-# Where sign-up (and, from auth-login-logout, log-in) sends the user.
+# Where sign-up and log-in send the user.
 LOGIN_REDIRECT_URL = "/"
+# Where login-required pages send anonymous visitors (a URL name, resolved).
+LOGIN_URL = "accounts:login"
+# Where log-out sends the user.
+LOGOUT_REDIRECT_URL = "/"
 
 
 # Password validation

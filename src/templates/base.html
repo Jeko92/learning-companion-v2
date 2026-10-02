@@ -14,8 +14,12 @@
         <span>Goals</span>
         {% if user.is_authenticated %}
           <span class="font-medium text-slate-800">{{ user.get_username }}</span>
+          <form method="post" action="{% url 'accounts:logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="hover:underline">Log out</button>
+          </form>
         {% else %}
-          <span>Log in</span>
+          <a href="{% url 'accounts:login' %}" class="hover:underline">Log in</a>
           <a href="{% url 'accounts:signup' %}" class="font-medium text-slate-800 hover:underline">Sign up</a>
         {% endif %}
       </nav>
