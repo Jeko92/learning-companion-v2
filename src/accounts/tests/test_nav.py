@@ -19,9 +19,9 @@ class NavTests(TestCase):
         user = get_user_model().objects.create_user(USERNAME, password=PASSWORD)
         self.client.force_login(user)
 
-    def test_anonymous_nav_has_goals_and_login_and_signup_links(self):
-        # auth-login-logout made "Log in" a real link; it was a placeholder
-        # until then (#2 AC4, #3 AC9). "Goals" stays a non-link placeholder.
+    def test_anonymous_nav_has_only_login_and_signup_links(self):
+        # goal-list-create removed the "Goals" placeholder for anonymous
+        # visitors (#2 AC4, #3 AC9 pinned it); it's a link once logged in.
         page = self.get_page()
 
         self.assertEqual(
@@ -33,17 +33,19 @@ class NavTests(TestCase):
         )
         # Exact text guards against stray nav text. "No username for anonymous
         # visitors" holds by construction: AnonymousUser.get_username() is "".
-        self.assertEqual(page.text("nav"), "Goals Log in Sign up")
-        self.assertNotIn("Goals", page.href_text())
+        self.assertEqual(page.text("nav"), "Log in Sign up")
 
-    def test_logged_in_nav_links_the_username_to_the_profile_and_has_logout(self):
+    def test_logged_in_nav_links_goals_and_the_profile_and_has_logout(self):
         # profile-page made the username a link to /profile/ (#4 AC10 had no
-        # links in the logged-in nav).
+        # links); goal-list-create made "Goals" a link to /goals/.
         self.log_in()
 
         page = self.get_page()
 
-        self.assertEqual(page.links("nav"), [(reverse("profiles:mine"), USERNAME)])
+        self.assertEqual(
+            page.links("nav"),
+            [(reverse("goals:list"), "Goals"), (reverse("profiles:mine"), USERNAME)],
+        )
         # Exact text: Goals, the username and the Log out button, nothing else.
         # (#3 pinned "Goals <username>"; auth-login-logout adds Log out.)
         self.assertEqual(page.text("nav"), f"Goals {USERNAME} Log out")
