@@ -36,12 +36,14 @@ class NavTests(TestCase):
         self.assertEqual(page.text("nav"), "Goals Log in Sign up")
         self.assertNotIn("Goals", page.href_text())
 
-    def test_logged_in_nav_has_username_and_logout_form_and_no_auth_links(self):
+    def test_logged_in_nav_links_the_username_to_the_profile_and_has_logout(self):
+        # profile-page made the username a link to /profile/ (#4 AC10 had no
+        # links in the logged-in nav).
         self.log_in()
 
         page = self.get_page()
 
-        self.assertEqual(page.links("nav"), [])
+        self.assertEqual(page.links("nav"), [(reverse("profiles:mine"), USERNAME)])
         # Exact text: Goals, the username and the Log out button, nothing else.
         # (#3 pinned "Goals <username>"; auth-login-logout adds Log out.)
         self.assertEqual(page.text("nav"), f"Goals {USERNAME} Log out")
