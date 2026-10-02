@@ -6,7 +6,7 @@ A learning companion for tracking goals and learning sessions, attaching resourc
 
 - Python 3.14, Django 6.1, SQLite (dev, tests and container)
 - Server-rendered Django templates, Tailwind via `django-tailwind-cli` (standalone binary, no Node). The Tailwind version is pinned in `settings.py` (`TAILWIND_CLI_VERSION`), and the built CSS is git-ignored, so run `tailwind build` after checkout. Tests don't need the build.
-- Auth: Django's built-in auth with the custom user model `accounts.User` (`AUTH_USER_MODEL = "accounts.User"`, an `AbstractUser` with no extra fields). Always refer to it through `get_user_model()` or `settings.AUTH_USER_MODEL`, never `django.contrib.auth.models.User`. Profile data goes on a `Profile` model, not on `User`. Sign-up redirects to `LOGIN_REDIRECT_URL = "/"`; #4 (`auth-login-logout`) adds log-in and log-out and reuses it.
+- Auth: Django's built-in auth with the custom user model `accounts.User` (`AUTH_USER_MODEL = "accounts.User"`, an `AbstractUser` with no extra fields). Always refer to it through `get_user_model()` or `settings.AUTH_USER_MODEL`, never `django.contrib.auth.models.User`. Profile data goes on a `Profile` model, not on `User`. Sign-up (`/accounts/signup/`), log-in (`/accounts/login/`) and log-out (`/accounts/logout/`, POST only) are `accounts` views, the last two thin subclasses of Django's `LoginView` and `LogoutView`. `LOGIN_URL = "accounts:login"`, `LOGIN_REDIRECT_URL = "/"` and `LOGOUT_REDIRECT_URL = "/"`. A `next` parameter is followed only for same-site URLs (Django's `url_has_allowed_host_and_scheme`); keep it that way for any new redirect.
 - Django's built-in test runner (`django.test`), ruff for lint and formatting
 - Settings from the environment via `django-environ` (`src/config/env.py`). `SECRET_KEY` is required, `DEBUG` defaults to `False` and `ALLOWED_HOSTS` to `localhost,127.0.0.1`. The process environment beats `.env`, and `.env.example` documents every variable.
 - OpenAI Chat Completions for the AI features; API key from `.env`, never hardcoded
@@ -37,7 +37,7 @@ python3 .claude/scripts/board.py sync                                        # m
 - `src/manage.py`, `src/config/`: Django project (settings, root URLs, ASGI/WSGI)
 - `src/<app>/`: one Django app per domain area, tests in `src/<app>/tests/` (`test_*.py`)
 - `src/core/`: the home page and other site-wide views. `src/core/tests/html.py` holds `PageParser`, the HTML helper shared by the apps' page tests.
-- `src/accounts/`: the custom user model and sign-up at `/accounts/signup/` (URL namespace `accounts`). #4 adds log-in and log-out under `/accounts/`.
+- `src/accounts/`: the custom user model, and sign-up, log-in and log-out under `/accounts/` (URL namespace `accounts`)
 - `src/templates/`: project-wide templates (`base.html` layout, pages that extend it, `accounts/` pages)
 - `src/assets/`: static source directory (`STATICFILES_DIRS`); the built `css/tailwind.css` is git-ignored
 - `work/<ticket-id>/`: workflow artifacts per ticket (`ticket.md`, `plan.md`, `review.md`, `activity.log`)
