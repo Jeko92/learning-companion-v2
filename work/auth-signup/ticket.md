@@ -20,7 +20,7 @@ As a visitor to the Learning Companion, I want to create an account with a usern
   - a username that differs from an existing one only in case (e.g. `Alice` when `alice` exists): error on `username`
   - a password rejected by the configured password validators (e.g. too short or too common): error on `password2`
 - [ ] AC8 For a logged-in user, both `GET` and `POST` to `/accounts/signup/` redirect to `settings.LOGIN_REDIRECT_URL`. The form is not rendered and no user is created.
-- [ ] AC9 For anonymous visitors, the nav shows a "Sign up" link to `reverse("accounts:signup")`. For logged-in users there is no such link. "Goals" and "Log in" stay non-link placeholders.
+- [ ] AC9 For anonymous visitors, the nav shows "Goals" and "Log in" as non-link placeholders and a "Sign up" link to `reverse("accounts:signup")`. For logged-in users, the nav shows "Goals" (still a non-link placeholder) and neither "Log in" nor the "Sign up" link.
 - [ ] AC10 For a logged-in user, the nav shows their username (`user.get_username()`), which signals that they are signed in. Anonymous visitors see no username in the nav.
 
 ## Out of scope
@@ -55,5 +55,6 @@ Constraints and context:
 - Django's default `AUTH_PASSWORD_VALIDATORS` (similarity, minimum length, common, numeric) are already configured. AC7's validator case relies on them. Django 6.1's `UserCreationForm` rejects usernames that match an existing one case-insensitively, and AC7 pins that behaviour.
 - #2's nav test asserts that "Goals" and "Log in" are not inside any link. Adding a real "Sign up" link must keep that test green.
 - `CLAUDE.md` and `README.md` get the `accounts` app and the custom user model (`AUTH_USER_MODEL`) in their Layout and Stack sections. The plan includes this.
+- Plan review (2026-10-02, approved): the plan's first draft would have shown the "Log in" placeholder to logged-in users, next to their username. AC9 now hides "Log in" from logged-in users, so the nav is "Goals · Log in · Sign up" when anonymous and "Goals · <username>" when logged in. #4 adds "Log out" to the logged-in nav.
 
 Status: the user approved these acceptance criteria (AC1–AC10) on 2026-10-02. The next step is `plan-ticket`.
