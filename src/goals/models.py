@@ -3,6 +3,11 @@ from django.db import models
 from django.db.models import Q
 
 
+def strip(value):
+    """Trim the ends of free text; other values reach field validation."""
+    return value.strip() if isinstance(value, str) else value
+
+
 class Goal(models.Model):
     """A learning goal, owned by one user."""
 
@@ -32,3 +37,12 @@ class Goal(models.Model):
                 name="goals_goal_status_valid",
             ),
         )
+
+    def clean_fields(self, exclude=None):
+        # Model CharFields don't strip: trim first so "   " fails as blank.
+        self.title = strip(self.title)
+        super().clean_fields(exclude=exclude)
+
+    def save(self, *args, **kwargs):
+        self.title = strip(self.title)
+        super().save(*args, **kwargs)

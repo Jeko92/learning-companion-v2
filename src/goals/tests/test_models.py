@@ -63,3 +63,23 @@ class GoalStatusTests(TestCase):
 
                 goal.refresh_from_db()
                 self.assertEqual(goal.status, value)
+
+
+class GoalTitleTests(TestCase):
+    def setUp(self):
+        self.owner = get_user_model().objects.create_user("alice")
+
+    def test_title_is_stored_trimmed(self):
+        goal = Goal.objects.create(owner=self.owner, title="  Learn Django ")
+
+        goal.refresh_from_db()
+        self.assertEqual(goal.title, "Learn Django")
+
+    def test_title_is_required_and_at_most_200_characters(self):
+        for title in ("", "   ", "x" * 201):
+            with self.subTest(title=title[:5]):
+                with self.assertRaises(ValidationError) as caught:
+                    Goal(owner=self.owner, title=title).full_clean()
+
+                self.assertIn("title", caught.exception.error_dict)
+        Goal(owner=self.owner, title="x" * 200).full_clean()

@@ -62,7 +62,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-model):
 
   Expected red: `False is not True`. Impl: the nested `Status`, `choices` and `default` on the field, and the `CheckConstraint` in `Meta.constraints`; `makemigrations` creates `0002`. Covers: AC3.
   - Done 2026-10-02: red as expected (`False is not true`, and `ValidationError not raised`), then green. The `CheckConstraint` lists the values literally, because `Meta`'s body can't see the nested `Status`. A test that every `Goal.Status` value passes the constraint keeps the two in step.
-- [ ] 4. The title is required and stored trimmed. Test:
+- [x] 4. The title is required and stored trimmed. Test:
   - `Goal.objects.create(owner=…, title="  Learn Django ")`, then `refresh_from_db()`, gives "Learn Django".
   - With `subTest` for `""` and `"   "`, `full_clean()` fails on `title`.
   - A 201-character title fails with "Ensure this value has at most 200 characters (it has 201)."; 200 characters passes.
