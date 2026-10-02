@@ -1,6 +1,7 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 
 
 class LearningSession(models.Model):
@@ -9,6 +10,7 @@ class LearningSession(models.Model):
     goal = models.ForeignKey(
         "goals.Goal", on_delete=models.CASCADE, related_name="sessions"
     )
+    date = models.DateField(default=timezone.localdate)
     duration_minutes = models.PositiveIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(1440)]
     )

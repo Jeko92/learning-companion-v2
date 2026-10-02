@@ -77,7 +77,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(session-mode
   - Test: for 0 and 1,441, `update(duration_minutes=…)` inside `transaction.atomic()` raises `IntegrityError`. For 1 and 1,440, `update()` then `refresh_from_db()` stores the value. Expected red: no `IntegrityError` for 1,441 (and for 0, which `PositiveIntegerField` allows).
   - Impl: `Meta.constraints` with the `CheckConstraint` and a comment saying why, plus a migration.
   - Covers: AC4.
-- [ ] 5. **`date` defaults to today.**
+- [x] 5. **`date` defaults to today.**
   - Test: with `django.utils.timezone.now` patched to `datetime(2026, 3, 10, 23, 30, tzinfo=UTC)`, a session saved without a date has `date == date(2026, 3, 10)`. The field is a `DateField`. Expected red: the field name is missing.
   - Impl: `date = DateField(default=timezone.localdate)`, plus a migration.
   - Covers: AC3.

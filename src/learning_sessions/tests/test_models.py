@@ -1,3 +1,6 @@
+from datetime import UTC, date, datetime
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, models, transaction
@@ -93,3 +96,24 @@ class LearningSessionDurationTests(TestCase):
                 sessions.update(duration_minutes=minutes)
                 session.refresh_from_db()
                 self.assertEqual(session.duration_minutes, minutes)
+
+
+# Late in the day, so a date taken from UTC is checked near midnight.
+NOW = datetime(2026, 3, 10, 23, 30, tzinfo=UTC)
+
+
+class LearningSessionDateTests(TestCase):
+    def setUp(self):
+        self.assertIn("date", {f.name for f in LearningSession._meta.get_fields()})
+        owner = get_user_model().objects.create_user("alice")
+        self.goal = Goal.objects.create(owner=owner, title="Learn Django")
+
+    def test_date_defaults_to_today(self):
+        self.assertIsInstance(LearningSession._meta.get_field("date"), models.DateField)
+        with patch("django.utils.timezone.now", return_value=NOW):
+            session = LearningSession.objects.create(
+                goal=self.goal, duration_minutes=30
+            )
+
+        session.refresh_from_db()
+        self.assertEqual(session.date, date(2026, 3, 10))
