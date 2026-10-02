@@ -8,8 +8,11 @@ from django.shortcuts import resolve_url
 from django.test import Client, RequestFactory, TestCase
 from django.urls import reverse
 from django.views.generic import DetailView
+from django.views.generic.detail import SingleObjectMixin
+from django.views.generic.list import MultipleObjectMixin
 
 from core.tests.html import PageParser
+from goals import urls as goal_urls
 from goals.models import Goal
 from goals.views import OwnGoalsMixin
 
@@ -728,3 +731,32 @@ class GoalFilterEmptyStateTests(TestCase):
 
                 self.assertIn("No goals yet.", main)
                 self.assertNotIn("No goals with this status.", main)
+
+
+class GoalViewsScopingTests(TestCase):
+    def test_every_goal_lookup_view_scopes_through_own_goals_mixin(self):
+        # Create looks no goal up (it sets the owner in form_valid).
+        views = {
+            p.name: p.callback.view_class
+            for p in goal_urls.urlpatterns
+            if p.name != "create"
+        }
+
+        # A new route must be added here deliberately, not slip past the check.
+        self.assertEqual(set(views), {"list", "detail", "edit", "delete"})
+        for name, view in views.items():
+            with self.subTest(view=name):
+                # A model on the view plus a wrong base order would serve
+                # every user's goals silently (see CLAUDE.md, Goals).
+                self.assertIsNone(view.model)
+                # OwnGoalsMixin must precede Django's own get_queryset, so it
+                # (or a super() chain through it, as the list's filter uses)
+                # is what scopes the lookup.
+                mro = view.__mro__
+                django_qs = [
+                    c for c in (SingleObjectMixin, MultipleObjectMixin) if c in mro
+                ]
+                self.assertTrue(django_qs)
+                self.assertLess(
+                    mro.index(OwnGoalsMixin), min(mro.index(c) for c in django_qs)
+                )
