@@ -1,3 +1,6 @@
+from pathlib import Path
+
+from django.conf import settings
 from django.test import TestCase
 from django.urls import resolve
 
@@ -19,3 +22,11 @@ class HomePageTests(TestCase):
 
         self.assertTemplateUsed(response, "home.html")
         self.assertTemplateUsed(response, "base.html")
+
+    def test_templates_load_from_the_project_templates_dir(self):
+        response = self.client.get("/")
+
+        origins = {t.name: Path(t.origin.name) for t in response.templates}
+        for name in ("base.html", "home.html"):
+            with self.subTest(template=name):
+                self.assertEqual(origins[name], settings.BASE_DIR / "templates" / name)
