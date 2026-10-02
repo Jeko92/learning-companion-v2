@@ -200,3 +200,26 @@ class LoginFailureTests(TestCase):
         self.assertIn(INVALID_LOGIN, page.text("main"))
         self.assertNotIn("This account is inactive.", page.text("main"))
         self.assertNotIn("_auth_user_id", self.client.session)
+
+
+class LoginLoggedInTests(TestCase):
+    def setUp(self):
+        user = get_user_model().objects.create_user(USERNAME, password=PASSWORD)
+        self.client.force_login(user)
+
+    def test_logged_in_get_redirects_without_the_form(self):
+        response = self.client.get(LOGIN_PATH)
+
+        self.assertRedirects(
+            response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
+        )
+        self.assertTemplateNotUsed(response, "accounts/login.html")
+
+    def test_logged_in_post_redirects(self):
+        response = self.client.post(
+            LOGIN_PATH, {"username": USERNAME, "password": PASSWORD}
+        )
+
+        self.assertRedirects(
+            response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
+        )

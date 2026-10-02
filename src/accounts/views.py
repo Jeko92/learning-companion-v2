@@ -33,6 +33,8 @@ class SignUpView(CreateView):
 
 class LogInView(auth_views.LoginView):
     template_name = "accounts/login.html"
+    # Signed-in users go to LOGIN_REDIRECT_URL, as on sign-up.
+    redirect_authenticated_user = True
 
     def form_valid(self, form):
         response = super().form_valid(form)
