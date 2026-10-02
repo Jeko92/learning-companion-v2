@@ -36,7 +36,7 @@ class NavTests(TestCase):
         self.assertEqual(page.text("nav"), "Goals Log in Sign up")
         self.assertNotIn("Goals", page.href_text())
 
-    def test_logged_in_nav_has_no_login_placeholder_and_no_signup_link(self):
+    def test_logged_in_nav_has_username_and_logout_form_and_no_auth_links(self):
         self.log_in()
 
         page = self.get_page()
@@ -45,14 +45,11 @@ class NavTests(TestCase):
         # Exact text: Goals, the username and the Log out button, nothing else.
         # (#3 pinned "Goals <username>"; auth-login-logout adds Log out.)
         self.assertEqual(page.text("nav"), f"Goals {USERNAME} Log out")
-        forms = page.forms("nav")
-        self.assertEqual(
-            [attrs for attrs, _ in forms],
-            [{"method": "post", "action": reverse("accounts:logout")}],
-        )
-        self.assertIn(
-            "csrfmiddlewaretoken", {attrs.get("name") for attrs in forms[0][1]}
-        )
+        ((attrs, inputs),) = page.forms("nav")
+        # Only method and action, so styling attributes can't break the test.
+        self.assertEqual(attrs.get("method"), "post")
+        self.assertEqual(attrs.get("action"), reverse("accounts:logout"))
+        self.assertIn("csrfmiddlewaretoken", {a.get("name") for a in inputs})
 
     def test_logged_in_nav_shows_the_username(self):
         self.log_in()

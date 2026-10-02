@@ -34,8 +34,9 @@ def collapse(pieces):
 
 class PageParser(HTMLParser):
     """Collects the text inside each of SECTIONS, the text inside any element
-    with an href, and every start tag with its attributes, so tests check
-    structure, not just that a string appears somewhere on the page."""
+    with an href, every start tag with its attributes, and each <form> with
+    its <input>s, so tests check structure, not just that a string appears
+    somewhere on the page."""
 
     def __init__(self):
         super().__init__()
@@ -65,7 +66,11 @@ class PageParser(HTMLParser):
 
     def forms(self, section):
         """(form attrs, [input attrs]) for every <form> inside the section, with
-        each <input> tied to the innermost form it sits in."""
+        each <input> tied to the innermost form it sits in.
+
+        Only <input> is collected (not <select>, <textarea>, <button> or
+        inputs linked with form="id"), and a nested <form> is kept as its own
+        form, whereas browsers ignore it. Fine for this project's forms."""
         return [(attrs, list(inputs)) for attrs, inputs in self.section_forms[section]]
 
     def handle_starttag(self, tag, attrs):

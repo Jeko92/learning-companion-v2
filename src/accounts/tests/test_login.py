@@ -33,12 +33,11 @@ class LoginPageTests(TestCase):
     def test_login_page_renders_the_login_form(self):
         page = get_page(self.client, LOGIN_PATH)
 
-        forms = page.forms("main")
-        self.assertEqual(
-            [attrs for attrs, _ in forms],
-            [{"method": "post", "action": reverse("accounts:login")}],
-        )
-        input_names = {attrs.get("name") for attrs in forms[0][1]}
+        ((attrs, inputs),) = page.forms("main")
+        # Only method and action, so styling attributes can't break the test.
+        self.assertEqual(attrs.get("method"), "post")
+        self.assertEqual(attrs.get("action"), reverse("accounts:login"))
+        input_names = {attrs.get("name") for attrs in inputs}
         self.assertLessEqual(
             {"csrfmiddlewaretoken", "username", "password"}, input_names
         )
@@ -214,6 +213,8 @@ class LoginFailureTests(TestCase):
                 self.assertNotIn("_auth_user_id", self.client.session)
                 self.assertNotContains(response, password)
                 main_texts.append(page.text("main"))
+        # Both cases must have run cleanly before their pages can be compared.
+        self.assertEqual(len(main_texts), 2)
         self.assertEqual(main_texts[0], main_texts[1])
 
     def test_inactive_user_gets_the_generic_error(self):

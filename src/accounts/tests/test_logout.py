@@ -74,6 +74,8 @@ class SessionLifecycleTests(TestCase):
             reverse("accounts:login"), {"username": USERNAME, "password": PASSWORD}
         )
 
+        # A failed login would keep the key too, so the login must have worked.
+        self.assertIn("_auth_user_id", self.client.session)
         self.assertNotEqual(self.session_key(), anonymous_key)
         self.assertFalse(Session.objects.filter(session_key=anonymous_key).exists())
 
@@ -98,6 +100,11 @@ class CsrfTests(TestCase):
         self.csrf_client = Client(enforce_csrf_checks=True)
 
     def test_login_without_a_csrf_token_is_rejected(self):
+        # GET first so the CSRF cookie is set: the 403 must come from the
+        # missing token, not from a missing cookie.
+        self.csrf_client.get(reverse("accounts:login"))
+        self.assertIn(settings.CSRF_COOKIE_NAME, self.csrf_client.cookies)
+
         response = self.csrf_client.post(
             reverse("accounts:login"), {"username": USERNAME, "password": PASSWORD}
         )
@@ -107,6 +114,9 @@ class CsrfTests(TestCase):
 
     def test_logout_without_a_csrf_token_is_rejected(self):
         self.csrf_client.force_login(self.user)
+        # GET first so the CSRF cookie is set (see the login test above).
+        self.csrf_client.get("/")
+        self.assertIn(settings.CSRF_COOKIE_NAME, self.csrf_client.cookies)
 
         response = self.csrf_client.post(LOGOUT_PATH)
 
