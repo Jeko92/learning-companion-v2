@@ -284,3 +284,43 @@ class ProfileEditCsrfTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.profile.refresh_from_db()
         self.assertEqual(self.profile.name, "Alice Smith")
+
+
+class ProfilePrivacyTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        python = Tag.objects.get_or_create_by_name("Python")[0]
+        alice = User.objects.create_user(USERNAME, password=PASSWORD).profile
+        alice.name, alice.cohort = "Alice Only", "Cohort A"
+        alice.save()
+        alice.focus_areas.add(python, Tag.objects.get_or_create_by_name("Haskell")[0])
+        self.bob = User.objects.create_user("bob", password=PASSWORD)
+        bob = self.bob.profile
+        bob.name, bob.cohort = "Bob", "Cohort B"
+        bob.save()
+        bob.focus_areas.add(python)
+        self.client.force_login(self.bob)
+
+    def test_your_pages_never_show_other_users_data(self):
+        pk = self.bob.profile.pk
+        for page in ("detail", "edit"):
+            with self.subTest(page=page):
+                response = self.client.get(reverse(f"profiles:{page}", args=[pk]))
+
+                self.assertEqual(response.status_code, 200)
+                for value in ("Alice Only", "Cohort A", "Haskell"):
+                    self.assertNotContains(response, value)
+
+    def test_the_edit_form_offers_no_list_of_existing_tags(self):
+        page = get_page(
+            self.client, reverse("profiles:edit", args=[self.bob.profile.pk])
+        )
+
+        self.assertNotIn("select", [tag for tag, _ in page.elements])
+        self.assertFalse(
+            [
+                a
+                for tag, a in page.elements
+                if tag == "input" and a.get("type") == "checkbox"
+            ]
+        )

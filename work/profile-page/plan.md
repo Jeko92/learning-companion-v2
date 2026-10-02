@@ -186,7 +186,7 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
   Impl: none. Covers: AC6 (CSRF).
   - Guard. Mutation: `@method_decorator(csrf_exempt, name="dispatch")` on `ProfileUpdateView`. The first case must go red. Revert afterwards.
   - Done 2026-10-02: green on arrival. Under the mutation, the no-token case went red (`302 != 403`). The view was then restored.
-- [ ] 15. Your pages never show other users' data. Test: `test_views.py`.
+- [x] 15. Your pages never show other users' data. Test: `test_views.py`.
   - Alice has name "Alice Only", cohort "Cohort A", and tags "Python" (shared) and "Haskell" (alice only).
   - Bob has "Bob", "Cohort B" and "Python".
   - Bob's detail page and edit page contain none of "Alice Only", "Cohort A" or "Haskell".
@@ -194,6 +194,7 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
 
   Impl: none. Covers: AC10.
   - Guard. Mutation: `ProfileForm.focus_areas = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)`. It must go red, because a `<select>` appears and "Haskell" shows on bob's page. Revert afterwards.
+  - Done 2026-10-02: green on arrival. Under the mutation, both tests went red: a `select` element appeared, and "Haskell" was found on bob's edit page. The form was then restored.
 - [ ] 16. Profile values are escaped.
   - Alice's name, cohort and one tag are set to `<script>alert(1)</script>` (the tag through `Tag.objects.create`).
   - Her detail and edit responses: `assertNotContains(response, "<script>alert(1)</script>")` and `assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")`.
