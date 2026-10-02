@@ -132,6 +132,23 @@ class LoginNextTests(TestCase):
                     self.assertTrue(location.startswith("/"))
                     self.assertFalse(location.startswith(("//", "/\\")))
 
+    def test_next_cannot_inject_markup_into_the_login_page(self):
+        script = "<script>alert(1)</script>"
+        # Both payloads have no scheme or host, so url_has_allowed_host_and_scheme
+        # accepts them as relative same-site paths and they reach the template:
+        # only escaping keeps the markup inert.
+        payloads = (f'">{script}', f'/x/?q=">{script}')
+        for payload in payloads:
+            with self.subTest(payload=payload):
+                response = self.client.get(LOGIN_PATH, {"next": payload})
+
+                self.assertNotContains(response, script)
+        page = PageParser()
+        page.feed(self.client.get(LOGIN_PATH, {"next": payloads[1]}).content.decode())
+        ((_, inputs),) = page.forms("main")
+        next_values = [a.get("value") for a in inputs if a.get("name") == "next"]
+        self.assertEqual(next_values, [payloads[1]])
+
 
 INVALID_LOGIN = (
     "Please enter a correct username and password. Note that both fields may be"
