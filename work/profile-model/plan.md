@@ -168,6 +168,41 @@ Each step is one red–green–refactor cycle and one commit, `feat(profile-mode
       - the add page returned 200 with no inline management form
     - The throwaway users were deleted (0 left, 0 profiles).
 
+### Review findings (final-review 2026-10-02, verdict FAIL by the user's decision; see `review.md`)
+Each step is one cycle and one commit. Steps 21 and 22 are guards that pass on arrival, so each names a mutation that must turn it red and is then reverted.
+
+- [ ] 19. (Finding 1, AC3) `get_or_create_by_name` survives losing a creation race. Test: `tags/tests/test_models.py` `GetOrCreateByNameTests`, with `"Python"` saved and the manager's initial lookup forced to miss once (`unittest.mock.patch` on the lookup, so the code takes the create path). Assert:
+  - `get_or_create_by_name("python")` returns `(the existing tag, False)` and raises nothing
+  - `Tag.objects.count() == 1`
+  - when called inside an outer `transaction.atomic()`, a further query in that block still works, so the caller's transaction isn't broken
+
+  Expected red: `ValidationError` ("A tag with this name already exists."). Impl:
+  - validate the fields only (`full_clean(validate_constraints=False)`), so a blank name still raises `ValidationError`
+  - save inside `transaction.atomic()`
+  - on `IntegrityError`, re-query `name__iexact` and return `(tag, False)`
+
+  Covers: AC3.
+- [ ] 20. (Finding 2) Non-string names give a `ValidationError`, not an `AttributeError`.
+  - `Tag(name=None).full_clean()` raises `ValidationError` with `"name"` in `error_dict`.
+  - `get_or_create_by_name(None)` raises `ValidationError`.
+
+  Test: `test_models.py`. Expected red: `AttributeError` (`'NoneType' object has no attribute 'strip'`). Impl: strip only when `isinstance(name, str)` (in `clean_fields`, `save` and the manager). Covers: AC2.
+- [ ] 21. (Finding 3, AC5) Fixture loads create no profile. Test: `profiles/tests/test_signals.py`. `get_user_model()(username="fixture").save_base(raw=True)`, which is what `loaddata` does, leaves `Profile.objects.filter(user__username="fixture")` empty. Impl: none.
+  - Guard. Mutation: the receiver checks only `if created:`. It must go red. Revert afterwards.
+- [ ] 22. (Finding 4, AC9) The focus-areas field uses the tag autocomplete. Test: `profiles/tests/test_admin.py`. On the change page, the `select` named `profile-0-focus_areas` has `admin-autocomplete` in its `class` and `data-model-name="tag"`. Impl: none.
+  - Guard. Mutation: remove `autocomplete_fields` from `ProfileInline`. It must go red. Revert afterwards.
+- [ ] 23. (Findings 5 and 6) Test hardening, with no behaviour change. Commit `refactor(profile-model): tighten the backfill and admin add tests`.
+  - The migration test asserts that `old`'s backfilled profile also has `cohort == ""` and no `focus_areas`.
+  - The add-user test asserts the POST redirects (`assertEqual(response.status_code, 302)`) before looking up `bob`.
+- [ ] 24. (Findings 7, 8, 9 and 11) Docs. No test. Commit `docs(profile-model): qualify the profile and tag invariants`.
+  - `CLAUDE.md` auth bullet: every user created through `save()` gets a profile; `bulk_create` and raw fixture loads skip the signal. Views must use `Profile.objects.get_or_create(user=request.user)`, not a bare `user.profile`.
+  - `CLAUDE.md` tags bullet:
+    - names are trimmed and length-checked only through `save()`/`full_clean()`, and `update()`/`bulk_create()` bypass both
+    - `get_or_create_by_name` is the only creation path for typed input
+    - it is safe under concurrent creation
+  - `README.md`: qualify "every user has a profile" in the same way.
+  - Step 18's Done note: record that it also added the RUF012 and `TransactionTestCase` rules to `CLAUDE.md` and the profile paragraph to `README.md`.
+
 ## Coverage
 | AC | Steps |
 |---|---|
