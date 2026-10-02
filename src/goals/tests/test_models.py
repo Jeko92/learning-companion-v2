@@ -155,3 +155,13 @@ class OwnedByTests(TestCase):
         self.assertEqual(
             list(Goal.objects.owned_by(alice).filter(status=Goal.Status.DONE)), [newer]
         )
+
+
+class GoalUrlTests(TestCase):
+    def test_a_goal_knows_its_detail_url(self):
+        self.assertTrue(hasattr(Goal, "get_absolute_url"))
+        goal = Goal.objects.create(
+            owner=get_user_model().objects.create_user("alice"), title="Learn Django"
+        )
+
+        self.assertEqual(goal.get_absolute_url(), f"/goals/{goal.pk}/")

@@ -59,7 +59,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-edit-de
   - `reverse("goals:detail", args=[pk]) == f"/goals/{pk}/"`
 
   Expected red: `404 != 200`. Impl: the `detail` route, `GoalDetailView(OwnGoalsMixin, DetailView)`, and a minimal template. Covers: AC1 (detail), AC4.
-- [ ] 2. `Goal.get_absolute_url()` and the admin's "View on site".
+- [x] 2. `Goal.get_absolute_url()` and the admin's "View on site".
   - In `test_models.py`: assert `hasattr(Goal, "get_absolute_url")` first, then `goal.get_absolute_url() == f"/goals/{goal.pk}/"`.
   - In `test_admin.py`: the superuser's change page for a goal contains an `a.viewsitelink`.
 
