@@ -133,7 +133,7 @@ Guard steps (7, 8, 10, 12) name their mutation.
 
   Expected red: page 1 shows 21 items. Impl: `paginate_by = 20`, plus the Previous/Next links in `goal_list.html`. Covers: AC12.
   - Done 2026-10-02: red as expected (page 1 listed all 21, and `?page=99` gave `200 != 404`), then green. The test's `titles()` helper first also picked up the words "goals" and "goal" from the heading; it now matches only the seeded titles with a regex. That was a deliberate test fix.
-- [ ] 14. Docs. No test. Commit `docs(goal-list-create): document the goal list and create pages`.
+- [x] 14. Docs. No test. Commit `docs(goal-list-create): document the goal list and create pages`.
   - `CLAUDE.md`:
     - The Goals bullet: the pages `/goals/` (`goals:list`, paginated 20 per page) and `/goals/new/` (`goals:create`). `Goal.objects.owned_by(user)` is the one scoping helper (via `OwnGoalsMixin`). `GoalForm` has an explicit field allow-list and the owner is set from `request.user`. The description is capped at 2,000 characters by a model validator.
     - The Layout line for `src/goals/`.
@@ -143,6 +143,14 @@ Guard steps (7, 8, 10, 12) name their mutation.
     - creating a goal as alice shows "Goal created."
     - an anonymous `/goals/` redirects to login
     - delete the manual-check goal afterwards
+
+  - Done 2026-10-02. `migrate` applied `goals.0002_alter_goal_description` to the dev DB. Results against `runserver` with curl, real CSRF tokens and the fictional users:
+    - An anonymous `/goals/` gave 302 to `/accounts/login/?next=/goals/`.
+    - Alice saw only her 3 goals, newest first.
+    - Creating "Manual check goal" gave 302 to `/goals/`, which showed "Goal created." with the new goal.
+    - The nav linked "Goals" to `/goals/`.
+    - Bob saw only his 2 goals.
+    - The manual-check goal was deleted (5 sample goals left).
 
 ## Coverage
 | AC | Steps |
