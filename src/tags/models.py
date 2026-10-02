@@ -8,3 +8,8 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        # Model CharFields don't strip; "Python" and " Python" must be one tag.
+        self.name = self.name.strip()
+        super().save(*args, **kwargs)

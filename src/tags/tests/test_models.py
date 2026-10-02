@@ -9,3 +9,9 @@ class TagModelTests(TestCase):
 
         self.assertEqual(Tag._meta.get_field("name").max_length, 50)
         self.assertEqual(str(tag), "Python")
+
+    def test_name_is_stored_trimmed(self):
+        tag = Tag.objects.create(name="  Python ")
+
+        tag.refresh_from_db()
+        self.assertEqual(tag.name, "Python")
