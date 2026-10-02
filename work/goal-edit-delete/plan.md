@@ -99,7 +99,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-edit-de
   - the detail page's Edit link
 
   Covers: AC1 (edit), AC4 (link), AC6.
-- [ ] 8. A valid edit saves and returns to the goal with a message. POST `title="  Learn Django well "`, `description="All parts"`, `status="done"` and `owner=<bob.pk>`. Assert:
+- [x] 8. A valid edit saves and returns to the goal with a message. POST `title="  Learn Django well "`, `description="All parts"`, `status="done"` and `owner=<bob.pk>`. Assert:
   - a redirect to `goal.get_absolute_url()`
   - the saved values, with the title trimmed
   - the owner is still alice

@@ -374,3 +374,26 @@ class GoalEditTests(TestCase):
         links = get_page(self.client, self.goal.get_absolute_url()).links("main")
 
         self.assertIn((self.path, "Edit goal"), links)
+
+    def test_a_valid_edit_saves_and_returns_to_the_goal(self):
+        bob = get_user_model().objects.create_user("bob")
+        data = {
+            "title": "  Learn Django well ",
+            "description": "All parts",
+            "status": "done",
+            "owner": bob.pk,
+        }
+
+        response = self.client.post(self.path, data)
+
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        self.goal.refresh_from_db()
+        self.assertEqual(
+            (self.goal.title, self.goal.description, self.goal.status, self.goal.owner),
+            ("Learn Django well", "All parts", Goal.Status.DONE, self.alice),
+        )
+        self.assertContains(
+            self.client.get(self.goal.get_absolute_url()), "Goal updated."
+        )

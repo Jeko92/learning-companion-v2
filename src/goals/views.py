@@ -36,5 +36,6 @@ class GoalCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
         return super().form_valid(form)
 
 
-class GoalUpdateView(OwnGoalsMixin, UpdateView):
+class GoalUpdateView(OwnGoalsMixin, SuccessMessageMixin, UpdateView):
     form_class = GoalForm
+    success_message = "Goal updated."
