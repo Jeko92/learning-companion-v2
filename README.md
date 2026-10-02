@@ -45,9 +45,10 @@ Values are read from the process environment first. `.env` at the repo root only
 - `src/<app>/`: Django apps, each with its own tests
 - `src/core/`: the home page and other site-wide views
 - `src/accounts/`: the custom user model (`accounts.User`), and sign-up, log-in and log-out under `/accounts/`
-- `src/tags/`: shared tags (case-insensitive unique names), used for focus areas
+- `src/tags/`: shared tags (case-insensitive unique names), used for focus areas and session tags
 - `src/profiles/`: each user's profile (name, cohort, focus areas), created automatically for new users, and the profile pages under `/profile/`
 - `src/goals/`: learning goals (title, description, status planned / in-progress / done), each owned by one user; listed at `/goals/`, created at `/goals/new/`, and viewed, edited or deleted at `/goals/<id>/`
+- `src/learning_sessions/`: learning sessions, each logged against one goal: a date (today or earlier), a duration in minutes (1 to 1,440), notes and tags
 - `src/templates/`: project-wide templates (`base.html` layout, pages that extend it, `accounts/`, `profiles/` and `goals/` pages)
 - `src/assets/`: static source files; the built `css/tailwind.css` is git-ignored
 - `work/`: workflow artifacts per ticket (`ticket.md`, `plan.md`, `review.md`)

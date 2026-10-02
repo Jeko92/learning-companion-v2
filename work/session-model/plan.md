@@ -136,7 +136,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(session-mode
     - `makemigrations --check` reports no changes, and the dev database had never applied it, so no `migrate … zero` was needed. `migrate learning_sessions` applied it cleanly.
     - With no source change, the commit only ticks this step: `docs(session-model): confirm one initial migration`, not the planned `refactor(...)`.
     - The migration refers to `learning_sessions.models.reject_future_dates`, so renaming that validator needs a migration. Step 14 documents this.
-- [ ] 14. **Docs.** No test. Commit `docs(session-model): document the learning_sessions app`.
+- [x] 14. **Docs.** No test. Commit `docs(session-model): document the learning_sessions app`.
   - `CLAUDE.md`:
     - A "Learning sessions" Stack bullet after Goals, covering:
       - the app name and why it isn't `sessions`
@@ -150,6 +150,17 @@ Each step is one red–green–refactor cycle and one commit, `feat(session-mode
     - A Layout line for `src/learning_sessions/`.
   - `README.md`: a Layout line for `src/learning_sessions/`, and the tags line mentions session tags.
   - Manual check: `migrate`, then in `manage.py shell` create a session for an existing goal without a date (it gets today), check `str()`, `owned_by()` and that `full_clean()` rejects 0 minutes, then delete it.
+  - Done 2026-10-03. `CLAUDE.md`:
+    - the Learning sessions Stack bullet, including the validator's dotted path in the migration
+    - the Tags bullet now says "and for a learning session's `tags`"
+    - a Layout line
+  - `README.md`: a Layout line, and the tags line mentions session tags.
+  - Manual check in `manage.py shell`, with a throwaway user and goal, deleted afterwards:
+    - a session saved without a date got today, `2026-10-02`. That is UTC, as `TIME_ZONE` says, although it was already 3 October locally.
+    - `str()` was `Manual check · 2026-10-02 · 45 min`
+    - `owned_by()` returned only that session
+    - `full_clean()` rejected 0 minutes on `duration_minutes`
+    - deleting the user removed the goal and the session
 
 ## Coverage
 | AC | Steps |
