@@ -121,8 +121,9 @@ Guard steps (7, 8, 10, 12) name their mutation.
 
   In `core/tests/test_home.py`, `test_nav_shows_goals_as_a_placeholder_that_is_not_a_link` becomes `test_anonymous_nav_has_no_goals_link`: "Goals" is not in the anonymous nav text. Expected red: the anonymous text is still "Goals Log in Sign up". Impl: `base.html` (move "Goals" into the logged-in branch as a link). Covers: AC10.
   - This deliberately changes #2 AC4, #3 AC9, #4 AC10 and #6 AC11, recorded in the commit body.
-- [ ] 12. Goal values are shown escaped. Alice has a goal whose title and description are `<script>alert(1)</script>`. `GET /goals/` must not contain the raw payload (`assertNotContains`) and must contain `&lt;script&gt;alert(1)&lt;/script&gt;`. Impl: none. Covers: AC11.
+- [x] 12. Goal values are shown escaped. Alice has a goal whose title and description are `<script>alert(1)</script>`. `GET /goals/` must not contain the raw payload (`assertNotContains`) and must contain `&lt;script&gt;alert(1)&lt;/script&gt;`. Impl: none. Covers: AC11.
   - Guard. Mutation: `{{ goal.title|safe }}` in `goal_list.html`. It must go red. Revert afterwards.
+  - Done 2026-10-02: green on arrival. Under the mutation it went red (the raw payload was found). The template was then restored. The description isn't shown on the list, so only the title is rendered there.
 - [ ] 13. The list is paginated, 20 per page, counting only your goals.
   - Alice has 21 goals ("g01" oldest to "g21" newest, with `created_at` set via `update` so the order is deterministic); bob has 30.
   - **Page 1:** shows g21 to g02 (20 items), has a "Next" link to `?page=2`, and no "Previous".

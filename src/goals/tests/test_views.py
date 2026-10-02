@@ -67,6 +67,15 @@ class GoalListTests(TestCase):
 
         self.assertIn("No goals yet.", main)
 
+    def test_goal_values_are_shown_escaped(self):
+        payload = "<script>alert(1)</script>"
+        Goal.objects.create(owner=self.alice, title=payload, description=payload)
+
+        response = self.client.get("/goals/")
+
+        self.assertNotContains(response, payload)
+        self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
+
 
 class GoalCreatePageTests(TestCase):
     def setUp(self):
