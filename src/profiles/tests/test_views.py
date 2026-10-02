@@ -324,3 +324,25 @@ class ProfilePrivacyTests(TestCase):
                 if tag == "input" and a.get("type") == "checkbox"
             ]
         )
+
+
+class ProfileEscapingTests(TestCase):
+    PAYLOAD = "<script>alert(1)</script>"
+
+    def setUp(self):
+        alice = get_user_model().objects.create_user(USERNAME, password=PASSWORD)
+        self.profile = alice.profile
+        self.profile.name = self.profile.cohort = self.PAYLOAD
+        self.profile.save()
+        self.profile.focus_areas.add(Tag.objects.create(name=self.PAYLOAD))
+        self.client.force_login(alice)
+
+    def test_profile_values_are_shown_escaped(self):
+        for page in ("detail", "edit"):
+            with self.subTest(page=page):
+                response = self.client.get(
+                    reverse(f"profiles:{page}", args=[self.profile.pk])
+                )
+
+                self.assertNotContains(response, self.PAYLOAD)
+                self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")

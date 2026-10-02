@@ -195,12 +195,13 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
   Impl: none. Covers: AC10.
   - Guard. Mutation: `ProfileForm.focus_areas = forms.ModelMultipleChoiceField(queryset=Tag.objects.all(), required=False)`. It must go red, because a `<select>` appears and "Haskell" shows on bob's page. Revert afterwards.
   - Done 2026-10-02: green on arrival. Under the mutation, both tests went red: a `select` element appeared, and "Haskell" was found on bob's edit page. The form was then restored.
-- [ ] 16. Profile values are escaped.
+- [x] 16. Profile values are escaped.
   - Alice's name, cohort and one tag are set to `<script>alert(1)</script>` (the tag through `Tag.objects.create`).
   - Her detail and edit responses: `assertNotContains(response, "<script>alert(1)</script>")` and `assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")`.
 
   Test: `test_views.py`. Impl: none. Covers: AC12.
   - Guard. Mutation: `{{ profile.name|safe }}` in the detail template. The detail subtest must go red. Revert afterwards.
+  - Done 2026-10-02: green on arrival. Under the mutation, the detail subtest went red (the raw `<script>alert(1)</script>` was found). The template was then restored.
 - [ ] 17. The username in the nav links to your profile. Rewrite `test_logged_in_nav_has_username_and_logout_form_and_no_auth_links` to assert:
   - `links("nav") == [(reverse("profiles:mine"), USERNAME)]`
   - the text is still exactly "Goals alice Log out"
