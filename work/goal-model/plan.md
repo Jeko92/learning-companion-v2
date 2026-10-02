@@ -39,7 +39,7 @@ The user approved this plan on 2026-10-02, with four improvements applied after 
 
 Each step is one red–green–refactor cycle and one commit, `feat(goal-model): …`. Test modules: `src/goals/tests/test_apps.py`, `test_models.py` and `test_admin.py`. Guard steps (5, 8) name their mutation.
 
-- [ ] 1. The `goals` app is installed. Test: `test_apps.py` (`SimpleTestCase`, `apps.is_installed("goals")`). Expected red: `False is not True`. Impl: `src/goals/__init__.py`, `apps.py` (`GoalsConfig`), `tests/__init__.py`, and `"goals"` in `INSTALLED_APPS`. Covers: AC1.
+- [x] 1. The `goals` app is installed. Test: `test_apps.py` (`SimpleTestCase`, `apps.is_installed("goals")`). Expected red: `False is not True`. Impl: `src/goals/__init__.py`, `apps.py` (`GoalsConfig`), `tests/__init__.py`, and `"goals"` in `INSTALLED_APPS`. Covers: AC1.
 - [ ] 2. `Goal` has the agreed fields, and the description is optional. Test: `test_models.py`.
   - `goals.Goal` is registered.
   - Field introspection shows:
