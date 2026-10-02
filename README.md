@@ -19,7 +19,7 @@ Styling uses Tailwind through `django-tailwind-cli`, a standalone binary with no
 
 Users sign up at `/accounts/signup/`, log in at `/accounts/login/` and log out with the nav's Log out button (a POST to `/accounts/logout/`). The project uses a custom user model, `accounts.User`. If your `src/db.sqlite3` was created before that change (before the `auth-signup` ticket), `migrate` fails with `InconsistentMigrationHistory`. Delete `src/db.sqlite3` once and run `migrate` again.
 
-Every user has a profile (name, cohort, focus areas), created automatically when the user is. Running `migrate` gives users who existed before that a profile too. Profiles can be edited in the admin on each user's page.
+Every user gets a profile (name, cohort, focus areas), created automatically when the user is created through sign-up, `createsuperuser` or the admin. Users loaded from fixtures don't get one automatically. Running `migrate` gives users who existed before that a profile too. Profiles can be edited in the admin on each user's page.
 
 Settings come from the environment via `django-environ`, read in `src/config/env.py`:
 

@@ -167,6 +167,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(profile-mode
       - the change page returned 200 with `profile-0-name`, `-cohort` and `-focus_areas`, and an `admin-autocomplete` widget
       - the add page returned 200 with no inline management form
     - The throwaway users were deleted (0 left, 0 profiles).
+  - Also added (beyond the step's list, recorded after review): the RUF012-tuples and `TransactionTestCase` rules in the `CLAUDE.md` test bullet, and a user-facing profile paragraph in `README.md`.
 
 ### Review findings (final-review 2026-10-02, verdict FAIL by the user's decision; see `review.md`)
 Each step is one cycle and one commit. Steps 21 and 22 are guards that pass on arrival, so each names a mutation that must turn it red and is then reverted.
@@ -201,7 +202,7 @@ Each step is one cycle and one commit. Steps 21 and 22 are guards that pass on a
 - [x] 23. (Findings 5 and 6) Test hardening, with no behaviour change. Commit `refactor(profile-model): tighten the backfill and admin add tests`.
   - The migration test asserts that `old`'s backfilled profile also has `cohort == ""` and no `focus_areas`.
   - The add-user test asserts the POST redirects (`assertEqual(response.status_code, 302)`) before looking up `bob`.
-- [ ] 24. (Findings 7, 8, 9 and 11) Docs. No test. Commit `docs(profile-model): qualify the profile and tag invariants`.
+- [x] 24. (Findings 7, 8, 9 and 11) Docs. No test. Commit `docs(profile-model): qualify the profile and tag invariants`.
   - `CLAUDE.md` auth bullet: every user created through `save()` gets a profile; `bulk_create` and raw fixture loads skip the signal. Views must use `Profile.objects.get_or_create(user=request.user)`, not a bare `user.profile`.
   - `CLAUDE.md` tags bullet:
     - names are trimmed and length-checked only through `save()`/`full_clean()`, and `update()`/`bulk_create()` bypass both
