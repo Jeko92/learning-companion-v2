@@ -41,6 +41,25 @@ class UserAdminProfileInlineTests(TestCase):
             admin.site._registry[get_user_model()], auth_admin.UserAdmin
         )
 
+    def test_focus_areas_are_picked_with_the_tag_autocomplete(self):
+        response = self.client.get(
+            reverse("admin:accounts_user_change", args=[self.alice.pk])
+        )
+        page = PageParser()
+        page.feed(response.content.decode())
+
+        (select,) = [
+            attrs
+            for tag, attrs in page.elements
+            if tag == "select" and attrs.get("name") == "profile-0-focus_areas"
+        ]
+        self.assertIn("admin-autocomplete", select.get("class", "").split())
+        # The widget names the field it serves; the server resolves Tag from it.
+        self.assertEqual(
+            (select.get("data-model-name"), select.get("data-field-name")),
+            ("profile", "focus_areas"),
+        )
+
     def test_adding_a_user_in_the_admin_creates_exactly_one_profile(self):
         # The inline is hidden on the add page: a filled-in inline would save a
         # second profile next to the one the post_save signal creates.
