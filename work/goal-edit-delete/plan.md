@@ -53,7 +53,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-edit-de
 - Guard steps (4, 9, 12, 13, 14) name their mutation, which runs with `PYTHONDONTWRITEBYTECODE=1`.
 - Stage only when the suite and lint both exit 0.
 
-- [ ] 1. The detail page is served. Alice, logged in, `GET /goals/<pk>/`:
+- [x] 1. The detail page is served. Alice, logged in, `GET /goals/<pk>/`:
   - status 200, **asserted first**
   - `goals/goal_detail.html` and `base.html` are used
   - `reverse("goals:detail", args=[pk]) == f"/goals/{pk}/"`

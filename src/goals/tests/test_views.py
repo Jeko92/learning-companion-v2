@@ -264,3 +264,24 @@ class GoalListPaginationTests(TestCase):
 
     def test_an_out_of_range_page_is_not_found(self):
         self.assertEqual(self.client.get("/goals/?page=99").status_code, 404)
+
+
+class GoalDetailTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(
+            owner=self.alice,
+            title="Learn Django",
+            description="Parts 1-3\nParts 4-7",
+            status=Goal.Status.IN_PROGRESS,
+        )
+        self.path = f"/goals/{self.goal.pk}/"
+        self.client.force_login(self.alice)
+
+    def test_the_detail_page_is_served(self):
+        response = self.client.get(self.path)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "goals/goal_detail.html")
+        self.assertTemplateUsed(response, "base.html")
+        self.assertEqual(reverse("goals:detail", args=[self.goal.pk]), self.path)

@@ -1,7 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, ListView
+from django.views.generic import CreateView, DetailView, ListView
 
 from goals.forms import GoalForm
 from goals.models import Goal
@@ -19,6 +19,10 @@ class OwnGoalsMixin(LoginRequiredMixin):
 class GoalListView(OwnGoalsMixin, ListView):
     template_name = "goals/goal_list.html"
     paginate_by = 20
+
+
+class GoalDetailView(OwnGoalsMixin, DetailView):
+    pass
 
 
 class GoalCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
