@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.shortcuts import resolve_url
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from core.tests.html import PageParser
@@ -248,3 +248,39 @@ class ProfileEditTests(TestCase):
                     ["Django", "Python"],
                 )
                 self.assertEqual(Tag.objects.count(), tag_count)
+
+
+class ProfileEditCsrfTests(TestCase):
+    # The default test client skips CSRF checks; this one enforces them.
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user(USERNAME, password=PASSWORD)
+        self.profile = self.alice.profile
+        self.path = f"/profile/{self.profile.pk}/edit/"
+        self.csrf_client = Client(enforce_csrf_checks=True)
+        self.csrf_client.force_login(self.alice)
+        # GET first so the CSRF cookie is set: a 403 must come from the token.
+        page = PageParser()
+        page.feed(self.csrf_client.get(self.path).content.decode())
+        ((_, inputs),) = page.forms("main")
+        self.tokens = [
+            a["value"] for a in inputs if a.get("name") == "csrfmiddlewaretoken"
+        ]
+        self.data = {"name": "Alice Smith", "cohort": "", "focus_areas": ""}
+
+    def test_a_save_without_a_token_is_rejected(self):
+        response = self.csrf_client.post(self.path, self.data)
+
+        self.assertEqual(response.status_code, 403)
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.name, "")
+
+    def test_a_save_with_the_forms_token_succeeds(self):
+        self.assertEqual(len(self.tokens), 1, "the edit form has no CSRF token")
+
+        response = self.csrf_client.post(
+            self.path, {**self.data, "csrfmiddlewaretoken": self.tokens[0]}
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.name, "Alice Smith")

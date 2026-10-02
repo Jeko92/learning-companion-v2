@@ -179,12 +179,13 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
   - The tests write the invisible characters as escapes (`\u200b`, `\ufeff`, `\u0301`, `\u00a0`). Ruff's PLE2515 flags literal ones, which had slipped into the step 11 test as well; they were converted here.
 - [x] 13. The name is validated before the lookup. `get_or_create_by_name("x" * 50_001)` raises `ValidationError`, not a database error, and creates nothing. Expected red: `OperationalError: LIKE or GLOB pattern too complex` (the missing behaviour itself). Impl: `get_or_create_by_name` calls `clean_name()` first, and the `iexact` lookup uses the validated name. Covers: AC9.
   - Done 2026-10-02: red as expected (`OperationalError: LIKE or GLOB pattern too complex`), then green. `clean_name()` now does the field validation, so the later `full_clean(validate_constraints=False)` call was dropped; uniqueness stays with the database.
-- [ ] 14. CSRF is enforced on the edit form. Test: `test_views.py`, with `Client(enforce_csrf_checks=True)` and `force_login(alice)`, after a GET of the edit page (so the cookie is set):
+- [x] 14. CSRF is enforced on the edit form. Test: `test_views.py`, with `Client(enforce_csrf_checks=True)` and `force_login(alice)`, after a GET of the edit page (so the cookie is set):
   - a POST without a token returns 403, and the name is unchanged
   - a POST with the `csrfmiddlewaretoken` read from that page's form (asserting `len(tokens) == 1`) returns 302, and the name is saved
 
   Impl: none. Covers: AC6 (CSRF).
   - Guard. Mutation: `@method_decorator(csrf_exempt, name="dispatch")` on `ProfileUpdateView`. The first case must go red. Revert afterwards.
+  - Done 2026-10-02: green on arrival. Under the mutation, the no-token case went red (`302 != 403`). The view was then restored.
 - [ ] 15. Your pages never show other users' data. Test: `test_views.py`.
   - Alice has name "Alice Only", cohort "Cohort A", and tags "Python" (shared) and "Haskell" (alice only).
   - Bob has "Bob", "Cohort B" and "Python".
