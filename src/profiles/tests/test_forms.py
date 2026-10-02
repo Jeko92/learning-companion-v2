@@ -86,3 +86,15 @@ class FocusAreasInputTests(TestCase):
         self.assertEqual(
             [t.name for t in self.profile.focus_areas.all()], ["Django", "Python"]
         )
+
+    def test_entries_differing_only_in_non_ascii_case_are_merged(self):
+        # SQLite folds only ASCII case, so here the form's own merge decides.
+        tag_count = Tag.objects.count()
+
+        response = self.save("\u00c9lan, \u00e9lan")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            [t.name for t in self.profile.focus_areas.all()], ["\u00c9lan"]
+        )
+        self.assertEqual(Tag.objects.count(), tag_count + 1)

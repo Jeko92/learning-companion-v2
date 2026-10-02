@@ -253,8 +253,9 @@ Each step is one cycle and one commit. Steps 21 and 23 are guards and test harde
   - a `reject_commas` validator on `Tag.name`, with `makemigrations tags` creating `0004`
 
   Covers: AC7, AC9.
-- [ ] 21. (Finding 3, medium; AC7) Entries that differ only in non-ASCII case are merged in the form. Test: in `test_forms.py`, POSTing `focus_areas="\u00c9lan, \u00e9lan"` gives exactly one tag, "Élan", and exactly one new `Tag` row. Impl: none, because `casefold` de-duplication already exists.
+- [x] 21. (Finding 3, medium; AC7) Entries that differ only in non-ASCII case are merged in the form. Test: in `test_forms.py`, POSTing `focus_areas="\u00c9lan, \u00e9lan"` gives exactly one tag, "Élan", and exactly one new `Tag` row. Impl: none, because `casefold` de-duplication already exists.
   - Guard. Mutation: replace `if name.casefold() not in seen:` with `if True:`. It must go red (two tags). Revert afterwards.
+  - Done 2026-10-02: green on arrival. Under the mutation it went red, with two tags ('Élan', 'élan'). The form was then restored.
 - [ ] 22. (Finding 4) `ProfileForm` behaves as a normal `ModelForm`. Test: `test_forms.py`.
   - `ProfileForm()` with no instance renders: `str(form)` doesn't raise, and the initial `focus_areas` is `""`.
   - For alice's profile, a bound valid form with `save(commit=False)` doesn't change her tags until `form.save_m2m()` is called. After that call the tags are set.
