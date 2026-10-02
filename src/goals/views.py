@@ -1,6 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
-from django.views.generic import CreateView, DetailView, ListView
+from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
 from goals.forms import GoalForm
 from goals.models import Goal
@@ -34,3 +34,7 @@ class GoalCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):
         # The owner is the logged-in user, never form input.
         form.instance.owner = self.request.user
         return super().form_valid(form)
+
+
+class GoalUpdateView(OwnGoalsMixin, UpdateView):
+    form_class = GoalForm

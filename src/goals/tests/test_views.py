@@ -330,3 +330,47 @@ class GoalDetailTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.content, missing.content)
+
+
+class GoalEditTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(
+            owner=self.alice,
+            title="Learn Django",
+            description="Parts 1-7",
+            status=Goal.Status.IN_PROGRESS,
+        )
+        self.path = f"/goals/{self.goal.pk}/edit/"
+        self.client.force_login(self.alice)
+
+    def test_the_edit_page_renders_your_goal_in_a_form(self):
+        response = self.client.get(self.path)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "goals/goal_form.html")
+        self.assertEqual(reverse("goals:edit", args=[self.goal.pk]), self.path)
+        page = PageParser()
+        page.feed(response.content.decode())
+        ((attrs, inputs),) = page.forms("main")
+        self.assertEqual(attrs.get("method"), "post")
+        self.assertEqual(attrs.get("action"), self.path)
+        values = {a.get("name"): a.get("value") for a in inputs}
+        self.assertIn("csrfmiddlewaretoken", values)
+        self.assertEqual(values["title"], "Learn Django")
+        self.assertIn("Parts 1-7", page.text("main"))  # the textarea's content
+        selected = [
+            a.get("value")
+            for t, a in page.elements
+            if t == "option" and "selected" in a
+        ]
+        self.assertEqual(selected, ["in-progress"])
+        self.assertNotIn("owner", {a.get("name") for _, a in page.elements})
+        self.assertIn("Edit goal", page.text("main"))
+        self.assertNotIn("New goal", page.text("main"))
+        self.assertIn((self.goal.get_absolute_url(), "Cancel"), page.links("main"))
+
+    def test_the_detail_page_links_to_the_edit_page(self):
+        links = get_page(self.client, self.goal.get_absolute_url()).links("main")
+
+        self.assertIn((self.path, "Edit goal"), links)

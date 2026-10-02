@@ -84,7 +84,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-edit-de
   Expected red: `'/goals/' != '/goals/<pk>/'`. Impl: remove `success_url` from `GoalCreateView`, so it uses `get_absolute_url`. Covers: AC11, AC15 (redirect).
   - This deliberately changes #8 AC6, recorded in the commit body.
   - Done 2026-10-02: red as expected (`'/goals/' != '/goals/1/'`), then green. #8's test was rewritten as `test_a_valid_create_saves_your_goal_and_opens_it`, which also covers the planned separate test, so that test wasn't added as a duplicate.
-- [ ] 7. The edit page renders the goal in a form, and the detail page links to it. `GET /goals/<pk>/edit/`:
+- [x] 7. The edit page renders the goal in a form, and the detail page links to it. `GET /goals/<pk>/edit/`:
   - status 200, asserted first, with `goals/goal_form.html` used
   - `reverse("goals:edit", …)` matches
   - one POST form whose `action` is the edit URL, a CSRF token, `title` pre-filled, a `description` textarea holding the description, and the `status` option for the goal's status `selected`
