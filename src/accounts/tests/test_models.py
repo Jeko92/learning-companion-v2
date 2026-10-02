@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
+from django.core.management import call_command
 from django.test import TestCase
 
 
@@ -20,3 +21,12 @@ class UserModelTests(TestCase):
             {f.name for f in User._meta.fields},
             {f.name for f in AbstractUser._meta.fields} | {"id"},
         )
+
+
+class MigrationsTests(TestCase):
+    def test_no_model_change_is_missing_a_migration(self):
+        # makemigrations --check exits with status 1 when a migration is missing.
+        try:
+            call_command("makemigrations", "--check", "--dry-run", verbosity=0)
+        except SystemExit:
+            self.fail("A model change has no migration; run makemigrations.")
