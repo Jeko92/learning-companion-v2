@@ -40,6 +40,7 @@ Review only what the diff introduces or changes. Everything older has already be
 - **At most about 5 mutations per review.** A re-review uses them to confirm previous findings first.
 - **Work in a scratch copy of `src/` only, never the repo.** Copy `src/` into a folder under `/private/tmp/claude-501/`, and run that copy's `manage.py` with the repo's `.venv/bin/python`. Never copy `.venv`.
 - After each mutation, run only the affected test module.
+- **Run every mutation with `PYTHONDONTWRITEBYTECODE=1`.** Python's `.pyc` check compares only file size and whole-second mtime. A same-length swap (e.g. `CASCADE` → `PROTECT`) that is restored within the same second would otherwise keep running the stale mutated bytecode.
 
 ## What to check, in this order, within that scope
 
