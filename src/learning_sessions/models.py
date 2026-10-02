@@ -31,8 +31,13 @@ class LearningSession(models.Model):
     # holds the limit for forms, full_clean() and the admin alike.
     notes = models.TextField(blank=True, validators=[MaxLengthValidator(2000)])
     tags = models.ManyToManyField("tags.Tag", blank=True, related_name="sessions")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        # Newest first: by the day it happened, then by when it was logged;
+        # the id breaks ties between sessions recorded together.
+        ordering = ("-date", "-created_at", "-id")
         constraints = (
             # The validators are only checked by full_clean() and forms; this
             # stops update() and bulk_create() too. PositiveIntegerField's own

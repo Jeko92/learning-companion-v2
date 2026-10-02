@@ -199,3 +199,45 @@ class LearningSessionTagTests(TestCase):
 
         self.assertQuerySetEqual(mine.tags.all(), [django])
         self.assertTrue(LearningSession.objects.filter(pk=theirs.pk).exists())
+
+
+class LearningSessionOrderingTests(TestCase):
+    def setUp(self):
+        fields = {f.name for f in LearningSession._meta.get_fields()}
+        self.assertLessEqual({"created_at", "updated_at"}, fields)
+        owner = get_user_model().objects.create_user("alice")
+        self.goal = Goal.objects.create(owner=owner, title="Learn Django")
+
+    def session(self, day):
+        return LearningSession.objects.create(
+            goal=self.goal, date=day, duration_minutes=30
+        )
+
+    def test_timestamps_record_creation_and_the_last_change(self):
+        later = datetime(2026, 3, 11, 8, 0, tzinfo=UTC)
+        with patch("django.utils.timezone.now", return_value=NOW):
+            session = self.session(date(2026, 3, 10))
+        with patch("django.utils.timezone.now", return_value=later):
+            session.save()
+
+        session.refresh_from_db()
+        self.assertEqual((session.created_at, session.updated_at), (NOW, later))
+
+    def test_sessions_are_newest_first_by_date(self):
+        older = self.session(date(2026, 3, 1))
+        newer = self.session(date(2026, 3, 9))
+        oldest = self.session(date(2026, 2, 1))
+
+        self.assertEqual(list(LearningSession.objects.all()), [newer, older, oldest])
+
+    def test_sessions_on_one_date_are_newest_recorded_first(self):
+        day = date(2026, 3, 9)
+        first, second, third = (self.session(day) for _ in range(3))
+        earlier = datetime(2026, 3, 9, 8, 0, tzinfo=UTC)
+        LearningSession.objects.filter(pk=second.pk).update(created_at=earlier)
+        LearningSession.objects.filter(pk__in=[first.pk, third.pk]).update(
+            created_at=NOW
+        )
+
+        # Same created_at: the id breaks the tie.
+        self.assertEqual(list(LearningSession.objects.all()), [third, first, second])

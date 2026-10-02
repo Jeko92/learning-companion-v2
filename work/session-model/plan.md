@@ -96,7 +96,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(session-mode
     - Expected red: the field name is missing.
   - Impl: the field, plus a migration.
   - Covers: AC6.
-- [ ] 9. **Timestamps, and newest first.**
+- [x] 9. **Timestamps, and newest first.**
   - Test:
     - `created_at`/`updated_at` are set (`auto_now_add`/`auto_now`, with `now` patched for a create and a later save).
     - Sessions on different dates come out by `-date`, regardless of creation order.
@@ -105,6 +105,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(session-mode
     - Expected red: the field names are missing.
   - Impl: both timestamp fields, `Meta.ordering = ("-date", "-created_at", "-id")`, plus a migration.
   - Covers: AC8.
+  - Done 2026-10-02. The red came from the class `setUp`'s field-name check, so the ordering was also mutation-checked once green (with `PYTHONDONTWRITEBYTECODE=1`). With `ordering = ()`, both ordering tests went red. With `("-date", "-created_at")`, dropping the id tiebreak, the same-date test went red. The model was then restored.
 - [ ] 10. **`str(session)`.**
   - Test: `str(LearningSession(goal=<"Learn Django">, date=date(2026, 3, 10), duration_minutes=45)) == "Learn Django · 2026-03-10 · 45 min"`. Expected red: the default `LearningSession object (None)`.
   - Impl: `__str__`.
