@@ -13,7 +13,7 @@
       <nav class="flex gap-6 text-sm text-slate-500">
         <span>Goals</span>
         {% if user.is_authenticated %}
-          <span class="font-medium text-slate-800">{{ user.get_username }}</span>
+          <a href="{% url 'profiles:mine' %}" class="font-medium text-slate-800 hover:underline">{{ user.get_username }}</a>
           <form method="post" action="{% url 'accounts:logout' %}">
             {% csrf_token %}
             <button type="submit" class="hover:underline">Log out</button>

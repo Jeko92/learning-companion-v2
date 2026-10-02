@@ -202,13 +202,14 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
   Test: `test_views.py`. Impl: none. Covers: AC12.
   - Guard. Mutation: `{{ profile.name|safe }}` in the detail template. The detail subtest must go red. Revert afterwards.
   - Done 2026-10-02: green on arrival. Under the mutation, the detail subtest went red (the raw `<script>alert(1)</script>` was found). The template was then restored.
-- [ ] 17. The username in the nav links to your profile. Rewrite `test_logged_in_nav_has_username_and_logout_form_and_no_auth_links` to assert:
+- [x] 17. The username in the nav links to your profile. Rewrite `test_logged_in_nav_has_username_and_logout_form_and_no_auth_links` to assert:
   - `links("nav") == [(reverse("profiles:mine"), USERNAME)]`
   - the text is still exactly "Goals alice Log out"
   - the logout form is unchanged
 
   Rename the test to `test_logged_in_nav_links_the_username_to_the_profile_and_has_logout`. The anonymous nav test is unchanged. Expected red: `[] != [('/profile/', 'alice')]`. Impl: the `<a>` in `base.html`. Covers: AC11.
   - This deliberately changes #4 AC10 ("no links" when logged in), recorded in the step note and the commit body.
+  - Done 2026-10-02: red as expected (`[] != [('/profile/', 'alice')]`), then green with the `<a>` in `base.html`. The exact nav text and the logout-form assertions were unchanged, and so was the anonymous nav test.
 - [ ] 18. Docs. No test. Commit `docs(profile-page): document the profile pages and tag normalisation`.
   - `CLAUDE.md`:
     - **Stack, auth bullet:** the profile pages (`/profile/` redirects to your own, `/profile/<pk>/` and `/profile/<pk>/edit/` are login-required), and any view taking a pk must scope its queryset to `request.user` (`OwnProfileMixin`), so others' ids are 404.
