@@ -35,6 +35,8 @@ class CreateMissingProfilesMigrationTests(TransactionTestCase):
             "profiles", "Profile"
         )
         self.assertEqual(Profile.objects.filter(user_id=old.pk).count(), 1)
-        self.assertEqual(Profile.objects.get(user_id=old.pk).name, "")
+        backfilled = Profile.objects.get(user_id=old.pk)
+        self.assertEqual((backfilled.name, backfilled.cohort), ("", ""))
+        self.assertFalse(backfilled.focus_areas.exists())
         self.assertEqual(Profile.objects.filter(user_id=has.pk).count(), 1)
         self.assertEqual(Profile.objects.get(user_id=has.pk).name, "Has One")

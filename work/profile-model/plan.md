@@ -198,7 +198,7 @@ Each step is one cycle and one commit. Steps 21 and 22 are guards that pass on a
   - Done 2026-10-02: green on arrival once the test was corrected. Under the mutation it went red (`'admin-autocomplete' not found in []`). The admin was then restored.
   - **Correction to the plan:** Django's autocomplete widget sets `data-model-name` to the model that owns the field (`profile`), with `data-field-name="focus_areas"` (`django/contrib/admin/widgets.py:554-556`). The server resolves the target `Tag` admin from those.
     - The test asserts `("profile", "focus_areas")`, not the planned `data-model-name="tag"`, which was a wrong assumption in the plan.
-- [ ] 23. (Findings 5 and 6) Test hardening, with no behaviour change. Commit `refactor(profile-model): tighten the backfill and admin add tests`.
+- [x] 23. (Findings 5 and 6) Test hardening, with no behaviour change. Commit `refactor(profile-model): tighten the backfill and admin add tests`.
   - The migration test asserts that `old`'s backfilled profile also has `cohort == ""` and no `focus_areas`.
   - The add-user test asserts the POST redirects (`assertEqual(response.status_code, 302)`) before looking up `bob`.
 - [ ] 24. (Findings 7, 8, 9 and 11) Docs. No test. Commit `docs(profile-model): qualify the profile and tag invariants`.

@@ -66,7 +66,7 @@ class UserAdminProfileInlineTests(TestCase):
         add_path = reverse("admin:accounts_user_add")
         self.assertNotIn("profile-TOTAL_FORMS", self.field_names(add_path))
 
-        self.client.post(
+        response = self.client.post(
             add_path,
             {
                 "username": "bob",
@@ -76,5 +76,7 @@ class UserAdminProfileInlineTests(TestCase):
             },
         )
 
+        # A rejected form re-renders with 200; a saved user redirects.
+        self.assertEqual(response.status_code, 302)
         bob = get_user_model().objects.get(username="bob")
         self.assertEqual(Profile.objects.filter(user=bob).count(), 1)
