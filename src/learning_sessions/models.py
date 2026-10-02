@@ -1,5 +1,9 @@
 from django.core.exceptions import ValidationError
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import (
+    MaxLengthValidator,
+    MaxValueValidator,
+    MinValueValidator,
+)
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
@@ -23,6 +27,9 @@ class LearningSession(models.Model):
     duration_minutes = models.PositiveIntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(1440)]
     )
+    # A TextField's max_length only shapes the form widget; the validator
+    # holds the limit for forms, full_clean() and the admin alike.
+    notes = models.TextField(blank=True, validators=[MaxLengthValidator(2000)])
 
     class Meta:
         constraints = (

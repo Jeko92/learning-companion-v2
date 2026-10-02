@@ -133,3 +133,28 @@ class LearningSessionDateTests(TestCase):
                 tomorrow.full_clean()
 
         self.assertIn("date", caught.exception.error_dict)
+
+
+class LearningSessionNotesTests(TestCase):
+    def setUp(self):
+        self.assertIn("notes", {f.name for f in LearningSession._meta.get_fields()})
+        owner = get_user_model().objects.create_user("alice")
+        self.goal = Goal.objects.create(owner=owner, title="Learn Django")
+
+    def session(self, notes):
+        return LearningSession(goal=self.goal, duration_minutes=30, notes=notes)
+
+    def test_notes_are_optional_free_text(self):
+        notes = LearningSession._meta.get_field("notes")
+
+        self.assertIsInstance(notes, models.TextField)
+        self.assertIs(notes.blank, True)
+        self.session("").full_clean()
+
+    def test_notes_are_capped_at_2000_characters(self):
+        self.session("n" * 2000).full_clean()
+
+        with self.assertRaises(ValidationError) as caught:
+            self.session("n" * 2001).full_clean()
+
+        self.assertIn("notes", caught.exception.error_dict)

@@ -85,7 +85,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(session-mode
   - Test: with `now` patched as in step 5, `full_clean()` rejects `date(2026, 3, 11)` with an error on `date`, and accepts `date(2026, 3, 10)` and `date(2025, 1, 1)`. Expected red: no `ValidationError` for tomorrow.
   - Impl: the `reject_future_dates` validator on `date`, plus a migration.
   - Covers: AC3.
-- [ ] 7. **`notes` is optional and capped at 2,000 characters.**
+- [x] 7. **`notes` is optional and capped at 2,000 characters.**
   - Test: the field is a `TextField` with `blank=True`. `full_clean()` accepts an empty value and `"n" * 2000`, and rejects `"n" * 2001` with an error on `notes`. Expected red: the field name is missing.
   - Impl: the field with `MaxLengthValidator(2000)`, plus a migration.
   - Covers: AC5.

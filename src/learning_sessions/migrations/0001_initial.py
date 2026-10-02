@@ -22,6 +22,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('date', models.DateField(default=django.utils.timezone.localdate, validators=[learning_sessions.models.reject_future_dates])),
                 ('duration_minutes', models.PositiveIntegerField(validators=[django.core.validators.MinValueValidator(1), django.core.validators.MaxValueValidator(1440)])),
+                ('notes', models.TextField(blank=True, validators=[django.core.validators.MaxLengthValidator(2000)])),
                 ('goal', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sessions', to='goals.goal')),
             ],
             options={
