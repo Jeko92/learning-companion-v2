@@ -24,6 +24,7 @@ As a learner, I want my learning goals stored with a title, a description, a sta
 
   - A new goal defaults to `planned`.
   - Any other value fails `full_clean()` with a `ValidationError` on `status`.
+  - The database also rejects an invalid status: writing one through `QuerySet.update()` raises `IntegrityError`. Added during planning (2026-10-02), at the user's request: a `CheckConstraint`, so `update()`/`bulk_create()` can't bypass the choices.
 - [ ] AC4 The title is required and is stored trimmed.
   - `Goal.objects.create(title="  Learn Django ", …)` stores "Learn Django".
   - A blank or whitespace-only title fails `full_clean()` on `title`.
