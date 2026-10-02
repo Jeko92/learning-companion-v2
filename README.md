@@ -47,6 +47,7 @@ Values are read from the process environment first. `.env` at the repo root only
 - `src/accounts/`: the custom user model (`accounts.User`), and sign-up, log-in and log-out under `/accounts/`
 - `src/tags/`: shared tags (case-insensitive unique names), used for focus areas
 - `src/profiles/`: each user's profile (name, cohort, focus areas), created automatically for new users, and the profile pages under `/profile/`
+- `src/goals/`: learning goals (title, description, status planned / in-progress / done), each owned by one user
 - `src/templates/`: project-wide templates (`base.html` layout, pages that extend it, `accounts/` and `profiles/` pages)
 - `src/assets/`: static source files; the built `css/tailwind.css` is git-ignored
 - `work/`: workflow artifacts per ticket (`ticket.md`, `plan.md`, `review.md`)
