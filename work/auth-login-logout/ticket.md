@@ -28,6 +28,15 @@ As a registered user of the Learning Companion, I want to log in and out, and ge
   - anonymous: exactly "Goals Log in Sign up", where "Log in" links to `reverse("accounts:login")`, "Sign up" links to `reverse("accounts:signup")`, and "Goals" stays a non-link placeholder
   - logged in: "Goals", the username, and a "Log out" button inside a `method="post"` form whose `action` is `reverse("accounts:logout")` and which carries a CSRF token. There are no "Log in" or "Sign up" links.
 - [ ] AC11 The full round trip works in one test client session: sign up or create a user, log out (POST), confirm anonymous, log back in with the same password, and confirm logged in.
+- [ ] AC12 CSRF is enforced on login and logout. With a CSRF-enforcing client (`Client(enforce_csrf_checks=True)`):
+  - a login `POST` without a CSRF token returns 403 and logs no one in
+  - a logout `POST` without a token returns 403 and leaves the user logged in
+  - a logout `POST` with the token taken from the nav's logout form succeeds, which proves the nav button carries a working token
+- [ ] AC13 The session is replaced at login and invalidated at logout:
+  - after a successful login, the session key differs from the anonymous session key the visitor had before (session-fixation protection)
+  - after logout, a request that reuses the old session cookie is anonymous
+- [ ] AC14 A deactivated account can't log in. A user with `is_active=False` who submits the correct password gets the same generic error as in AC5 (not a separate "inactive" message) and is not logged in.
+- [ ] AC15 A malicious `next` can't inject markup into the login page. `GET /accounts/login/?next="><script>alert(1)</script>` returns a page that doesn't contain the raw string `<script>alert(1)</script>`; the value appears only escaped (reflected-XSS protection).
 
 ## Out of scope
 - Password reset and password change flows (and their routes).
@@ -46,6 +55,12 @@ Answers from refinement (2026-10-02):
 - A logged-in user opening the login page is redirected to `LOGIN_REDIRECT_URL`, consistent with sign-up (#3 AC8).
 - Extras: a "Welcome back, <username>!" message after login. No cross-links.
 - Failed logins use one generic message for both an unknown username and a wrong password, so the login page doesn't reveal which usernames exist. Sign-up still reveals taken usernames, which #3 accepted as inherent.
+- Security review of the draft (2026-10-02, approved by the user): AC12–AC15 were added to pin protections Django already provides, so a later refactor can't silently drop them:
+  - CSRF enforced on login and logout. Logout CSRF would let any site log users out.
+  - Session key rotation at login, and invalidation at logout.
+  - Deactivated accounts can't log in and aren't revealed. Django's default `ModelBackend` rejects `is_active=False`, so `AuthenticationForm` raises its generic `invalid_login` error. The separate "This account is inactive." message only appears with `AllowAllUsersModelBackend`, which this project doesn't use.
+  - Escaped output of `next` in the login form's hidden field.
+- **Usernames are case-sensitive at login** (Django's default): `Alice` doesn't log in as `alice`. This is a usability point, not a security one, because sign-up (#3 AC7) already rejects usernames that differ only in case. Keep the default.
 
 Constraints and context:
 - #3 set `LOGIN_REDIRECT_URL = "/"` and created the `accounts` app with the namespace `accounts`. The login view reuses both.
