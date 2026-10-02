@@ -40,7 +40,7 @@ The user approved this plan on 2026-10-02, with four improvements applied after 
 Each step is one red–green–refactor cycle and one commit, `feat(goal-model): …`. Test modules: `src/goals/tests/test_apps.py`, `test_models.py` and `test_admin.py`. Guard steps (5, 8) name their mutation.
 
 - [x] 1. The `goals` app is installed. Test: `test_apps.py` (`SimpleTestCase`, `apps.is_installed("goals")`). Expected red: `False is not True`. Impl: `src/goals/__init__.py`, `apps.py` (`GoalsConfig`), `tests/__init__.py`, and `"goals"` in `INSTALLED_APPS`. Covers: AC1.
-- [ ] 2. `Goal` has the agreed fields, and the description is optional. Test: `test_models.py`.
+- [x] 2. `Goal` has the agreed fields, and the description is optional. Test: `test_models.py`.
   - `goals.Goal` is registered.
   - Field introspection shows:
     - `owner` is a `ForeignKey` to `get_user_model()`, with `CASCADE` and `related_name="goals"`
@@ -52,6 +52,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-model):
   - The existing `test_custom_user_model_adds_no_fields` stays green.
 
   Expected red: `'goals.Goal' not found`. Impl: `src/goals/models.py`, with `status` a plain `CharField(max_length=20)` for now; `makemigrations goals` creates `0001`. Refactor: direct import. Covers: AC2, AC5.
+  - Done 2026-10-02: red as expected (`'goals.Goal' not found`), then green. `status` got a plain `default="planned"` here, because AC5's `full_clean()` test would otherwise fail on a blank status. Step 3 still fails first on `hasattr(Goal, "Status")`.
 - [ ] 3. The status is a `TextChoices` defaulting to planned. Test:
   - `hasattr(Goal, "Status")` is asserted first.
   - `Goal.Status.values == ["planned", "in-progress", "done"]` and `.labels == ["Planned", "In progress", "Done"]`.
