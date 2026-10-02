@@ -23,6 +23,7 @@ As a logged-in learner, I want to open, edit and delete my own goals, and be sur
   - `GET /goals/<pk>/edit/` returns 200 and renders `goals/goal_form.html`.
   - It has one `method="post"` form whose `action` is the edit URL, with a CSRF token, the `title`, `description` and `status` fields pre-filled, and no `owner` field.
   - The heading says "Edit goal", not "New goal".
+  - A "Cancel" link goes back to the goal's detail page, matching the delete confirmation.
 - [ ] AC7 A valid edit saves and returns to the goal.
   - The title, description and status are saved, with the title trimmed.
   - The response redirects to `/goals/<pk>/`, which shows "Goal updated." and the new values.
@@ -33,7 +34,7 @@ As a logged-in learner, I want to open, edit and delete my own goals, and be sur
   - a description over 2,000 characters
   - an unknown status
 - [ ] AC9 Delete asks for confirmation.
-  - `GET /goals/<pk>/delete/` returns 200 and shows "Delete “<title>”?".
+  - `GET /goals/<pk>/delete/` returns 200, renders `goals/goal_confirm_delete.html` (`DeleteView`'s default name), and shows "Delete “<title>”?".
   - It has one `method="post"` form with a CSRF token and a "Delete" button, plus a "Cancel" link to the goal's detail page.
   - A `GET` never deletes.
 - [ ] AC10 Confirming deletes the goal. `POST /goals/<pk>/delete/` deletes it and redirects to `/goals/`, which shows "Goal deleted." and no longer lists it.
@@ -41,6 +42,9 @@ As a logged-in learner, I want to open, edit and delete my own goals, and be sur
 - [ ] AC12 CSRF is enforced on edit and delete. With CSRF checks enforced, a `POST` without a token returns 403 and changes or deletes nothing. A `POST` with the token from the rendered form succeeds.
 - [ ] AC13 Goal values are shown escaped. A title and description containing `<script>alert(1)</script>` appear only escaped on the detail page, the edit page and the delete confirmation. This pins the description escaping that #8's list couldn't cover.
 - [ ] AC14 A wrongly ordered ownership mixin fails loudly. `OwnGoalsMixin` no longer sets `model`. A view that lists it *after* the generic view, e.g. `class V(DetailView, OwnGoalsMixin)`, raises `ImproperlyConfigured` instead of silently serving unscoped goals. This hardening comes from the #8 security review.
+- [ ] AC15 `Goal.get_absolute_url()` returns `reverse("goals:detail", args=[goal.pk])`.
+  - Create and edit redirect through it (the generic views' default success URL).
+  - Templates link to a goal with `{{ goal.get_absolute_url }}`, and the admin shows "View on site".
 
 ## Out of scope
 - Sessions, resources and AI actions on the detail page (#11+, #16, #17).
@@ -65,8 +69,13 @@ Defaults I chose (say if you want them changed):
 - **List titles** become links to the detail page.
 - **The messages** are "Goal updated." and "Goal deleted.".
 
+Added after a best-practice review (2026-10-02, the user's choice):
+- **`Goal.get_absolute_url()`** (AC15): it is the generic views' success URL and the templates' link target, and the admin gets "View on site".
+- **Django's default template names:** `goals/goal_detail.html`, `goals/goal_form.html` (shared by create and edit) and `goals/goal_confirm_delete.html`.
+- **A Cancel link on the edit page** (AC6).
+
 Constraints and context:
 - **Ruff RUF012:** class-level options are tuples (CLAUDE.md).
 - **Docs:** `CLAUDE.md` (Goals bullet, Layout) and `README.md` get the new pages. The plan includes this.
 
-Status: waiting for the user to approve the acceptance criteria.
+Status: waiting for the user to approve the acceptance criteria (AC1–AC15).
