@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "tags",
     "profiles",
     "goals",
+    "learning_sessions",
 ]
 
 MIDDLEWARE = [

@@ -53,7 +53,7 @@ Condensed from three read-only research reports (app scaffolding, test setup, da
 ## Steps
 Each step is one red–green–refactor cycle and one commit, `feat(session-model): …`, unless stated otherwise. The test files are `src/learning_sessions/tests/test_apps.py`, `test_models.py` and `test_admin.py`.
 
-- [ ] 1. **The `learning_sessions` app is installed.**
+- [x] 1. **The `learning_sessions` app is installed.**
   - Test: `test_apps.py`, `InstalledAppsTests.test_learning_sessions_app_is_installed` (`SimpleTestCase`, `apps.is_installed("learning_sessions")`). Expected red: `False is not True`.
   - Impl: `src/learning_sessions/__init__.py`, `apps.py` (`LearningSessionsConfig`), `migrations/__init__.py`, `tests/__init__.py`, and the `INSTALLED_APPS` entry after `"goals"`.
   - Covers: AC1.
