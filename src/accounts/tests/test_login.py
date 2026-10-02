@@ -109,3 +109,20 @@ class LoginFailureTests(TestCase):
                 self.assertNotContains(response, password)
                 main_texts.append(page.text("main"))
         self.assertEqual(main_texts[0], main_texts[1])
+
+    def test_inactive_user_gets_the_generic_error(self):
+        # The default ModelBackend rejects is_active=False before the form's
+        # "This account is inactive." check, so the account isn't revealed.
+        user = get_user_model().objects.get(username=USERNAME)
+        user.is_active = False
+        user.save()
+
+        response = self.client.post(
+            LOGIN_PATH, {"username": USERNAME, "password": PASSWORD}
+        )
+
+        page = PageParser()
+        page.feed(response.content.decode())
+        self.assertIn(INVALID_LOGIN, page.text("main"))
+        self.assertNotIn("This account is inactive.", page.text("main"))
+        self.assertNotIn("_auth_user_id", self.client.session)
