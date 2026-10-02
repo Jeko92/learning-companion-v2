@@ -12,13 +12,34 @@ from django.urls import URLResolver, get_resolver, resolve
 from core import urls as core_urls
 from core import views
 
-# Elements that never get an end tag, so they must not stay on the open stack.
-VOID_ELEMENTS = {"base", "br", "hr", "img", "input", "link", "meta", "source", "wbr"}
-SECTIONS = ("title", "header", "nav", "main")
+# HTML void elements never get an end tag, so they must not stay on the open stack.
+VOID_ELEMENTS = {
+    "area",
+    "base",
+    "br",
+    "col",
+    "embed",
+    "hr",
+    "img",
+    "input",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr",
+}
+SECTIONS = ("title", "header", "nav", "main", "footer")
 PITCH = (
     "Track your learning goals and sessions, and get AI-powered summaries"
     " and next steps."
 )
+
+
+def collapse(pieces):
+    """Joins text pieces with a space and collapses whitespace, so template
+    formatting can't change a check and text can't match across elements."""
+    return " ".join(" ".join(pieces).split())
 
 
 class PageParser(HTMLParser):
@@ -29,12 +50,16 @@ class PageParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.open_tags = []
-        self.seen_tags = set()
-        self.text = dict.fromkeys(SECTIONS, "")
-        self.href_text = ""
+        self.pieces = {section: [] for section in SECTIONS}
+        self.href_pieces = []
+
+    def text(self, section):
+        return collapse(self.pieces[section])
+
+    def href_text(self):
+        return collapse(self.href_pieces)
 
     def handle_starttag(self, tag, attrs):
-        self.seen_tags.add(tag)
         if tag not in VOID_ELEMENTS:
             has_href = any(name == "href" for name, _ in attrs)
             self.open_tags.append((tag, has_href))
@@ -48,9 +73,9 @@ class PageParser(HTMLParser):
         names = {name for name, _ in self.open_tags}
         for section in SECTIONS:
             if section in names:
-                self.text[section] += data
+                self.pieces[section].append(data)
         if any(has_href for _, has_href in self.open_tags):
-            self.href_text += data
+            self.href_pieces.append(data)
 
 
 class HomePageTests(TestCase):
@@ -98,16 +123,16 @@ class HomePageTests(TestCase):
     def test_header_and_title_show_the_app_name(self):
         page = self.get_page()
 
-        self.assertIn("Learning Companion", page.text["header"])
-        self.assertIn("Learning Companion", page.text["title"])
+        self.assertIn("Learning Companion", page.text("header"))
+        self.assertIn("Learning Companion", page.text("title"))
 
     def test_nav_shows_placeholders_that_are_not_links(self):
         page = self.get_page()
 
         for placeholder in ("Goals", "Log in"):
             with self.subTest(placeholder=placeholder):
-                self.assertIn(placeholder, page.text["nav"])
-                self.assertNotIn(placeholder, page.href_text)
+                self.assertIn(placeholder, page.text("nav"))
+                self.assertNotIn(placeholder, page.href_text())
 
     def test_layout_renders_messages_added_for_the_request(self):
         # No view adds messages yet, so attach the storage to a request by hand
@@ -124,13 +149,13 @@ class HomePageTests(TestCase):
     def test_home_fills_the_layout_content_block_with_the_pitch(self):
         page = self.get_page()
 
-        self.assertIn(PITCH, " ".join(page.text["main"].split()))
+        self.assertIn(PITCH, page.text("main"))
         self.assertNotIn(PITCH, render_to_string("base.html"))
 
     def test_layout_has_a_footer(self):
         page = self.get_page()
 
-        self.assertIn("footer", page.seen_tags)
+        self.assertIn("Learning Companion", page.text("footer"))
 
     def test_layout_links_the_tailwind_stylesheet_without_a_build(self):
         # Nothing checks that the built file exists, so this passes on a fresh
