@@ -32,7 +32,8 @@ class GoalListView(OwnGoalsMixin, ListView):
     def get_queryset(self):
         goals = super().get_queryset()
         status = self.request.GET.get("status")
-        if status:
+        # Only a known status filters; anything else shows all goals.
+        if status in Goal.Status.values:
             goals = goals.filter(status=status)
         return goals
 

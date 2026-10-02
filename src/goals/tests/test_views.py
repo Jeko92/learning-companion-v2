@@ -625,3 +625,9 @@ class GoalStatusFilterTests(TestCase):
                 self.assertEqual(
                     self.listed(f"/goals/?status={status}"), {self.titles[status]}
                 )
+
+    def test_a_missing_empty_or_invalid_status_shows_all(self):
+        for path in ("/goals/", "/goals/?status=", "/goals/?status=bogus"):
+            with self.subTest(path=path):
+                self.assertEqual(self.client.get(path).status_code, 200)
+                self.assertEqual(self.listed(path), set(self.titles.values()))
