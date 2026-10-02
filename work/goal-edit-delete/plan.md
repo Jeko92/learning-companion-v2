@@ -77,12 +77,13 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-edit-de
   - Guard. Mutation: `GoalDetailView(LoginRequiredMixin, DetailView)` with `model = Goal` (unscoped). Bob's request must go red (200). Revert afterwards.
   - Done 2026-10-02: green on arrival. Under the mutation, bob's request went red (`200 != 404`). The view was then restored.
 - [x] 5. List titles link to the goal. `links("main")` on `/goals/` includes `(goal.get_absolute_url(), goal.title)` for each goal. Expected red: the link is missing. Impl: `<a href="{{ goal.get_absolute_url }}">` in `goal_list.html`. Covers: AC5, AC15 (templates).
-- [ ] 6. Creating a goal now opens it.
+- [x] 6. Creating a goal now opens it.
   - **Test change:** #8's `test_a_valid_create_saves_your_goal_and_returns_to_the_list` is rewritten deliberately to expect a redirect to `goal.get_absolute_url()`, with "Goal created." on the followed page.
   - **New test:** `test_after_creating_you_land_on_the_goal`.
 
   Expected red: `'/goals/' != '/goals/<pk>/'`. Impl: remove `success_url` from `GoalCreateView`, so it uses `get_absolute_url`. Covers: AC11, AC15 (redirect).
   - This deliberately changes #8 AC6, recorded in the commit body.
+  - Done 2026-10-02: red as expected (`'/goals/' != '/goals/1/'`), then green. #8's test was rewritten as `test_a_valid_create_saves_your_goal_and_opens_it`, which also covers the planned separate test, so that test wasn't added as a duplicate.
 - [ ] 7. The edit page renders the goal in a form, and the detail page links to it. `GET /goals/<pk>/edit/`:
   - status 200, asserted first, with `goals/goal_form.html` used
   - `reverse("goals:edit", …)` matches

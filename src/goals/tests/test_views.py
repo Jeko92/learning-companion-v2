@@ -134,22 +134,22 @@ class GoalCreateTests(TestCase):
             "status": "in-progress",
         }
 
-    def test_a_valid_create_saves_your_goal_and_returns_to_the_list(self):
+    def test_a_valid_create_saves_your_goal_and_opens_it(self):
+        # goal-edit-delete: a new goal now opens its detail page (#8 AC6
+        # returned to the list).
         response = self.client.post("/goals/new/", self.data)
 
-        self.assertRedirects(response, "/goals/", fetch_redirect_response=False)
         goal = Goal.objects.get()
+        self.assertRedirects(
+            response, goal.get_absolute_url(), fetch_redirect_response=False
+        )
         self.assertEqual(
             (goal.owner, goal.title, goal.status),
             (self.alice, "Learn Django", Goal.Status.IN_PROGRESS),
         )
-        followed = self.client.get("/goals/")
+        followed = self.client.get(goal.get_absolute_url())
         self.assertContains(followed, "Goal created.")
-        page = PageParser()
-        page.feed(followed.content.decode())
-        self.assertTrue(
-            page.text("main").startswith("Your goals New goal Learn Django")
-        )
+        self.assertContains(followed, "Learn Django")
 
     def test_a_posted_owner_is_ignored(self):
         bob = get_user_model().objects.create_user("bob")
