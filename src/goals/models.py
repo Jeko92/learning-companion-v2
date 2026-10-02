@@ -40,6 +40,9 @@ class Goal(models.Model):
             ),
         )
 
+    def __str__(self):
+        return self.title
+
     def clean_fields(self, exclude=None):
         # Model CharFields don't strip: trim first so "   " fails as blank.
         self.title = strip(self.title)

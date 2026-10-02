@@ -81,7 +81,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-model):
   - `list(Goal.objects.all()) == [c, b, a]`.
 
   Expected red: the default id order `[a, b, c]`. Impl: `Meta.ordering = ("-created_at", "-id")`; `makemigrations` creates `0003`. Covers: AC7.
-- [ ] 7. `str(goal)` is the title. Expected red: `'Goal object (1)' != 'Learn Django'`. Impl: `__str__`. Covers: AC8.
+- [x] 7. `str(goal)` is the title. Expected red: `'Goal object (1)' != 'Learn Django'`. Impl: `__str__`. Covers: AC8.
 - [ ] 8. Ownership. Test:
   - Alice has two goals and bob has one. `alice.goals.all()` holds exactly alice's two.
   - After `alice.delete()`, no goal of alice's remains, and bob's goal still exists.

@@ -115,3 +115,10 @@ class GoalOrderingTests(TestCase):
         Goal.objects.filter(pk__in=[b.pk, c.pk]).update(created_at=newer)
 
         self.assertEqual(list(Goal.objects.all()), [c, b, a])
+
+
+class GoalStrTests(TestCase):
+    def test_shows_its_title(self):
+        owner = get_user_model().objects.create_user("bob")
+
+        self.assertEqual(str(Goal(owner=owner, title="Learn Django")), "Learn Django")
