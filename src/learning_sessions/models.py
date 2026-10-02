@@ -47,3 +47,6 @@ class LearningSession(models.Model):
                 name="learning_sessions_learningsession_duration_valid",
             ),
         )
+
+    def __str__(self):
+        return f"{self.goal} · {self.date:%Y-%m-%d} · {self.duration_minutes} min"

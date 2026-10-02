@@ -241,3 +241,14 @@ class LearningSessionOrderingTests(TestCase):
 
         # Same created_at: the id breaks the tie.
         self.assertEqual(list(LearningSession.objects.all()), [third, first, second])
+
+
+class LearningSessionStrTests(TestCase):
+    def test_str_names_the_goal_date_and_duration(self):
+        owner = get_user_model().objects.create_user("alice")
+        goal = Goal(owner=owner, title="Learn Django")
+        session = LearningSession(
+            goal=goal, date=date(2026, 3, 10), duration_minutes=45
+        )
+
+        self.assertEqual(str(session), "Learn Django · 2026-03-10 · 45 min")
