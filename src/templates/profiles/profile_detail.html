@@ -2,5 +2,26 @@
 
 {% block content %}
   <h1 class="text-2xl font-bold">Your profile</h1>
-  <dl></dl>
+  <dl class="mt-6 space-y-4">
+    <div>
+      <dt class="text-sm text-slate-500">Name</dt>
+      <dd>{{ profile.name|default:"Not set" }}</dd>
+    </div>
+    <div>
+      <dt class="text-sm text-slate-500">Cohort</dt>
+      <dd>{{ profile.cohort|default:"Not set" }}</dd>
+    </div>
+    <div>
+      <dt class="text-sm text-slate-500">Focus areas</dt>
+      <dd>
+        <ul>
+          {% for tag in profile.focus_areas.all %}
+            <li>{{ tag.name }}</li>
+          {% empty %}
+            <li>No focus areas yet.</li>
+          {% endfor %}
+        </ul>
+      </dd>
+    </div>
+  </dl>
 {% endblock %}

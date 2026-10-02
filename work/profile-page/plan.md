@@ -91,7 +91,7 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
   - a template with an empty `<dl>`
 
   Covers: AC1 (detail), AC4.
-- [ ] 2. The detail page shows the profile's values. Subtests:
+- [x] 2. The detail page shows the profile's values. Subtests:
   - **filled:** name "Alice Smith", cohort "Spring 2026", tags "Python" and "Django". `page.text("main")` contains them, with "Django" before "Python".
   - **empty:** `main` shows "Not set" twice and "No focus areas yet.".
 
