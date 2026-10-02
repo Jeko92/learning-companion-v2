@@ -118,7 +118,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-edit-de
   - the detail page links "Delete goal" to the delete URL
 
   Expected red: `404 != 200`. Impl: the `delete` route, `GoalDeleteView(OwnGoalsMixin, DeleteView)` with `success_url = reverse_lazy("goals:list")`, the template, and the detail page's Delete link. Covers: AC1 (delete), AC4 (link), AC9.
-- [ ] 11. Confirming deletes the goal with a message. A POST to the delete URL gives a redirect to `/goals/`, and the goal is gone. With `follow=True`, "Goal deleted." is shown and the title isn't listed. Expected red: "Goal deleted." is missing (the delete already works). Impl: `SuccessMessageMixin` with a `get_success_message()` override, since `%(title)s` would raise `KeyError` after the delete. Covers: AC10.
+- [x] 11. Confirming deletes the goal with a message. A POST to the delete URL gives a redirect to `/goals/`, and the goal is gone. With `follow=True`, "Goal deleted." is shown and the title isn't listed. Expected red: "Goal deleted." is missing (the delete already works). Impl: `SuccessMessageMixin` with a `get_success_message()` override, since `%(title)s` would raise `KeyError` after the delete. Covers: AC10.
 - [ ] 12. Edit and delete are login-required and owner-scoped. Subtests for edit and delete, each with GET and POST:
   - **anonymous:** redirected to login with `next`, and alice's goal unchanged and not deleted
   - **bob on alice's goal:** 404, with content identical to the same request for pk 999999, and alice's goal unchanged and not deleted

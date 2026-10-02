@@ -468,3 +468,12 @@ class GoalDeleteTests(TestCase):
         links = get_page(self.client, self.goal.get_absolute_url()).links("main")
 
         self.assertIn((self.path, "Delete goal"), links)
+
+    def test_confirming_deletes_the_goal(self):
+        response = self.client.post(self.path)
+
+        self.assertRedirects(response, "/goals/", fetch_redirect_response=False)
+        self.assertFalse(Goal.objects.filter(pk=self.goal.pk).exists())
+        followed = self.client.get("/goals/")
+        self.assertContains(followed, "Goal deleted.")
+        self.assertNotContains(followed, "Learn Django")

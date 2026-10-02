@@ -48,5 +48,10 @@ class GoalUpdateView(OwnGoalsMixin, SuccessMessageMixin, UpdateView):
     success_message = "Goal updated."
 
 
-class GoalDeleteView(OwnGoalsMixin, DeleteView):
+class GoalDeleteView(OwnGoalsMixin, SuccessMessageMixin, DeleteView):
     success_url = reverse_lazy("goals:list")
+
+    def get_success_message(self, cleaned_data):
+        # A fixed text: DeleteView's cleaned_data is empty, so a %(title)s
+        # success_message would raise KeyError after the row is gone.
+        return "Goal deleted."
