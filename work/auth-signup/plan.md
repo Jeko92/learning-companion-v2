@@ -251,10 +251,11 @@ The verdict was FAIL because AC7's visible-error half was not proven (finding 1)
 ## Review findings, round 2 (review.md, 2026-10-02)
 The verdict was FAIL because AC2's "adds no fields" was only partly proven (finding 7). Findings 5 and 6 (security, low) remain deferred to a deployment-hardening ticket.
 
-- [ ] 20. The custom user model adds no fields, many-to-many fields included: `{f.name for f in User._meta.fields + User._meta.many_to_many} == {f.name for f in AbstractUser._meta.fields + AbstractUser._meta.many_to_many} | {"id"}`. Test: `src/accounts/tests/test_models.py`, extending `test_custom_user_model_adds_no_fields`. Impl: none. Covers: AC2 (finding 7, medium).
+- [x] 20. The custom user model adds no fields, many-to-many fields included: `{f.name for f in User._meta.fields + User._meta.many_to_many} == {f.name for f in AbstractUser._meta.fields + AbstractUser._meta.many_to_many} | {"id"}`. Test: `src/accounts/tests/test_models.py`, extending `test_custom_user_model_adds_no_fields`. Impl: none. Covers: AC2 (finding 7, medium).
   - This is a guard that passes on arrival. Confirm that it guards: temporarily add `friends = models.ManyToManyField("self", blank=True)` to `accounts.User`. The test must go red. Then remove it. No migration is generated, because the guard test reads the model, not the database.
   - First check in a shell that `AbstractUser._meta.many_to_many` lists `groups` and `user_permissions`.
   - Commit: `feat(auth-signup): prove the user model adds no many-to-many fields either`.
+  - Done 2026-10-02: a shell check confirmed that both `AbstractUser` and `accounts.User` have exactly the many-to-many fields `groups` and `user_permissions`. The guard was green on arrival. A temporary `friends = ManyToManyField("self")` turned it red. The field was then removed, and no migration was written.
 - [ ] 21. Pin the logged-in nav exactly: `page.text("nav") == "Goals alice"` in `test_logged_in_nav_has_no_login_placeholder_and_no_signup_link`. Test: `src/accounts/tests/test_nav.py`. Impl: none. Covers: AC9, AC10 (finding 8, low).
   - This is a guard that passes on arrival. Confirm that it guards: temporarily add `<span>Profile</span>` to the logged-in branch of the nav. The test must go red. Then remove it.
   - Commit: `feat(auth-signup): pin the logged-in nav text exactly`.

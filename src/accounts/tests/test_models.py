@@ -16,12 +16,13 @@ class UserModelTests(TestCase):
         self.assertTrue(issubclass(User, AbstractUser))
 
     def test_custom_user_model_adds_no_fields(self):
-        # Profile data goes into a Profile model, not onto the user.
-        User = get_user_model()
+        # Profile data goes into a Profile model, not onto the user. _meta.fields
+        # leaves out many-to-many fields, so compare those too.
+        def field_names(model):
+            return {f.name for f in model._meta.fields + model._meta.many_to_many}
 
         self.assertEqual(
-            {f.name for f in User._meta.fields},
-            {f.name for f in AbstractUser._meta.fields} | {"id"},
+            field_names(get_user_model()), field_names(AbstractUser) | {"id"}
         )
 
 
