@@ -735,6 +735,12 @@ class GoalFilterEmptyStateTests(TestCase):
 
 class GoalViewsScopingTests(TestCase):
     def test_every_goal_lookup_view_scopes_through_own_goals_mixin(self):
+        User = get_user_model()
+        alice = User.objects.create_user("alice")
+        alices_goal = Goal.objects.create(owner=alice, title="Alice's goal")
+        bobs_goal = Goal.objects.create(
+            owner=User.objects.create_user("bob"), title="x"
+        )
         # Create looks no goal up (it sets the owner in form_valid).
         views = {
             p.name: p.callback.view_class
@@ -760,3 +766,16 @@ class GoalViewsScopingTests(TestCase):
                 self.assertLess(
                     mro.index(OwnGoalsMixin), min(mro.index(c) for c in django_qs)
                 )
+                # Without an override, the lookup is the mixin's own.
+                if "get_queryset" not in view.__dict__:
+                    self.assertIs(view.get_queryset, OwnGoalsMixin.get_queryset)
+                # With one (the list's filter) or without: only alice's goals.
+                request = RequestFactory().get("/")
+                request.user = alice
+                instance = view()
+                instance.setup(
+                    request, **({} if name == "list" else {"pk": alices_goal.pk})
+                )
+                goals = set(instance.get_queryset())
+                self.assertIn(alices_goal, goals)
+                self.assertNotIn(bobs_goal, goals)

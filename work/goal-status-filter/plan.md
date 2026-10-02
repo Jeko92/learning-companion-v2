@@ -89,12 +89,13 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-status-
     - `?status=bogus` listed all 3, with All active
 
 ## Review fixes (from `review.md`, 2026-10-02)
-- [ ] 10. Make the AC8 guard prove that `get_queryset` resolves to `OwnGoalsMixin.get_queryset` (review finding, medium). Extend `GoalViewsScopingTests` with two checks per walked route (`list`, `detail`, `edit`, `delete`), as subtests, keeping the existing checks.
+- [x] 10. Make the AC8 guard prove that `get_queryset` resolves to `OwnGoalsMixin.get_queryset` (review finding, medium). Extend `GoalViewsScopingTests` with two checks per walked route (`list`, `detail`, `edit`, `delete`), as subtests, keeping the existing checks.
   - **Structural:** a view that doesn't define `get_queryset` itself (`"get_queryset" not in view.__dict__`) must have `view.get_queryset is OwnGoalsMixin.get_queryset`.
   - **Behavioural, for every route:** create one goal for alice and one for bob. Build the view with `RequestFactory().get("/")`, `request.user = alice`, `view_instance = view(); view_instance.setup(request, pk=alice_goal.pk)` (no `pk` for `list`). `set(view_instance.get_queryset())` contains alice's goal and not bob's. This covers the list view's own `get_queryset` override and any later one.
   - Expected: green on arrival (guard step, as in step 8).
   - Guard. Mutation: add `def get_queryset(self): return Goal.objects.all()` to `GoalDetailView`, keeping `OwnGoalsMixin` first. It must go red (both checks). Revert afterwards and record the result here.
   - Impl: none. Commit `feat(goal-status-filter): prove every goal view scopes through OwnGoalsMixin`. Covers: AC8.
+  - Done 2026-10-02: green on arrival. With the mutation, the `detail` subtest went red on the behavioural check (`<Goal: x> unexpectedly found in {<Goal: Alice's goal>, <Goal: x>}`). **Correction:** only the behavioural check fires, not both. The structural check covers only views without their own `get_queryset`, so by design it skips a view that overrides it. The behavioural check is what catches an override, and it covers the list view's filter too. The view was restored (`git checkout`), and the suite passes (195 tests).
 
 ## Coverage
 | AC | Steps |
