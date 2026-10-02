@@ -559,3 +559,24 @@ class GoalEditDeleteCsrfTests(TestCase):
                 )
 
                 self.assertEqual(response.status_code, 302)
+
+
+class GoalPagesEscapingTests(TestCase):
+    PAYLOAD = "<script>alert(1)</script>"
+
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(
+            owner=alice, title=self.PAYLOAD, description=self.PAYLOAD
+        )
+        self.client.force_login(alice)
+
+    def test_goal_values_are_escaped_on_every_goal_page(self):
+        for page in ("detail", "edit", "delete"):
+            with self.subTest(page=page):
+                response = self.client.get(
+                    reverse(f"goals:{page}", args=[self.goal.pk])
+                )
+
+                self.assertNotContains(response, self.PAYLOAD)
+                self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
