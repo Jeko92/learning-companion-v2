@@ -1,8 +1,10 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
+
+from core.tests.html import PageParser
 
 LOGOUT_PATH = "/accounts/logout/"
 USERNAME = "alice"
@@ -70,3 +72,42 @@ class SessionLifecycleTests(TestCase):
 
         self.assertFalse(Session.objects.filter(session_key=old_key).exists())
         self.assertIs(response.wsgi_request.user.is_authenticated, False)
+
+
+class CsrfTests(TestCase):
+    # The default test client skips CSRF checks; this one enforces them.
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(USERNAME, password=PASSWORD)
+        self.csrf_client = Client(enforce_csrf_checks=True)
+
+    def test_login_without_a_csrf_token_is_rejected(self):
+        response = self.csrf_client.post(
+            reverse("accounts:login"), {"username": USERNAME, "password": PASSWORD}
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertNotIn("_auth_user_id", self.csrf_client.session)
+
+    def test_logout_without_a_csrf_token_is_rejected(self):
+        self.csrf_client.force_login(self.user)
+
+        response = self.csrf_client.post(LOGOUT_PATH)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            self.csrf_client.session.get("_auth_user_id"), str(self.user.pk)
+        )
+
+    def test_logout_with_the_token_from_the_nav_form_succeeds(self):
+        self.csrf_client.force_login(self.user)
+        page = PageParser()
+        page.feed(self.csrf_client.get("/").content.decode())
+        ((_, inputs),) = page.forms("nav")
+        tokens = [a["value"] for a in inputs if a.get("name") == "csrfmiddlewaretoken"]
+        self.assertEqual(len(tokens), 1, "the nav logout form has no CSRF token")
+        token = tokens[0]
+
+        response = self.csrf_client.post(LOGOUT_PATH, {"csrfmiddlewaretoken": token})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertNotIn("_auth_user_id", self.csrf_client.session)

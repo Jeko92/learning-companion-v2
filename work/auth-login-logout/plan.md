@@ -159,13 +159,14 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-login-l
   Test: `test_nav.py` (logged-in test rewritten). Expected red: `forms("nav") == []`, and the text lacks "Log out". Impl: the logout form in the authenticated branch of `base.html`. Covers: AC10 (logged in).
   - This is a deliberate change of #3's logged-in exact text, recorded the same way.
   - Done 2026-10-02: the exact text went from `"Goals alice"` to `"Goals alice Log out"`. The test also checks that `links("nav") == []` and that the nav has exactly one POST form to `accounts:logout` with a `csrfmiddlewaretoken`. Red: `'Goals alice' != 'Goals alice Log out'`. Green after the form was added.
-- [ ] 15. CSRF is enforced on login and logout. With `Client(enforce_csrf_checks=True)`:
+- [x] 15. CSRF is enforced on login and logout. With `Client(enforce_csrf_checks=True)`:
   - a login `POST` without a token returns 403, and no one is logged in
   - for a logged-in user (`force_login`), a logout `POST` without a token returns 403, and the user stays logged in
   - a logout `POST` with the `csrfmiddlewaretoken` value read from `forms("nav")` on a fresh `GET /` returns 302, and the user is anonymous
 
   Test: `test_logout.py`. Impl: none. Covers: AC12.
   - This is a guard. Mutation: remove `{% csrf_token %}` from the nav's logout form. The third case must go red. Revert afterwards.
+  - Done 2026-10-02: green on arrival. The first mutation run hit an *error* (unpacking a missing token), not an assertion. The test was refactored to assert that the nav form holds exactly one CSRF token. With that, the mutation went red with `0 != 1 : the nav logout form has no CSRF token`. The template was then restored.
 - [ ] 16. Full round trip in one client:
   1. sign up `alice` through `/accounts/signup/` (logged in)
   2. `POST` logout, and check that the user is anonymous
