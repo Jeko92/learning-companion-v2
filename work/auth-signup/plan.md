@@ -96,7 +96,7 @@ Test files:
 Each step is one red–green–refactor cycle and one commit, `feat(auth-signup): <what the step delivers>`. Step 5 is a test-only refactor, committed as `refactor(auth-signup): ...`.
 
 - [x] 1. The `accounts` app is installed: `apps.is_installed("accounts")` is `True`. Test: `src/accounts/tests/test_apps.py`, expected red `False is not True`. It also needs `src/accounts/tests/__init__.py`, and an empty `src/accounts/__init__.py` so discovery finds the tests, as in #2 step 1. Impl: `src/accounts/apps.py` (`AccountsConfig`, `name = "accounts"`), and `"accounts"` in `INSTALLED_APPS`. Covers: AC1.
-- [ ] 2. The project uses the custom user model:
+- [x] 2. The project uses the custom user model:
   - `settings.AUTH_USER_MODEL == "accounts.User"`
   - `get_user_model()._meta.label == "accounts.User"`
   - it is a subclass of `AbstractUser`
