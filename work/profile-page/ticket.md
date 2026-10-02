@@ -84,4 +84,4 @@ Constraints and context:
 - `CLAUDE.md` (Layout, Stack) and `README.md` get the profile URLs and the tag normalisation rule. The plan includes this.
 - Depends on #4 and #5, both done.
 
-Status: waiting for the user to approve the acceptance criteria.
+Status: the user approved these acceptance criteria (AC1–AC12) on 2026-10-02. The next step is `plan-ticket`.
