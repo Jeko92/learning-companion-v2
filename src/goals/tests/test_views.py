@@ -3,12 +3,15 @@ from datetime import UTC, datetime
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ImproperlyConfigured
 from django.shortcuts import resolve_url
-from django.test import Client, TestCase
+from django.test import Client, RequestFactory, TestCase
 from django.urls import reverse
+from django.views.generic import DetailView
 
 from core.tests.html import PageParser
 from goals.models import Goal
+from goals.views import OwnGoalsMixin
 
 PASSWORD = "Tr4ck-Learning!"
 
@@ -580,3 +583,19 @@ class GoalPagesEscapingTests(TestCase):
 
                 self.assertNotContains(response, self.PAYLOAD)
                 self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
+
+
+class OwnGoalsMixinOrderTests(TestCase):
+    def test_a_wrongly_ordered_mixin_fails_loudly(self):
+        # Listed after the generic view, the mixin's scoped get_queryset() is
+        # shadowed; with no model to fall back on, Django must refuse to serve.
+        class WronglyOrdered(DetailView, OwnGoalsMixin):
+            pass
+
+        alice = get_user_model().objects.create_user("alice")
+        goal = Goal.objects.create(owner=alice, title="Learn Django")
+        request = RequestFactory().get("/")
+        request.user = alice
+
+        with self.assertRaises(ImproperlyConfigured):
+            WronglyOrdered.as_view()(request, pk=goal.pk)

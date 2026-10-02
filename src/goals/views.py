@@ -14,9 +14,12 @@ from goals.models import Goal
 
 
 class OwnGoalsMixin(LoginRequiredMixin):
-    """Only ever the logged-in user's own goals, via Goal.objects.owned_by."""
+    """Only ever the logged-in user's own goals, via Goal.objects.owned_by.
 
-    model = Goal
+    List it *first* in a view's bases. It deliberately sets no `model`: listed
+    after the generic view, Django's own get_queryset() would win, and without
+    a model that raises ImproperlyConfigured instead of serving every user's
+    goals."""
 
     def get_queryset(self):
         return Goal.objects.owned_by(self.request.user)
