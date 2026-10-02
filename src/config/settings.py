@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_tailwind_cli",
     "core",
 ]
 
@@ -119,6 +120,12 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = "static/"
+# django-tailwind-cli builds css/tailwind.css into the first entry; the built
+# file is git-ignored, so run 'manage.py tailwind build' after checkout.
+STATICFILES_DIRS = [BASE_DIR / "assets"]
+
+# Pinned, so builds are reproducible and don't look up the latest release.
+TAILWIND_CLI_VERSION = "4.3.3"
 
 
 # Email
