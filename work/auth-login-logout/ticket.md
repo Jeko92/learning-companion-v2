@@ -37,7 +37,7 @@ As a registered user of the Learning Companion, I want to log in and out, and ge
   - after logout, a request that reuses the old session cookie is anonymous
 - [x] AC14 A deactivated account can't log in. A user with `is_active=False` who submits the correct password gets the same generic error as in AC5 (not a separate "inactive" message) and is not logged in.
 - [x] AC15 A malicious `next` can't inject markup into the login page. `GET /accounts/login/?next="><script>alert(1)</script>` returns a page that doesn't contain the raw string `<script>alert(1)</script>`; the value appears only escaped (reflected-XSS protection).
-- [ ] AC16 Logout always ends in a redirect, and confirms only a real logout. Added after final review on 2026-10-02, at the user's decision.
+- [x] AC16 Logout always ends in a redirect, and confirms only a real logout. Added after final review on 2026-10-02, at the user's decision.
   - A `POST /accounts/logout/` from an anonymous visitor redirects to `settings.LOGOUT_REDIRECT_URL`, and the page doesn't show "You have been logged out.".
   - A `POST /accounts/logout/` whose `next` points back at the logout URL itself (`next=/accounts/logout/`) logs the user out and redirects to `settings.LOGOUT_REDIRECT_URL`. Django's admin-styled `registration/logged_out.html` is never rendered.
 
