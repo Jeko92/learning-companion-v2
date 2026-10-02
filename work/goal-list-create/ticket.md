@@ -75,4 +75,4 @@ Constraints and context:
 - Ruff RUF012: class-level options are tuples.
 - `CLAUDE.md` (Stack, Layout) and `README.md` get the goal pages. The plan includes this.
 
-Status: waiting for the user to approve the acceptance criteria.
+Status: the user approved these acceptance criteria (AC1–AC12) on 2026-10-02. The next step is `plan-ticket`.
