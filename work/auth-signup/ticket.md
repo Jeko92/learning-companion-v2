@@ -14,11 +14,11 @@ As a visitor to the Learning Companion, I want to create an account with a usern
 - [ ] AC4 A valid `POST` creates exactly one `accounts.User` with the submitted username. The password is stored hashed: `check_password` succeeds, and the raw password is not stored.
 - [ ] AC5 After a valid `POST`, the new user is logged in (the session's authenticated user is the new user), and the response redirects to `settings.LOGIN_REDIRECT_URL`, which is set to `"/"`.
 - [ ] AC6 Following that redirect, the home page shows the message "Welcome, <username>!".
-- [ ] AC7 An invalid `POST` re-renders the form with status 200 and shows the field errors. It creates no user and logs no one in. It is checked for:
-  - mismatched passwords
-  - a username that already exists with the same spelling
-  - a username that differs from an existing one only in case (e.g. `Alice` when `alice` exists)
-  - a password rejected by the configured password validators (e.g. too short or too common)
+- [ ] AC7 An invalid `POST` re-renders the form with status 200. It creates no user, logs no one in, and doesn't echo the submitted passwords: neither submitted password value appears in the response. Each error is attached to the field it belongs to, which `assertFormError` can check:
+  - mismatched passwords: error on `password2`
+  - a username that already exists with the same spelling: error on `username`
+  - a username that differs from an existing one only in case (e.g. `Alice` when `alice` exists): error on `username`
+  - a password rejected by the configured password validators (e.g. too short or too common): error on `password2`
 - [ ] AC8 For a logged-in user, both `GET` and `POST` to `/accounts/signup/` redirect to `settings.LOGIN_REDIRECT_URL`. The form is not rendered and no user is created.
 - [ ] AC9 For anonymous visitors, the nav shows a "Sign up" link to `reverse("accounts:signup")`. For logged-in users there is no such link. "Goals" and "Log in" stay non-link placeholders.
 - [ ] AC10 For a logged-in user, the nav shows their username (`user.get_username()`), which signals that they are signed in. Anonymous visitors see no username in the nav.
@@ -44,6 +44,7 @@ Answers from refinement (2026-10-02):
   2. `LOGIN_REDIRECT_URL` and `reverse()` instead of hardcoded URLs
   3. the case-insensitive duplicate username case
   4. explicit scope edges (`?next=`, rate limiting)
+- Second review, also approved (2026-10-02): AC7 now also checks that submitted passwords are not echoed back, and that each error sits on its field. Django 6.1's `SetPasswordMixin` puts both the mismatch and the validator errors on `password2`. `clean_username` puts duplicate errors on `username`.
 
 Constraints and context:
 - **Custom user model now, before any model references the user.** Django recommends setting `AUTH_USER_MODEL` at the start of a project. Changing it later, once other models point at the user, needs a hand-written data migration.
@@ -54,3 +55,5 @@ Constraints and context:
 - Django's default `AUTH_PASSWORD_VALIDATORS` (similarity, minimum length, common, numeric) are already configured. AC7's validator case relies on them. Django 6.1's `UserCreationForm` rejects usernames that match an existing one case-insensitively, and AC7 pins that behaviour.
 - #2's nav test asserts that "Goals" and "Log in" are not inside any link. Adding a real "Sign up" link must keep that test green.
 - `CLAUDE.md` and `README.md` get the `accounts` app and the custom user model (`AUTH_USER_MODEL`) in their Layout and Stack sections. The plan includes this.
+
+Status: the user approved these acceptance criteria (AC1–AC10) on 2026-10-02. The next step is `plan-ticket`.
