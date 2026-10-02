@@ -112,7 +112,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-signup)
   - A guard test that passes on arrival, because step 2 generated the migration. Confirm that it guards by temporarily adding a field, e.g. `nickname = models.CharField(max_length=20, blank=True)`, to `accounts.User`: the test must go red. Then remove the field.
   - Done 2026-10-02: green on arrival. With a temporary `nickname` field on `accounts.User`, this test went red ("A model change has no migration"), and so did step 2's no-extra-fields test. The field was removed and no migration file was written (`--dry-run`).
 - [x] 4. The user model is registered in the admin with `UserAdmin`: `isinstance(admin.site._registry[get_user_model()], UserAdmin)`. Test: `test_models.py`, `assertIsInstance(admin.site._registry.get(get_user_model()), UserAdmin)`, expected red `None is not an instance of <class 'UserAdmin'>`. Impl: `src/accounts/admin.py`. Covers: AC2.
-- [x] 5. Test-only refactor: move `VOID_ELEMENTS`, `SECTIONS`, `collapse` and `PageParser` from `src/core/tests/test_home.py` to `src/core/tests/html.py`, and import them in `test_home.py` from there. Test: the whole suite stays green, with the same number of tests (33). No new test. Impl: none. Covers: AC3, AC9 and AC10 (prerequisite). Commit: `refactor(auth-signup): share the page parser between apps' tests`.
+- [x] 5. Test-only refactor: move `VOID_ELEMENTS`, `SECTIONS`, `collapse` and `PageParser` from `src/core/tests/test_home.py` to `src/core/tests/html.py`, and import them in `test_home.py` from there. Test: the whole suite stays green, with the same number of tests (38; the "33" in the first draft was the count before this ticket). No new test. Impl: none. Covers: AC3, AC9 and AC10 (prerequisite). Commit: `refactor(auth-signup): share the page parser between apps' tests`.
   - Done 2026-10-02: moved, and still 38 tests green. While moving it, `collapse()`'s docstring was corrected to "text from adjacent elements isn't glued together" (#2 review finding 9).
 - [x] 6. An anonymous `GET /accounts/signup/` returns 200 and is routed through the `accounts.urls` include:
   - `reverse("accounts:signup") == "/accounts/signup/"`
@@ -243,7 +243,7 @@ The verdict was FAIL because AC7's visible-error half was not proven (finding 1)
     - Mutation B (a stray `<span>Profile</span>` in the anonymous nav) went red: `'Goals Profile Log in Sign up' != 'Goals Log in Sign up'`.
     - Mutation A (the username rendered without the `is_authenticated` check) stays green, and no test can make it red. The anonymous username is `""`, so the anonymous page is byte-for-byte the same in its text, and there's no visible regression to catch. The plan's wording ("plus an extra stray word ... must go red") had combined the two, but only the stray word is detectable.
     - Both mutations were reverted.
-- [ ] 19. Docs wording. No test.
+- [x] 19. Docs wording. No test.
   - In `CLAUDE.md`, the Stack auth bullet and the `src/accounts/` Layout line should describe log-in and log-out as #4's future work: "#4 adds log-in and log-out under `/accounts/` and reuses `LOGIN_REDIRECT_URL`" (finding 3).
   - In this plan, correct step 5's "(33)" to 38 (finding 4).
   - Commit: `docs(auth-signup): fix review wording findings`.
