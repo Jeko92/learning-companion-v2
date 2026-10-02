@@ -23,8 +23,9 @@ input="$(cat)"
 cmd="$(jq -r '.tool_input.command // empty' <<<"$input")"
 [ -z "$cmd" ] && exit 0
 
+# The subcommand must end at a word boundary, so 'git merge' does not match 'git merge-base'.
 is_git() {
-  echo "$cmd" | grep -qE "(^|[;&|]\s*)git\s+$1"
+  echo "$cmd" | grep -qE "(^|[;&|]\s*)git\s+$1([[:space:];&|)]|$)"
 }
 
 is_gh() {
