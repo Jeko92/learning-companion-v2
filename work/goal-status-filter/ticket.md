@@ -5,22 +5,22 @@ Issue: #10 · Branch: feature/goal-status-filter
 As a logged-in learner, I want to filter my goals list by status, so that I can focus on what I'm working on, what's planned, or what's done.
 
 ## Acceptance criteria
-- [ ] AC1 `?status=<value>` filters the list. For each of `planned`, `in-progress` and `done`, `GET /goals/?status=<value>` lists only the current user's goals with that status, newest first.
-- [ ] AC2 A missing, empty or invalid status shows all goals. `GET /goals/`, `?status=` and `?status=bogus` each return 200 and list all of the current user's goals, with no error.
-- [ ] AC3 The filter stays scoped to the owner. With another user having goals of the same status, `?status=<value>` never lists that user's goals.
-- [ ] AC4 A filter control of links sits above the list in `<main>`: "All", "Planned", "In progress" and "Done".
+- [x] AC1 `?status=<value>` filters the list. For each of `planned`, `in-progress` and `done`, `GET /goals/?status=<value>` lists only the current user's goals with that status, newest first.
+- [x] AC2 A missing, empty or invalid status shows all goals. `GET /goals/`, `?status=` and `?status=bogus` each return 200 and list all of the current user's goals, with no error.
+- [x] AC3 The filter stays scoped to the owner. With another user having goals of the same status, `?status=<value>` never lists that user's goals.
+- [x] AC4 A filter control of links sits above the list in `<main>`: "All", "Planned", "In progress" and "Done".
   - "All" points to `/goals/`; each other link points to `/goals/?status=<value>`.
   - The active filter is not a link. It is shown with `aria-current="page"`.
   - With no status or an invalid one, "All" is the active filter.
-- [ ] AC5 Pagination keeps the filter. With 21 goals of status `done` (and others of other statuses):
+- [x] AC5 Pagination keeps the filter. With 21 goals of status `done` (and others of other statuses):
   - Page 1 of `?status=done` has a "Next" link to `?status=done&page=2`.
   - Page 2 lists only the oldest `done` goal, and its "Previous" link keeps `status=done`.
   - Choosing a filter link always starts at page 1.
-- [ ] AC6 There are two empty states.
+- [x] AC6 There are two empty states.
   - A filter that matches none of the user's goals shows "No goals with this status."
   - A user with no goals at all sees "No goals yet." with or without a filter.
-- [ ] AC7 Query parameters are never reflected as raw markup. `GET /goals/?status=done&x=<script>alert(1)</script>` returns 200, and the page doesn't contain the raw `<script>alert(1)</script>`. This applies even though pagination links carry the query string forward.
-- [ ] AC8 Every goal view is pinned to `OwnGoalsMixin`. A test walks the views routed in `goals.urls` and, for the list, detail, edit and delete views, asserts:
+- [x] AC7 Query parameters are never reflected as raw markup. `GET /goals/?status=done&x=<script>alert(1)</script>` returns 200, and the page doesn't contain the raw `<script>alert(1)</script>`. This applies even though pagination links carry the query string forward.
+- [x] AC8 Every goal view is pinned to `OwnGoalsMixin`. A test walks the views routed in `goals.urls` and, for the list, detail, edit and delete views, asserts:
   - the view sets no `model`
   - its `get_queryset` resolves to `OwnGoalsMixin.get_queryset`
 
