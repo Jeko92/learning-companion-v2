@@ -124,7 +124,7 @@ Guard steps (7, 8, 10, 12) name their mutation.
 - [x] 12. Goal values are shown escaped. Alice has a goal whose title and description are `<script>alert(1)</script>`. `GET /goals/` must not contain the raw payload (`assertNotContains`) and must contain `&lt;script&gt;alert(1)&lt;/script&gt;`. Impl: none. Covers: AC11.
   - Guard. Mutation: `{{ goal.title|safe }}` in `goal_list.html`. It must go red. Revert afterwards.
   - Done 2026-10-02: green on arrival. Under the mutation it went red (the raw payload was found). The template was then restored. The description isn't shown on the list, so only the title is rendered there.
-- [ ] 13. The list is paginated, 20 per page, counting only your goals.
+- [x] 13. The list is paginated, 20 per page, counting only your goals.
   - Alice has 21 goals ("g01" oldest to "g21" newest, with `created_at` set via `update` so the order is deterministic); bob has 30.
   - **Page 1:** shows g21 to g02 (20 items), has a "Next" link to `?page=2`, and no "Previous".
   - **Page 2:** shows only g01 and has a "Previous" link.
@@ -132,6 +132,7 @@ Guard steps (7, 8, 10, 12) name their mutation.
   - None of bob's titles appear.
 
   Expected red: page 1 shows 21 items. Impl: `paginate_by = 20`, plus the Previous/Next links in `goal_list.html`. Covers: AC12.
+  - Done 2026-10-02: red as expected (page 1 listed all 21, and `?page=99` gave `200 != 404`), then green. The test's `titles()` helper first also picked up the words "goals" and "goal" from the heading; it now matches only the seeded titles with a regex. That was a deliberate test fix.
 - [ ] 14. Docs. No test. Commit `docs(goal-list-create): document the goal list and create pages`.
   - `CLAUDE.md`:
     - The Goals bullet: the pages `/goals/` (`goals:list`, paginated 20 per page) and `/goals/new/` (`goals:create`). `Goal.objects.owned_by(user)` is the one scoping helper (via `OwnGoalsMixin`). `GoalForm` has an explicit field allow-list and the owner is set from `request.user`. The description is capped at 2,000 characters by a model validator.

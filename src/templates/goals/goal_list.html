@@ -13,4 +13,14 @@
       <li>No goals yet.</li>
     {% endfor %}
   </ul>
+  {% if is_paginated %}
+    <nav class="mt-6 flex gap-6 text-sm" aria-label="Pages">
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="hover:underline">Previous</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="hover:underline">Next</a>
+      {% endif %}
+    </nav>
+  {% endif %}
 {% endblock %}

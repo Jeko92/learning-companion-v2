@@ -18,6 +18,7 @@ class OwnGoalsMixin(LoginRequiredMixin):
 
 class GoalListView(OwnGoalsMixin, ListView):
     template_name = "goals/goal_list.html"
+    paginate_by = 20
 
 
 class GoalCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):

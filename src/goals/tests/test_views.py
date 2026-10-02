@@ -1,3 +1,4 @@
+import re
 from datetime import UTC, datetime
 
 from django.conf import settings
@@ -230,3 +231,36 @@ class GoalCreateCsrfTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(Goal.objects.exists())
+
+
+class GoalListPaginationTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        alice = User.objects.create_user("alice", password=PASSWORD)
+        bob = User.objects.create_user("bob")
+        for n in range(1, 22):  # g01 (oldest) .. g21 (newest)
+            goal = Goal.objects.create(owner=alice, title=f"g{n:02}")
+            Goal.objects.filter(pk=goal.pk).update(
+                created_at=datetime(2026, 1, n, tzinfo=UTC)
+            )
+        for n in range(30):
+            Goal.objects.create(owner=bob, title=f"bob-{n}")
+        self.client.force_login(alice)
+
+    def titles(self, page):
+        # Only the seeded titles ("g01".."g21", "bob-N"), not words like "goals".
+        return re.findall(r"\b(?:g\d\d|bob-\d+)\b", page.text("main"))
+
+    def test_twenty_goals_per_page_counting_only_yours(self):
+        first = get_page(self.client, "/goals/")
+        second = get_page(self.client, "/goals/?page=2")
+
+        self.assertEqual(self.titles(first), [f"g{n:02}" for n in range(21, 1, -1)])
+        self.assertEqual(self.titles(second), ["g01"])
+        self.assertIn(("?page=2", "Next"), first.links("main"))
+        self.assertNotIn("Previous", first.text("main"))
+        self.assertIn(("?page=1", "Previous"), second.links("main"))
+        self.assertNotIn("Next", second.text("main"))
+
+    def test_an_out_of_range_page_is_not_found(self):
+        self.assertEqual(self.client.get("/goals/?page=99").status_code, 404)
