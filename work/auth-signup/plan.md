@@ -227,3 +227,18 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-signup)
 | AC10 username in the nav for logged-in users only | 15 |
 
 Step 13 is beyond the ACs: `sensitive_post_parameters`, as Django's own auth views do. Step 5 is a test-only refactor. Step 16 covers what tests can't verify: docs, the one-time DB reset note, and the manual check, including `createsuperuser` and the admin.
+
+## Review findings (review.md, 2026-10-02)
+The verdict was FAIL because AC7's visible-error half was not proven (finding 1). Findings 5 and 6 (security, low: transport hardening and admin throttling) were deferred to a deployment-hardening ticket, so they are not steps here.
+
+- [ ] 17. The re-rendered sign-up page shows each error: in every AC7 subtest, `message` is in `PageParser` `text("main")` of the response. Test: `src/accounts/tests/test_signup.py`, extending `test_invalid_signup_rerenders_the_form_with_the_field_error`. Impl: none. Covers: AC7 (finding 1, medium).
+  - This is a guard that passes on arrival, because `{{ form }}` renders the errors. Confirm that it guards: temporarily render `{{ form.username }}{{ form.password1 }}{{ form.password2 }}` instead of `{{ form }}` in `signup.html`. Every subtest must go red, and the template is then restored.
+  - The mismatch message contains a curly apostrophe (`didn’t`). Autoescaping leaves it unchanged, but compare against parsed text rather than raw HTML, so entity encoding can't matter.
+  - Commit: `feat(auth-signup): prove the re-rendered sign-up page shows each error`.
+- [ ] 18. Pin the anonymous nav exactly: `page.text("nav") == "Goals Log in Sign up"` in `test_anonymous_nav_has_placeholders_and_a_signup_link`. Remove `test_anonymous_nav_shows_no_username`, which can't fail. Test: `src/accounts/tests/test_nav.py`. Impl: none. Covers: AC9, AC10 (finding 2, low).
+  - This replaces a vacuous test with a stronger one. It is a deliberate test change, not a weakening, because the exact match subsumes the old assertion. Confirm it guards: temporarily render `{{ user.get_username }}` without the `is_authenticated` check, plus an extra stray word in the nav. The test must go red, and the change is then reverted.
+  - Commit: `refactor(auth-signup): pin the anonymous nav text exactly`.
+- [ ] 19. Docs wording. No test.
+  - In `CLAUDE.md`, the Stack auth bullet and the `src/accounts/` Layout line should describe log-in and log-out as #4's future work: "#4 adds log-in and log-out under `/accounts/` and reuses `LOGIN_REDIRECT_URL`" (finding 3).
+  - In this plan, correct step 5's "(33)" to 38 (finding 4).
+  - Commit: `docs(auth-signup): fix review wording findings`.
