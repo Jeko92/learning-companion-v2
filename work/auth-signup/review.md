@@ -1,9 +1,39 @@
 # Review: auth-signup
 ## Verdict: FAIL
 
-Round 1 (commit 3d97cc4). AC7 is only partly proven. The invalid-sign-up test checks the error on the form object in the context, but not that the re-rendered page shows it. A template that renders the fields without their errors keeps the whole suite green (finding 1, confirmed by mutation). Under the verdict rules, an uncovered acceptance criterion means FAIL, even though the suite is green and no finding is high.
+Round 2 (commit 261a8d2). Round 1's findings 1–4 are resolved. But AC2's "adds no fields" is only partly proven: the test compares `_meta.fields`, which leaves out many-to-many fields. A `friends = ManyToManyField("self")` added to `accounts.User` with its migration keeps the whole suite green, so the migration guard doesn't catch it either (finding 7, confirmed by mutation). An acceptance criterion that isn't fully covered means FAIL. The suite is green and no finding is high.
 
-## Acceptance criteria
+## Round 2 (commit 261a8d2)
+### Acceptance criteria
+- AC1, AC3, AC4, AC5, AC6, AC8 — unchanged since round 1 — PASS
+- AC2 — `test_custom_user_model_adds_no_fields` misses many-to-many fields (finding 7) — FAIL
+- AC7 — the round 1 gap is closed. Every subtest now also asserts that the error appears in `<main>`. The help texts don't contain any of the five messages, so the check can't pass by accident — PASS
+- AC9 — the anonymous nav is pinned exactly (`"Goals Log in Sign up"`) — PASS
+- AC10 — PASS. The anonymous half holds by construction, because `AnonymousUser.get_username()` is `""` (see finding 9).
+
+Suite: 50 tests green. `ruff check` and `ruff format --check` are clean, and so are `manage.py check` and `makemigrations --check --dry-run`.
+
+Mutations caught:
+- `{% if user %}` in the nav
+- `{{ request.user }}` in the anonymous nav
+- an extra `email` form field
+- a missing `{% csrf_token %}`
+- a welcome message built from raw POST input
+
+Not caught: findings 7 and 8.
+
+### Findings
+Code review (0 high):
+7. [medium] src/accounts/tests/test_models.py:18-25 — AC2 "adds no fields" compares only `_meta.fields`, so an added many-to-many field goes unnoticed. — Compare `fields + many_to_many` on both models (`AbstractUser`'s list includes `groups` and `user_permissions`). Plan step 20.
+8. [low] src/accounts/tests/test_nav.py:32-46 — The logged-in nav isn't pinned. A stray `<span>Profile</span><span>Sign up</span>` there keeps the suite green. — Assert `page.text("nav") == "Goals alice"`. Plan step 21.
+9. [low] src/accounts/tests/test_nav.py:26 and plan step 18's note — The comment "(no username)" and the note's "no test can make it red" / "no visible regression" go too far. Rendering the username unconditionally still outputs an empty `<span>`, and an element-level assertion would catch it, but no username ever reaches anonymous visitors. — Say that AC10's anonymous half holds by construction, and that the exact pin only guards against stray text. Plan step 22.
+10. [low] src/config/settings.py:89-94 — `AUTH_USER_MODEL` and `LOGIN_REDIRECT_URL` sit under the "# Password validation" header. — Give them their own "# Authentication" section. Plan step 22.
+11. [low] src/accounts/views.py:20 — `redirect(resolve_url(...))` resolves the URL twice, because `redirect()` already calls `resolve_url`. — Use `redirect(settings.LOGIN_REDIRECT_URL)`. Plan step 22.
+
+Security review (0 high, 0 medium, no new findings): findings 5 and 6 still stand and remain deferred.
+
+## Round 1 (commit 3d97cc4): verdict FAIL, findings 1–4 resolved by plan steps 17–19
+### Acceptance criteria
 - AC1 — covered by `accounts.tests.test_apps.InstalledAppsTests.test_accounts_app_is_installed` and `accounts.tests.test_signup.SignUpPageTests.test_signup_page_is_served_through_the_accounts_include` — PASS
 - AC2 — covered by `accounts.tests.test_models.UserModelTests.test_project_uses_the_custom_user_model`, `test_custom_user_model_adds_no_fields`, `UserAdminTests.test_user_model_is_registered_with_user_admin` and `MigrationsTests.test_no_model_change_is_missing_a_migration` — PASS
 - AC3 — covered by `test_signup_page_is_served_through_the_accounts_include` and `test_signup_page_renders_the_signup_form` — PASS
@@ -26,7 +56,7 @@ Mutations run in a scratch copy, each of which turned its test red:
 
 Two mutations stayed green: the template without errors (finding 1) and the username rendered for anonymous visitors (finding 2). `PageParser.links` and `href_text` were correct on nested elements, nested links, implicitly closed links, links outside sections and `<link href>`.
 
-## Findings
+### Findings
 Code review (0 high):
 1. [medium] src/accounts/tests/test_signup.py:135-148 — AC7 says the form is re-rendered with each error on its field, but the test only inspects `response.context["form"]`. A `signup.html` that renders `{{ form.username }}{{ form.password1 }}{{ form.password2 }}` without errors keeps the suite green, and the user would see no error. — In each subtest, also assert that the error message is visible in the page's `<main>` text. Plan step 17.
 2. [low] src/accounts/tests/test_nav.py:47-52 — `test_anonymous_nav_shows_no_username` can't fail for a realistic regression: `AnonymousUser.get_username()` is `""`, so an unconditional `{{ user.get_username }}` passes. — Pin the anonymous nav text exactly (`"Goals Log in Sign up"`), which covers AC9 and AC10 for anonymous visitors. Plan step 18.
@@ -48,4 +78,4 @@ The security review found no issue with:
 - account enumeration (inherent to username sign-up; acceptable)
 
 ## Reviewed
-commit 3d97cc4, 2026-10-02
+commit 261a8d2, 2026-10-02 (round 1: commit 3d97cc4, FAIL)
