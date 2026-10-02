@@ -119,7 +119,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(session-mode
   - Impl: `LearningSessionQuerySet.owned_by` and `objects = LearningSessionQuerySet.as_manager()`.
   - Covers: AC7.
   - Done 2026-10-03. The red came from the `hasattr` check in `setUp`. Mutation check once green: with `owned_by` returning `self.all()`, both tests went red, including the tag leak. The model was then restored.
-- [ ] 12. **`LearningSession` is in the admin.**
+- [x] 12. **`LearningSession` is in the admin.**
   - Test (`test_admin.py`):
     - `assertIn(LearningSession, admin.site._registry)` (the expected red).
     - `list_display` contains `goal`, `date` and `duration_minutes`, and `list_filter` contains `date`.
