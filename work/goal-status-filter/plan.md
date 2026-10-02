@@ -51,7 +51,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-status-
   - On `?status=bogus`, "All" is the active filter.
 
   Expected red: the filter links are missing. Impl: `active_status` and `statuses` in `get_context_data()`, and the filter nav in `goal_list.html`. Covers: AC4.
-- [ ] 5. Pagination keeps the filter. Alice has 21 `done` goals, `created_at` set via `update` (oldest `d01` to newest `d21`), plus some goals of other statuses.
+- [x] 5. Pagination keeps the filter. Alice has 21 `done` goals, `created_at` set via `update` (oldest `d01` to newest `d21`), plus some goals of other statuses.
   - Page 1 of `?status=done` lists `d21`…`d02`, with a "Next" link to `?status=done&page=2`.
   - Page 2 lists only `d01`, with a "Previous" link to `?status=done&page=1`.
   - The filter links on page 2 contain no `page`.

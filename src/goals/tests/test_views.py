@@ -664,3 +664,37 @@ class GoalStatusFilterTests(TestCase):
         self.assertEqual(self.active_filter("/goals/?status=done"), ["Done"])
 
         self.assertEqual(self.active_filter("/goals/?status=bogus"), ["All"])
+
+
+class GoalFilteredPaginationTests(TestCase):
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        for n in range(1, 22):  # d01 (oldest) .. d21 (newest), all done
+            goal = Goal.objects.create(
+                owner=alice, title=f"d{n:02}", status=Goal.Status.DONE
+            )
+            Goal.objects.filter(pk=goal.pk).update(
+                created_at=datetime(2026, 1, n, tzinfo=UTC)
+            )
+        for n in range(5):
+            Goal.objects.create(owner=alice, title=f"p{n}", status=Goal.Status.PLANNED)
+        self.client.force_login(alice)
+
+    def titles(self, page):
+        return re.findall(r"\b[dp]\d\d?\b", page.text("main"))
+
+    def test_pagination_keeps_the_filter(self):
+        first = get_page(self.client, "/goals/?status=done")
+        second = get_page(self.client, "/goals/?status=done&page=2")
+
+        self.assertEqual(self.titles(first), [f"d{n:02}" for n in range(21, 1, -1)])
+        self.assertIn(("?status=done&page=2", "Next"), first.links("main"))
+        self.assertEqual(self.titles(second), ["d01"])
+        self.assertIn(("?status=done&page=1", "Previous"), second.links("main"))
+
+    def test_filter_links_start_at_page_one(self):
+        second = get_page(self.client, "/goals/?status=done&page=2")
+
+        filter_links = [h for h, _ in second.links("main") if h.startswith("/goals/")]
+        self.assertTrue(filter_links)
+        self.assertFalse([h for h in filter_links if "page=" in h])
