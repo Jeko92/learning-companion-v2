@@ -119,12 +119,13 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-edit-de
 
   Expected red: `404 != 200`. Impl: the `delete` route, `GoalDeleteView(OwnGoalsMixin, DeleteView)` with `success_url = reverse_lazy("goals:list")`, the template, and the detail page's Delete link. Covers: AC1 (delete), AC4 (link), AC9.
 - [x] 11. Confirming deletes the goal with a message. A POST to the delete URL gives a redirect to `/goals/`, and the goal is gone. With `follow=True`, "Goal deleted." is shown and the title isn't listed. Expected red: "Goal deleted." is missing (the delete already works). Impl: `SuccessMessageMixin` with a `get_success_message()` override, since `%(title)s` would raise `KeyError` after the delete. Covers: AC10.
-- [ ] 12. Edit and delete are login-required and owner-scoped. Subtests for edit and delete, each with GET and POST:
+- [x] 12. Edit and delete are login-required and owner-scoped. Subtests for edit and delete, each with GET and POST:
   - **anonymous:** redirected to login with `next`, and alice's goal unchanged and not deleted
   - **bob on alice's goal:** 404, with content identical to the same request for pk 999999, and alice's goal unchanged and not deleted
 
   Impl: none. Covers: AC2 (edit, delete), AC3 (edit, delete).
   - Guard. Mutation: `GoalUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView)` with `model = Goal`. Bob's edit subtests must go red. Revert afterwards. Then the same mutation on `GoalDeleteView`.
+  - Done 2026-10-02: green on arrival. The unscoped `GoalUpdateView` failed bob's edit subtests, plus knock-on delete subtests, because the hacked title persisted. The unscoped `GoalDeleteView` failed bob's delete GET and POST. Both views were restored.
 - [ ] 13. CSRF is enforced on edit and delete. With `Client(enforce_csrf_checks=True)`, GET the edit page and the delete page first. For each:
   - a POST without a token returns 403, and nothing changes
   - a POST with the token read from that page's form (asserting `len(tokens) == 1`) returns 302

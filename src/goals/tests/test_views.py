@@ -477,3 +477,43 @@ class GoalDeleteTests(TestCase):
         followed = self.client.get("/goals/")
         self.assertContains(followed, "Goal deleted.")
         self.assertNotContains(followed, "Learn Django")
+
+
+class GoalEditDeleteAccessTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.cases = [
+            (page, method) for page in ("edit", "delete") for method in ("get", "post")
+        ]
+
+    def request(self, page, method, pk):
+        path = reverse(f"goals:{page}", args=[pk])
+        # Only the POSTs carry data; on a GET it would land in `next`.
+        data = {"title": "hacked", "status": "done"} if method == "post" else None
+        return path, getattr(self.client, method)(path, data)
+
+    def assert_untouched(self):
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.title, "Learn Django")
+
+    def test_anonymous_visitors_are_sent_to_log_in(self):
+        for page, method in self.cases:
+            with self.subTest(page=page, method=method):
+                path, response = self.request(page, method, self.goal.pk)
+
+                self.assertRedirects(
+                    response, login_redirect(path), fetch_redirect_response=False
+                )
+                self.assert_untouched()
+
+    def test_another_user_gets_the_same_404_as_for_a_missing_goal(self):
+        self.client.force_login(get_user_model().objects.create_user("bob"))
+        for page, method in self.cases:
+            with self.subTest(page=page, method=method):
+                _, response = self.request(page, method, self.goal.pk)
+                _, missing = self.request(page, method, 999999)
+
+                self.assertEqual(response.status_code, 404)
+                self.assertEqual(response.content, missing.content)
+                self.assert_untouched()
