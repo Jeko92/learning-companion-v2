@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
-from django.shortcuts import resolve_url
+from django.shortcuts import redirect, resolve_url
 from django.views.generic import CreateView
 
 from accounts.forms import SignUpForm
@@ -10,6 +10,12 @@ from accounts.forms import SignUpForm
 class SignUpView(CreateView):
     form_class = SignUpForm
     template_name = "accounts/signup.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        # Like LoginView.redirect_authenticated_user: signed-in users don't sign up.
+        if request.user.is_authenticated:
+            return redirect(resolve_url(settings.LOGIN_REDIRECT_URL))
+        return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
         return resolve_url(settings.LOGIN_REDIRECT_URL)

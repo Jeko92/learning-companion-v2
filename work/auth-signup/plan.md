@@ -174,7 +174,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-signup)
     - Mutation 1 (`BaseUserCreationForm`): the case-only subtest went red (`302 != 200`, because `Alice` was created). As a knock-on, the common-password subtest also went red (`2 != 1`), since subtests share one test's database. That only happens after an earlier subtest has already failed.
     - Mutation 2 (`render_value=True`): went red with `'Tr4ck-Learning!' unexpectedly found`.
     - Both mutations were reverted. `CASES` is a tuple (ruff `RUF012`).
-- [ ] 12. A logged-in user is redirected away from sign-up. After `force_login(existing_user)`:
+- [x] 12. A logged-in user is redirected away from sign-up. After `force_login(existing_user)`:
   - `GET /accounts/signup/` redirects to `settings.LOGIN_REDIRECT_URL` (`fetch_redirect_response=False`), and `accounts/signup.html` is not used
   - a valid `POST` for a new username also redirects there, and the user count is unchanged
 

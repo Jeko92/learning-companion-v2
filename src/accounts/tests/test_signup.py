@@ -137,3 +137,25 @@ class SignUpInvalidTests(TestCase):
                 self.assertNotIn("_auth_user_id", self.client.session)
                 for password in {data["password1"], data["password2"]}:
                     self.assertNotContains(response, password)
+
+
+class SignUpLoggedInTests(TestCase):
+    def setUp(self):
+        user = get_user_model().objects.create_user(USERNAME, password=PASSWORD)
+        self.client.force_login(user)
+
+    def test_logged_in_get_redirects_without_the_form(self):
+        response = self.client.get(SIGNUP_PATH)
+
+        self.assertRedirects(
+            response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
+        )
+        self.assertTemplateNotUsed(response, "accounts/signup.html")
+
+    def test_logged_in_post_redirects_without_creating_a_user(self):
+        response = self.client.post(SIGNUP_PATH, signup_data("bob"))
+
+        self.assertRedirects(
+            response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
+        )
+        self.assertEqual(get_user_model().objects.count(), 1)
