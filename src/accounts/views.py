@@ -42,3 +42,12 @@ class LogInView(auth_views.LoginView):
             self.request, f"Welcome back, {form.get_user().get_username()}!"
         )
         return response
+
+
+class LogOutView(auth_views.LogoutView):
+    # POST only (Django's LogoutView answers GET with 405).
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        # Messages are written at response time, so this survives the flush.
+        messages.info(request, "You have been logged out.")
+        return response

@@ -123,7 +123,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(auth-login-l
     - Following such a `next` after login only redirects within this site, so it is not an open redirect. The escaping is what keeps the markup inert.
     - The test comment was corrected, and the template was restored.
 - [x] 10. A logged-in user is redirected away from the login page. After `force_login`, both `GET` and `POST` to `/accounts/login/` redirect to `settings.LOGIN_REDIRECT_URL`, and `login.html` is not used. Test: `test_login.py`, expected red `200 != 302` on the `GET`. Impl: `redirect_authenticated_user = True`. Covers: AC8.
-- [ ] 11. Logout works only by `POST`:
+- [x] 11. Logout works only by `POST`:
   - `reverse("accounts:logout") == "/accounts/logout/"`, and `settings.LOGOUT_REDIRECT_URL == "/"`
   - for a logged-in user, a `POST` makes the user anonymous (no `_auth_user_id`) and redirects to `LOGOUT_REDIRECT_URL`, and with `follow=True` the page shows "You have been logged out."
   - a `GET` returns 405 and the user stays logged in

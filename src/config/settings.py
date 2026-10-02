@@ -94,6 +94,8 @@ AUTH_USER_MODEL = "accounts.User"
 LOGIN_REDIRECT_URL = "/"
 # Where login-required pages send anonymous visitors (a URL name, resolved).
 LOGIN_URL = "accounts:login"
+# Where log-out sends the user.
+LOGOUT_REDIRECT_URL = "/"
 
 
 # Password validation
