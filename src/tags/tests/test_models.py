@@ -97,3 +97,26 @@ class GetOrCreateByNameTests(TestCase):
             Tag.objects.get_or_create_by_name(None)
 
         self.assertEqual(Tag.objects.count(), 1)
+
+
+class NameNormalisationTests(TestCase):
+    def setUp(self):
+        self.python = Tag.objects.create(name="Python")
+
+    def test_full_width_letters_find_the_existing_tag(self):
+        tag, created = Tag.objects.get_or_create_by_name("ＰＹＴＨＯＮ")
+
+        self.assertEqual((tag, created), (self.python, False))
+
+    def test_composed_and_decomposed_spellings_are_one_tag(self):
+        first, _ = Tag.objects.get_or_create_by_name("café")
+        second, created = Tag.objects.get_or_create_by_name("café")
+
+        self.assertEqual((second, created), (first, False))
+
+    def test_inner_whitespace_collapses_to_one_space(self):
+        tag, _ = Tag.objects.get_or_create_by_name("Machine \t  Learning")
+        saved = Tag.objects.create(name=" Data  Science ")
+
+        self.assertEqual(Tag.objects.get(pk=tag.pk).name, "Machine Learning")
+        self.assertEqual(Tag.objects.get(pk=saved.pk).name, "Data Science")

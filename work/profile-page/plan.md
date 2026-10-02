@@ -163,7 +163,7 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
   - **Correction to the plan's expected red:** the name and cohort cases were already green. `name` became required in step 6, and the `ModelForm` gives the length errors.
   - The red came from the over-long focus-area entry. The save raised an unhandled `ValidationError` (a 500 in a real request) instead of a form error. That is the missing validation itself.
   - Then green, with `Tag.objects.clean_name()` and entry-named errors in `clean_focus_areas`.
-- [ ] 11. Tag names are NFKC-normalised and their whitespace collapsed. Test: `tags/tests/test_models.py`. With "Python" saved:
+- [x] 11. Tag names are NFKC-normalised and their whitespace collapsed. Test: `tags/tests/test_models.py`. With "Python" saved:
   - `get_or_create_by_name("ＰＹＴＨＯＮ")` returns `(python, False)`
   - `get_or_create_by_name("café")`, then `("café")`, gives one tag (the second call has `created=False`)
   - `get_or_create_by_name("Machine \t  Learning")` stores "Machine Learning"

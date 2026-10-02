@@ -1,11 +1,17 @@
+import unicodedata
+
 from django.db import IntegrityError, models, transaction
 from django.db.models.functions import Lower
 
 
-def strip(value):
-    """Model CharFields don't strip; only strings are, so other values still
-    reach field validation (e.g. None gives "cannot be null")."""
-    return value.strip() if isinstance(value, str) else value
+def normalize_name(value):
+    """NFKC (full-width letters, composed vs decomposed accents) and trimmed,
+    collapsed whitespace, so look-alike spellings are one tag. Only strings
+    are touched, so other values still reach field validation (e.g. None
+    gives "cannot be null")."""
+    if not isinstance(value, str):
+        return value
+    return " ".join(unicodedata.normalize("NFKC", value).split())
 
 
 class TagManager(models.Manager):
@@ -18,10 +24,10 @@ class TagManager(models.Manager):
 
     def get_or_create_by_name(self, name):
         """Turn typed input into a tag: (tag, created), matched the way the
-        unique constraint compares names (trimmed, ASCII case-insensitive), so
+        unique constraint compares names (normalised, ASCII case-insensitive), so
         the first spelling is kept. A blank name raises ValidationError.
         Safe when another request creates the same name concurrently."""
-        name = strip(name)
+        name = normalize_name(name)
         tag = self.filter(name__iexact=name).first()
         if tag is not None:
             return tag, False
@@ -60,11 +66,11 @@ class Tag(models.Model):
         return self.name
 
     def clean_fields(self, exclude=None):
-        # Strip first, so a whitespace-only name fails as blank.
-        self.name = strip(self.name)
+        # Normalise first, so a whitespace-only name fails as blank.
+        self.name = normalize_name(self.name)
         super().clean_fields(exclude=exclude)
 
     def save(self, *args, **kwargs):
-        # "Python" and " Python" must be one tag.
-        self.name = strip(self.name)
+        # "Python", " Python" and "ＰＹＴＨＯＮ" must be one tag.
+        self.name = normalize_name(self.name)
         super().save(*args, **kwargs)
