@@ -48,6 +48,10 @@ class PageParser(HTMLParser):
         self.link_pieces = {section: [] for section in SECTIONS}
         # (depth in open_tags, text pieces) for elements with an href still open.
         self.open_links = []
+        # Per section, (form attrs, [input attrs]) for each <form> inside it.
+        self.section_forms = {section: [] for section in SECTIONS}
+        # (depth in open_tags, input attrs list) for <form> elements still open.
+        self.open_forms = []
 
     def text(self, section):
         return collapse(self.pieces[section])
@@ -59,18 +63,32 @@ class PageParser(HTMLParser):
         """(href, text) for every element with an href inside the section."""
         return [(href, collapse(pieces)) for href, pieces in self.link_pieces[section]]
 
+    def forms(self, section):
+        """(form attrs, [input attrs]) for every <form> inside the section, with
+        each <input> tied to the innermost form it sits in."""
+        return [(attrs, list(inputs)) for attrs, inputs in self.section_forms[section]]
+
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
         self.elements.append((tag, attrs))
+        # <input> is void, so record it before the void-element return below.
+        if tag == "input" and self.open_forms:
+            self.open_forms[-1][1].append(attrs)
         if tag in VOID_ELEMENTS:
             return
+        names = {name for name, _ in self.open_tags}
         if "href" in attrs:
             pieces = []
-            names = {name for name, _ in self.open_tags}
             for section in SECTIONS:
                 if section in names:
                     self.link_pieces[section].append((attrs["href"], pieces))
             self.open_links.append((len(self.open_tags) + 1, pieces))
+        if tag == "form":
+            inputs = []
+            for section in SECTIONS:
+                if section in names:
+                    self.section_forms[section].append((attrs, inputs))
+            self.open_forms.append((len(self.open_tags) + 1, inputs))
         self.open_tags.append((tag, "href" in attrs))
 
     def handle_endtag(self, tag):
@@ -79,6 +97,7 @@ class PageParser(HTMLParser):
             del self.open_tags[len(names) - 1 - names[::-1].index(tag) :]
             depth = len(self.open_tags)
             self.open_links = [(d, p) for d, p in self.open_links if d <= depth]
+            self.open_forms = [(d, i) for d, i in self.open_forms if d <= depth]
 
     def handle_data(self, data):
         names = {name for name, _ in self.open_tags}
