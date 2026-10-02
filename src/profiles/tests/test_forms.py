@@ -47,3 +47,34 @@ class FocusAreasInputTests(TestCase):
         )
         self.assertEqual(Tag.objects.count(), tag_count)
         self.assertEqual([t.name for t in self.profile.focus_areas.all()], ["Django"])
+
+    def test_focus_area_input_is_bounded_before_any_database_work(self):
+        cases = (
+            (
+                "too long",
+                "x" * 1001,
+                "Ensure this value has at most 1000 characters (it has 1001).",
+            ),
+            (
+                "too many",
+                ", ".join(f"t{n}" for n in range(1, 22)),
+                "You can have at most 20 focus areas.",
+            ),
+        )
+        tag_count = Tag.objects.count()
+        for case, focus_areas, message in cases:
+            with self.subTest(case=case):
+                response = self.save(focus_areas)
+
+                self.assertEqual(response.status_code, 200)
+                self.assertFormError(response.context["form"], "focus_areas", message)
+                self.assertEqual(Tag.objects.count(), tag_count)
+                self.assertEqual(
+                    [t.name for t in self.profile.focus_areas.all()], ["Django"]
+                )
+
+    def test_twenty_focus_areas_are_allowed(self):
+        response = self.save(", ".join(f"t{n}" for n in range(1, 21)))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(self.profile.focus_areas.count(), 20)

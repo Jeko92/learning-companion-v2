@@ -231,7 +231,7 @@ Guard steps (7, 14, 15, 16) pass on arrival and name their mutation.
 ### Review findings (final-review 2026-10-02, verdict FAIL; see `review.md`)
 Each step is one cycle and one commit. Steps 21 and 23 are guards and test hardening, so they name their mutations.
 
-- [ ] 19. (Finding 1, high; AC13) Focus-area input is bounded before any database work. Test: `profiles/tests/test_forms.py`. Subtests on alice's edit URL:
+- [x] 19. (Finding 1, high; AC13) Focus-area input is bounded before any database work. Test: `profiles/tests/test_forms.py`. Subtests on alice's edit URL:
   - `focus_areas` of 1,001 characters gives "Ensure this value has at most 1000 characters (it has 1001)."
   - 21 distinct entries (`"t1, t2, …, t21"`) give "You can have at most 20 focus areas."
 

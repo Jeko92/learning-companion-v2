@@ -5,11 +5,18 @@ from django.db import transaction
 from profiles.models import Profile
 from tags.models import Tag
 
+# Each focus area costs a tag lookup, so the input is bounded before any of
+# that work: by length (checked by the field) and by count (in clean).
+MAX_FOCUS_AREAS = 20
+MAX_FOCUS_AREAS_LENGTH = 1000
+
 
 class ProfileForm(forms.ModelForm):
     # Typed as text, so the form never lists other users' tags.
     focus_areas = forms.CharField(
-        required=False, help_text="Comma-separated, e.g. Python, Django"
+        required=False,
+        max_length=MAX_FOCUS_AREAS_LENGTH,
+        help_text=f"Comma-separated, at most {MAX_FOCUS_AREAS}, e.g. Python, Django",
     )
 
     class Meta:
@@ -43,6 +50,10 @@ class ProfileForm(forms.ModelForm):
                 names.append(name)
         if errors:
             raise ValidationError(errors)
+        if len(names) > MAX_FOCUS_AREAS:
+            raise ValidationError(
+                f"You can have at most {MAX_FOCUS_AREAS} focus areas."
+            )
         return names
 
     @transaction.atomic
