@@ -92,7 +92,7 @@ Each step is one red–green–refactor cycle and one commit, `feat(goal-model):
   - **Pitfall found:** after the restore, the full suite was still red with `PROTECT`. `CASCADE` and `PROTECT` have the same length, so the restored file had the same size as the mutated one, and the restore landed within the same second as the cached bytecode. Python's `.pyc` check (size plus whole-second mtime) therefore kept the stale mutated bytecode.
     - Fixed by deleting `src/goals/__pycache__`.
     - From now on, mutation runs use `PYTHONDONTWRITEBYTECODE=1`.
-- [ ] 9. `Goal` is in the admin. Test: `test_admin.py`.
+- [x] 9. `Goal` is in the admin. Test: `test_admin.py`.
   - `assertIn(Goal, admin.site._registry)` comes first.
   - Its `list_display` includes `title`, `owner`, `status` and `created_at`.
   - `"status" in list_filter` and `"title" in search_fields`.
