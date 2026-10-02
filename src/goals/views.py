@@ -29,6 +29,13 @@ class GoalListView(OwnGoalsMixin, ListView):
     template_name = "goals/goal_list.html"
     paginate_by = 20
 
+    def get_queryset(self):
+        goals = super().get_queryset()
+        status = self.request.GET.get("status")
+        if status:
+            goals = goals.filter(status=status)
+        return goals
+
 
 class GoalDetailView(OwnGoalsMixin, DetailView):
     pass

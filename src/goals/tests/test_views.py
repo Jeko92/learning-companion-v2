@@ -599,3 +599,29 @@ class OwnGoalsMixinOrderTests(TestCase):
 
         with self.assertRaises(ImproperlyConfigured):
             WronglyOrdered.as_view()(request, pk=goal.pk)
+
+
+class GoalStatusFilterTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.alice = User.objects.create_user("alice", password=PASSWORD)
+        bob = User.objects.create_user("bob")
+        self.titles = {}
+        for status in Goal.Status.values:
+            Goal.objects.create(
+                owner=self.alice, title=f"alice-{status}", status=status
+            )
+            Goal.objects.create(owner=bob, title=f"bob-{status}", status=status)
+            self.titles[status] = f"alice-{status}"
+        self.client.force_login(self.alice)
+
+    def listed(self, path):
+        main = get_page(self.client, path).text("main")
+        return {t for t in re.findall(r"\b(?:alice|bob)-[a-z-]+\b", main)}
+
+    def test_a_status_filters_the_list(self):
+        for status in Goal.Status.values:
+            with self.subTest(status=status):
+                self.assertEqual(
+                    self.listed(f"/goals/?status={status}"), {self.titles[status]}
+                )
