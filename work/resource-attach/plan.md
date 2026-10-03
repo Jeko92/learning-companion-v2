@@ -31,7 +31,7 @@
 
   — test: `resources/tests/test_views.py` (`ResourceCreatePageTests`, `ResourceCreateAccessTests`, `ResourceViewsScopingTests`) — impl: `resources/urls.py` (new), `resources/views.py` (new: `OwnResourcesMixin`, `GoalResourcesMixin`, `ResourceCreateView`), `resources/forms.py` (new: `ResourceForm`, fields `url`, `title`, `type`), `templates/resources/resource_form.html` (new), `config/urls.py` — covers: AC1, AC2, AC4, AC10, AC12, AC20
 
-- [ ] 2. **Create POST: valid data and CSRF.** A valid POST creates the resource on the goal in the URL with title and URL stored trimmed, redirects to the goal page and shows "Resource added.". POSTed `goal` (another goal's pk), `created_at` and `updated_at` are ignored. A scheme-less `example.com` is stored as `https://example.com`. With `enforce_csrf_checks`, a POST without a token is 403 and stores nothing; with the page's token it is 302.
+- [x] 2. **Create POST: valid data and CSRF.** A valid POST creates the resource on the goal in the URL with title and URL stored trimmed, redirects to the goal page and shows "Resource added.". POSTed `goal` (another goal's pk), `created_at` and `updated_at` are ignored. A scheme-less `example.com` is stored as `https://example.com`. With `enforce_csrf_checks`, a POST without a token is 403 and stores nothing; with the page's token it is 302.
 
   — test: `resources/tests/test_views.py` (`ResourceCreateTests`, `ResourceCreateCsrfTests`) — impl: `resources/views.py` (`get_form_kwargs` instance with the goal, `success_message`, mixin `get_success_url`) — covers: AC10, AC11, AC19
 

@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.http import Http404
 from django.shortcuts import resolve_url
-from django.test import RequestFactory, TestCase
+from django.test import Client, RequestFactory, TestCase
 from django.urls import get_resolver, reverse
 from django.views.generic.detail import SingleObjectMixin
 from django.views.generic.list import MultipleObjectMixin
@@ -131,6 +131,95 @@ class ResourceCreateAccessTests(TestCase):
                 self.assertEqual(response.status_code, 404)
                 self.assertEqual(response.content, missing.content)
                 self.assertFalse(Resource.objects.exists())
+
+
+class ResourceCreateTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.client.force_login(self.alice)
+        self.path = f"/goals/{self.goal.pk}/resources/new/"
+
+    def test_a_valid_post_attaches_the_resource_to_the_goal(self):
+        response = self.client.post(
+            self.path,
+            valid_data(url="  https://www.djangoproject.com/  ", title="  Docs  "),
+        )
+
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        (resource,) = Resource.objects.all()
+        self.assertEqual(resource.goal, self.goal)
+        self.assertEqual(resource.url, "https://www.djangoproject.com/")
+        self.assertEqual(resource.title, "Docs")
+        self.assertEqual(resource.type, Resource.Type.DOC)
+        self.assertContains(self.client.get(response.url), "Resource added.")
+
+    def test_a_url_without_a_scheme_is_stored_as_https(self):
+        # Django's URLField form field assumes https; pinned so a change shows.
+        self.client.post(self.path, valid_data(url="example.com/guide"))
+
+        self.assertEqual(Resource.objects.get().url, "https://example.com/guide")
+
+    def test_a_posted_goal_or_timestamps_are_ignored(self):
+        other = Goal.objects.create(owner=self.alice, title="Other")
+        bobs = Goal.objects.create(
+            owner=get_user_model().objects.create_user("bob"), title="B"
+        )
+        for goal in (other, bobs):
+            with self.subTest(goal=goal.title):
+                self.client.post(
+                    self.path,
+                    valid_data(
+                        url=f"https://example.com/{goal.pk}",
+                        goal=goal.pk,
+                        created_at="2000-01-01 00:00",
+                        updated_at="2000-01-01 00:00",
+                    ),
+                )
+
+                resource = Resource.objects.latest("id")
+                self.assertEqual(resource.goal, self.goal)
+                self.assertGreater(resource.created_at.year, 2000)
+                self.assertGreater(resource.updated_at.year, 2000)
+        self.assertEqual(Resource.objects.filter(goal=self.goal).count(), 2)
+        self.assertFalse(Resource.objects.exclude(goal=self.goal).exists())
+
+
+class ResourceCreateCsrfTests(TestCase):
+    # The default test client skips CSRF checks; this one enforces them.
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=alice, title="Learn Django")
+        self.csrf_client = Client(enforce_csrf_checks=True)
+        self.csrf_client.force_login(alice)
+        self.path = f"/goals/{self.goal.pk}/resources/new/"
+
+    def token(self):
+        # GET first: sets the CSRF cookie and yields the form's token.
+        page = get_page(self.csrf_client, self.path)
+        ((_, inputs),) = page.forms("main")
+        return [a["value"] for a in inputs if a.get("name") == "csrfmiddlewaretoken"]
+
+    def test_a_post_without_a_token_is_rejected(self):
+        self.token()
+
+        response = self.csrf_client.post(self.path, valid_data())
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(Resource.objects.exists())
+
+    def test_a_post_with_the_forms_token_succeeds(self):
+        tokens = self.token()
+        self.assertEqual(len(tokens), 1)
+
+        response = self.csrf_client.post(
+            self.path, valid_data(csrfmiddlewaretoken=tokens[0])
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Resource.objects.exists())
 
 
 class ResourceViewsScopingTests(TestCase):

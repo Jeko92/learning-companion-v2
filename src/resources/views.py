@@ -1,4 +1,5 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.messages.views import SuccessMessageMixin
 from django.shortcuts import get_object_or_404
 from django.views.generic import CreateView
 
@@ -17,6 +18,10 @@ class OwnResourcesMixin(LoginRequiredMixin):
 
     def get_queryset(self):
         return Resource.objects.owned_by(self.request.user).select_related("goal")
+
+    def get_success_url(self):
+        # Resources have no page of their own: back to the goal after a change.
+        return self.object.goal.get_absolute_url()
 
 
 class GoalResourcesMixin(OwnResourcesMixin):
@@ -41,6 +46,12 @@ class GoalResourcesMixin(OwnResourcesMixin):
         return super().get_context_data(goal=self.goal, **kwargs)
 
 
-class ResourceCreateView(GoalResourcesMixin, CreateView):
+class ResourceCreateView(GoalResourcesMixin, SuccessMessageMixin, CreateView):
     form_class = ResourceForm
     template_name = "resources/resource_form.html"
+    success_message = "Resource added."
+
+    def get_form_kwargs(self):
+        # The goal is the one from the URL (already owner-checked), set before
+        # validation, so nothing posted can choose it.
+        return {**super().get_form_kwargs(), "instance": Resource(goal=self.goal)}
