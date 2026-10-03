@@ -1,5 +1,6 @@
 import re
 from datetime import UTC, datetime
+from html.parser import HTMLParser
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -13,7 +14,7 @@ from django.views.generic import DetailView
 from django.views.generic.detail import SingleObjectMixin
 from django.views.generic.list import MultipleObjectMixin
 
-from core.tests.html import PageParser
+from core.tests.html import VOID_ELEMENTS, PageParser, collapse
 from goals import urls as goal_urls
 from goals.models import Goal
 from goals.views import OwnGoalsMixin
@@ -867,6 +868,36 @@ def add_resource(goal, **fields):
     return Resource.objects.create(goal=goal, **fields)
 
 
+class LabelledSectionText(HTMLParser):
+    """The text inside the element labelled by `heading_id` (its
+    aria-labelledby), so a check can't pick up the same words elsewhere on
+    the page."""
+
+    def __init__(self, heading_id):
+        super().__init__()
+        self.heading_id = heading_id
+        self.depth = 0
+        self.pieces = []
+
+    def handle_starttag(self, tag, attrs):
+        if self.depth:
+            if tag not in VOID_ELEMENTS:
+                self.depth += 1
+        elif dict(attrs).get("aria-labelledby") == self.heading_id:
+            self.depth = 1
+
+    def handle_endtag(self, tag):
+        if self.depth:
+            self.depth -= 1
+
+    def handle_data(self, data):
+        if self.depth:
+            self.pieces.append(data)
+
+    def text(self):
+        return collapse(self.pieces)
+
+
 class GoalDetailResourcesTests(TestCase):
     def setUp(self):
         self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
@@ -874,9 +905,23 @@ class GoalDetailResourcesTests(TestCase):
         self.client.force_login(self.alice)
         self.path = self.goal.get_absolute_url()
 
-    def resources_text(self, page):
-        # The Resources section comes after the Sessions one.
-        return page.text("main").split("Resources", 1)[1]
+    def resources_text(self):
+        section = LabelledSectionText("resources-heading")
+        section.feed(self.client.get(self.path).content.decode())
+        return section.text()
+
+    def test_the_section_is_found_by_its_heading_not_by_a_word(self):
+        # "Resources" elsewhere on the page must not shift what is checked.
+        self.goal.title = "Resources for Django"
+        self.goal.save()
+        add_session(self.goal, notes="Resources: none yet")
+        add_resource(self.goal, title="A tutorial")
+
+        text = self.resources_text()
+
+        self.assertTrue(text.startswith("Resources Articles A tutorial Delete"), text)
+        self.assertNotIn("for Django", text)
+        self.assertNotIn("none yet", text)
 
     def test_resources_are_grouped_by_type_in_a_fixed_order(self):
         add_resource(self.goal, title="The docs", type=Resource.Type.DOC)
@@ -884,7 +929,7 @@ class GoalDetailResourcesTests(TestCase):
         add_resource(self.goal, title="A tutorial", type=Resource.Type.ARTICLE)
         add_resource(self.goal, title="Newer talk", type=Resource.Type.VIDEO)
 
-        text = self.resources_text(get_page(self.client, self.path))
+        text = self.resources_text()
 
         self.assertIn(
             "Articles A tutorial Delete Videos Newer talk Delete Older talk Delete "
@@ -927,7 +972,7 @@ class GoalDetailResourcesTests(TestCase):
     def test_a_goal_without_resources_says_so_and_offers_the_form(self):
         page = get_page(self.client, self.path)
 
-        self.assertIn("No resources yet.", self.resources_text(page))
+        self.assertIn("No resources yet.", self.resources_text())
         self.assertTrue(page.forms("main"))
 
     def test_the_attach_form_posts_to_the_create_route(self):

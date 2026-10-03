@@ -35,8 +35,8 @@
       {% endfor %}
     </ul>
   </section>
-  <section class="mt-10">
-    <h2 class="text-lg font-semibold">Resources</h2>
+  <section class="mt-10" aria-labelledby="resources-heading">
+    <h2 id="resources-heading" class="text-lg font-semibold">Resources</h2>
     {% for heading, resources in resource_groups %}
       <h3 class="mt-4 font-medium">{{ heading }}</h3>
       <ul class="mt-2 space-y-3">
