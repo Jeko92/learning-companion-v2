@@ -25,6 +25,7 @@ class Resource(models.Model):
         "goals.Goal", on_delete=models.CASCADE, related_name="resources"
     )
     url = HttpURLField(max_length=2048)
+    title = models.CharField(max_length=200)
 
     class Meta:
         constraints = (
@@ -37,11 +38,14 @@ class Resource(models.Model):
             ),
         )
 
+    def trim(self):
+        self.url, self.title = strip(self.url), strip(self.title)
+
     def clean_fields(self, exclude=None):
         # Model fields don't strip: trim first, so "  " fails as blank.
-        self.url = strip(self.url)
+        self.trim()
         super().clean_fields(exclude=exclude)
 
     def save(self, *args, **kwargs):
-        self.url = strip(self.url)
+        self.trim()
         super().save(*args, **kwargs)

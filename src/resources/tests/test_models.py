@@ -12,9 +12,9 @@ _numbers = count(1)
 
 
 def build_resource(goal, **fields):
-    """An unsaved resource with a distinct URL, unless given."""
+    """An unsaved resource with a distinct URL and title, unless given."""
     n = next(_numbers)
-    defaults = {"url": f"https://example.com/{n}"}
+    defaults = {"url": f"https://example.com/{n}", "title": f"Resource {n}"}
     return resource_models.Resource(goal=goal, **{**defaults, **fields})
 
 
@@ -142,3 +142,40 @@ class ResourceUrlTests(TestCase):
             with self.subTest(url=url):
                 resources.update(url=url)
                 self.assertEqual(resources.get().url, url)
+
+
+class ResourceTitleTests(TestCase):
+    def setUp(self):
+        fields = {f.name for f in resource_models.Resource._meta.get_fields()}
+        self.assertIn("title", fields)
+        alice = get_user_model().objects.create_user("alice")
+        self.goal = Goal.objects.create(owner=alice, title="Learn Django")
+
+    def test_the_title_is_a_required_short_text(self):
+        title = resource_models.Resource._meta.get_field("title")
+
+        self.assertIsInstance(title, models.CharField)
+        self.assertEqual(title.max_length, 200)
+        self.assertIs(title.blank, False)
+
+    def test_the_title_is_stored_trimmed(self):
+        resource = build_resource(self.goal, title="  Read the docs ")
+        resource.full_clean()
+        self.assertEqual(resource.title, "Read the docs")
+
+        saved = make_resource(self.goal, title=" Watch the talk  ")
+        saved.refresh_from_db()
+        self.assertEqual(saved.title, "Watch the talk")
+
+    def test_blank_or_too_long_titles_are_rejected(self):
+        for title in ("", "   ", "x" * 201):
+            with self.subTest(title=title[:5]):
+                resource = build_resource(self.goal, title=title)
+
+                with self.assertRaises(ValidationError) as caught:
+                    resource.full_clean()
+
+                self.assertIn("title", caught.exception.error_dict)
+
+    def test_a_200_character_title_is_accepted(self):
+        build_resource(self.goal, title="x" * 200).full_clean()
