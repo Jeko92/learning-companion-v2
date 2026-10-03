@@ -95,7 +95,7 @@
 ## Steps
 
 - [x] 1. **Refactor: extract `TagListField` and `tags_as_text` into `tags/forms.py`, and switch `ProfileForm` to them.** Profile messages and behaviour stay unchanged. Also generalise the `reject_commas` docstring ("separator for typed tag lists"). No new test; this is a pure refactor (`refactor(session-crud): ...`) that must keep `profiles.tests` and the full suite green. — test: existing `profiles/tests/test_forms.py`, `profiles/tests/test_views.py` — impl: `tags/forms.py` (new), `profiles/forms.py`, `tags/models.py` — covers: groundwork for AC16, AC17
-- [ ] 2. **Create page, plus access and the scoping guard.** For the owner, GET `/goals/<goal_pk>/sessions/new/` shows a form with:
+- [x] 2. **Create page, plus access and the scoping guard.** For the owner, GET `/goals/<goal_pk>/sessions/new/` shows a form with:
   - `date` (`type="date"`, value today in `YYYY-MM-DD`)
   - `duration_minutes`
   - `notes` (textarea)

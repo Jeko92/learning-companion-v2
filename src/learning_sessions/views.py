@@ -1,0 +1,47 @@
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.messages.views import SuccessMessageMixin
+from django.shortcuts import get_object_or_404
+from django.views.generic import CreateView
+
+from goals.models import Goal
+from learning_sessions.forms import LearningSessionForm
+from learning_sessions.models import LearningSession
+
+
+class OwnSessionsMixin(LoginRequiredMixin):
+    """Only ever the logged-in user's own sessions, via
+    LearningSession.objects.owned_by.
+
+    The same rules as goals.views.OwnGoalsMixin: list it *first* in a view's
+    bases and never set `model` on a session view, or Django's own
+    get_queryset() wins and could serve every user's sessions."""
+
+    def get_queryset(self):
+        return LearningSession.objects.owned_by(self.request.user)
+
+
+class GoalSessionsMixin(OwnSessionsMixin):
+    """For the routes under /goals/<goal_pk>/sessions/: the goal is looked up
+    through its owner as soon as the login check has passed, before any form
+    handling, so another user's goal is a 404 (never a page of form errors),
+    exactly like a missing one."""
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            self.goal = self.get_goal()
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_goal(self):
+        goals = Goal.objects.owned_by(self.request.user)
+        return get_object_or_404(goals, pk=self.kwargs["goal_pk"])
+
+    def get_queryset(self):
+        return super().get_queryset().filter(goal=self.goal)
+
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(goal=self.goal, **kwargs)
+
+
+class SessionCreateView(GoalSessionsMixin, SuccessMessageMixin, CreateView):
+    form_class = LearningSessionForm
+    template_name = "learning_sessions/session_form.html"
