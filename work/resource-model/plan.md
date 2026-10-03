@@ -86,7 +86,7 @@
   - `Resource.objects.all()` is newest first, with ties on `created_at` broken by `-id`.
 
   — test: `ResourceTimestampTests`, `ResourceOrderingTests` — impl: `resources/models.py` (timestamps, `Meta.ordering`), regenerate migration — covers: AC9
-- [ ] 10. **Display.** `str(Resource(goal=..., title="Read the docs", url=...)) == "Read the docs"`. — test: `ResourceStrTests` — impl: `resources/models.py` (`__str__`) — covers: AC10
+- [x] 10. **Display.** `str(Resource(goal=..., title="Read the docs", url=...)) == "Read the docs"`. — test: `ResourceStrTests` — impl: `resources/models.py` (`__str__`) — covers: AC10
 - [ ] 11. **`owned_by`.**
   - `Resource.objects.owned_by(alice)` returns exactly alice's resources across her goals, never bob's.
   - It chains: `.owned_by(alice).filter(goal=goal)`.

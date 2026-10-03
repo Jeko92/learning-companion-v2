@@ -294,3 +294,14 @@ class ResourceTimestampTests(TestCase):
         )
 
         self.assertEqual(list(Resource.objects.all()), [c, b, a])
+
+
+class ResourceStrTests(TestCase):
+    def test_a_resource_reads_as_its_title(self):
+        owner = get_user_model().objects.create_user("alice")
+        goal = Goal(owner=owner, title="Learn Django")
+        resource = resource_models.Resource(
+            goal=goal, title="Read the docs", url="https://docs.djangoproject.com/"
+        )
+
+        self.assertEqual(str(resource), "Read the docs")

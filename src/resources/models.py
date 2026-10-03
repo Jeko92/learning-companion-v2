@@ -66,6 +66,9 @@ class Resource(models.Model):
             ),
         )
 
+    def __str__(self):
+        return self.title
+
     def trim(self):
         self.url, self.title = strip(self.url), strip(self.title)
 
