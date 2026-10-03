@@ -172,7 +172,7 @@
   - No N+1: the query count is the same for 1 session with 1 tag and for 6 sessions with 3 tags each, pinned with `assertNumQueries` (`with_tags()` prefetch and one `Sum()` aggregate).
 
   — test: `goals/tests/test_views.py` (`GoalDetailSessionsTests`, `GoalDetailQueryCountTests`) — impl: `goals/views.py` (`GoalDetailView.get_context_data`), `templates/goals/goal_detail.html` — covers: AC5, AC6, AC7, AC10, AC27
-- [ ] 11. **Goal delete warning.**
+- [x] 11. **Goal delete warning.**
   - With 3 sessions, the goal's delete page says "Its 3 sessions will be deleted too.". With 1: "Its 1 session will be deleted too.".
   - With none: no warning.
   - Another goal's sessions (alice's other goal, bob's) aren't counted.

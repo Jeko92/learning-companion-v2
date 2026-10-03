@@ -93,3 +93,13 @@ class GoalDeleteView(OwnGoalsMixin, SuccessMessageMixin, DeleteView):
         # A fixed text: DeleteView's cleaned_data is empty, so a %(title)s
         # success_message would raise KeyError after the row is gone.
         return "Goal deleted."
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # The sessions that cascade with the goal, for the warning.
+        context["session_count"] = (
+            LearningSession.objects.owned_by(self.request.user)
+            .filter(goal=self.object)
+            .count()
+        )
+        return context

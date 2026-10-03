@@ -3,6 +3,9 @@
 {% block content %}
   <h1 class="text-2xl font-bold">Delete “{{ object.title }}”?</h1>
   <p class="mt-2 text-slate-500">This can't be undone.</p>
+  {% if session_count %}
+    <p class="mt-2 font-medium text-red-700">Its {{ session_count }} session{{ session_count|pluralize }} will be deleted too.</p>
+  {% endif %}
   <form method="post" action="{% url 'goals:delete' object.pk %}" class="mt-6">
     {% csrf_token %}
     <button type="submit" class="font-medium text-red-700">Delete</button>
