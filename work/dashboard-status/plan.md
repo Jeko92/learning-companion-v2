@@ -45,7 +45,7 @@
   - A user with one goal doesn't see that link.
 
   — test: `src/dashboard/tests/test_views.py` (`DashboardEmptyStateTests`) — impl: `src/templates/dashboard/dashboard.html` — covers: AC7
-- [ ] 8. **Fixed query count.**
+- [x] 8. **Fixed query count.**
   - The page runs the same number of queries for 1 goal and for 30 goals spread over the statuses (`CaptureQueriesContext`).
   - It is pinned with `assertNumQueries(3)`, commented as session, user and the grouped status count. If the actual number differs because of middleware or the nav, use the real count and list each query in the comment.
   - This test is expected to be green on first run with step 5's code. It stays as a regression pin, and the commit notes this.

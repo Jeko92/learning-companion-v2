@@ -2,8 +2,10 @@ from html.parser import HTMLParser
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.shortcuts import resolve_url
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from core.tests.html import VOID_ELEMENTS, PageParser, collapse
@@ -206,3 +208,30 @@ class DashboardEmptyStateTests(TestCase):
         page = get_page(self.client, "/dashboard/")
 
         self.assertNotIn("Create your first goal", page.text("main"))
+
+
+class DashboardQueryCountTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.few = User.objects.create_user("alice", password=PASSWORD)
+        Goal.objects.create(owner=self.few, title="Only one")
+        self.many = User.objects.create_user("carol", password=PASSWORD)
+        for n in range(30):
+            status = Goal.Status.values[n % len(Goal.Status.values)]
+            Goal.objects.create(owner=self.many, title=f"Goal {n}", status=status)
+
+    def queries_for(self, user):
+        self.client.force_login(user)
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.get("/dashboard/")
+        self.assertEqual(response.status_code, 200)
+        return len(queries)
+
+    def test_the_query_count_does_not_grow_with_the_number_of_goals(self):
+        self.assertEqual(self.queries_for(self.many), self.queries_for(self.few))
+
+    def test_the_dashboard_takes_a_fixed_number_of_queries(self):
+        self.client.force_login(self.many)
+        # Login session, user, the grouped status count.
+        with self.assertNumQueries(3):
+            self.client.get("/dashboard/")
