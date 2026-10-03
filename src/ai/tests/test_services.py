@@ -267,3 +267,58 @@ class CompleteEmptyReplyTests(NoNetworkTestCase):
                 )
                 (record,) = logs.records
                 self.assertIn("empty reply", record.getMessage())
+
+
+@override_settings(OPENAI_API_KEY=KEY_LIKE)
+class CompleteJsonErrorTests(NoNetworkTestCase):
+    def complete_json_with(self, client):
+        with patch("ai.services.get_client", return_value=client):
+            return self.services.complete_json(
+                "Be brief.", "Hi", name="steps", schema=STEPS_SCHEMA
+            )
+
+    def test_every_sdk_error_is_the_same_safe_error_logged_once_by_type(self):
+        for error in sdk_errors():
+            with self.subTest(error=type(error).__name__):
+                with (
+                    self.assertLogs("ai.services", "ERROR") as logs,
+                    self.assertRaises(self.services.AIServiceError) as raised,
+                ):
+                    self.complete_json_with(FakeClient(error=error))
+
+                self.assertEqual(str(raised.exception), CompleteErrorTests.SAFE_MESSAGE)
+                self.assertIs(raised.exception.__cause__, error)
+                (record,) = logs.records
+                text = record.getMessage()
+                self.assertIn(type(error).__name__, text)
+                self.assertNotIn(KEY_LIKE, text)
+                self.assertNotIn(str(error), text)
+                self.assertIsNone(record.exc_info)
+
+    def test_a_reply_without_content_is_the_empty_reply_error(self):
+        refusal = SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content=None, refusal="I can't help.")
+                )
+            ]
+        )
+        cases = {
+            "no choices": response(),
+            "no content": response(None),
+            "blank content": response(" \n\t "),
+            "a refusal": refusal,
+        }
+        for case, reply in cases.items():
+            with self.subTest(case=case):
+                with (
+                    self.assertLogs("ai.services", "ERROR") as logs,
+                    self.assertRaises(self.services.AIServiceError) as raised,
+                ):
+                    self.complete_json_with(FakeClient(reply=reply))
+
+                self.assertEqual(
+                    str(raised.exception), "The AI service returned an empty reply."
+                )
+                (record,) = logs.records
+                self.assertIn("empty reply", record.getMessage())
