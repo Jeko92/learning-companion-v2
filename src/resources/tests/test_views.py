@@ -222,6 +222,100 @@ class ResourceCreateCsrfTests(TestCase):
         self.assertTrue(Resource.objects.exists())
 
 
+class ResourceCreateValidationTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.client.force_login(self.alice)
+        self.path = f"/goals/{self.goal.pk}/resources/new/"
+
+    def test_invalid_input_is_rejected_and_nothing_is_saved(self):
+        required = "This field is required."
+        bad_url = "Enter a valid URL."
+        cases = [
+            ("no url", {"url": ""}, "url", required),
+            ("no title", {"title": ""}, "title", required),
+            ("blank title", {"title": "   "}, "title", required),
+            ("malformed url", {"url": "https://"}, "url", bad_url),
+            ("javascript url", {"url": "javascript:alert(1)"}, "url", bad_url),
+            ("data url", {"url": "data:text/html,hi"}, "url", bad_url),
+            ("ftp url", {"url": "ftp://example.com/file"}, "url", bad_url),
+            ("long title", {"title": "x" * 201}, "title",
+             "Ensure this value has at most 200 characters (it has 201)."),
+            ("long url", {"url": "https://example.com/" + "a" * 2029}, "url",
+             "Ensure this value has at most 2048 characters (it has 2049)."),
+            ("unknown type", {"type": "podcast"}, "type",
+             "Select a valid choice. podcast is not one of the available choices."),
+        ]  # fmt: skip
+        for case, changes, field, message in cases:
+            with self.subTest(case=case):
+                response = self.client.post(self.path, valid_data(**changes))
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "resources/resource_form.html")
+                # assertIn, not assertFormError: an over-long URL also fails
+                # URLValidator's own length check, so it gets two errors.
+                self.assertIn(message, response.context["form"].errors[field])
+                self.assertFalse(Resource.objects.exists())
+
+    def test_a_url_with_another_scheme_gets_exactly_one_error(self):
+        for url in ("javascript:alert(1)", "data:text/html,hi", "ftp://example.com/f"):
+            with self.subTest(url=url):
+                response = self.client.post(self.path, valid_data(url=url))
+
+                form = response.context["form"]
+                self.assertEqual(form.errors.get_json_data()["url"], [
+                    {"message": "Enter a valid URL.", "code": "invalid"}
+                ])  # fmt: skip
+                self.assertEqual(list(form.errors), ["url"])
+
+    def test_an_invalid_post_keeps_the_entered_values(self):
+        response = self.client.post(
+            self.path, valid_data(title="Django docs", url="ftp://example.com/x")
+        )
+
+        page = PageParser()
+        page.feed(response.content.decode())
+        values = {
+            a.get("name"): a.get("value") for t, a in page.elements if t == "input"
+        }
+        self.assertEqual(values["title"], "Django docs")
+        self.assertEqual(values["url"], "ftp://example.com/x")
+        selected = [a.get("value") for t, a in page.elements
+                    if t == "option" and "selected" in a]  # fmt: skip
+        self.assertEqual(selected, ["doc"])
+
+    def test_an_entered_title_is_escaped_when_the_form_comes_back(self):
+        response = self.client.post(self.path, valid_data(title=PAYLOAD, url=""))
+
+        self.assertNotContains(response, PAYLOAD)
+        self.assertContains(response, ESCAPED)
+
+    def test_boundary_values_are_accepted(self):
+        long_url = "https://example.com/" + "a" * 2028
+        self.assertEqual(len(long_url), 2048)
+        cases = {
+            "200-character title": valid_data(title="x" * 200),
+            "2,048-character url": valid_data(url=long_url),
+            "uppercase scheme": valid_data(url="HTTPS://EXAMPLE.COM/upper"),
+            **{
+                f"type {value}": valid_data(url=f"https://example.com/{value}",
+                                            type=value)
+                for value in Resource.Type.values
+            },
+        }  # fmt: skip
+        for case, data in cases.items():
+            with self.subTest(case=case):
+                response = self.client.post(self.path, data)
+
+                self.assertRedirects(
+                    response,
+                    self.goal.get_absolute_url(),
+                    fetch_redirect_response=False,
+                )
+        self.assertEqual(Resource.objects.count(), len(cases))
+
+
 class ResourceViewsScopingTests(TestCase):
     def test_every_resource_view_scopes_through_the_own_resources_mixins(self):
         routes = {p.name: p for p in resource_routes()}

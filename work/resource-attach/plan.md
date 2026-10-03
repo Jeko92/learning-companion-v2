@@ -35,7 +35,7 @@
 
   — test: `resources/tests/test_views.py` (`ResourceCreateTests`, `ResourceCreateCsrfTests`) — impl: `resources/views.py` (`get_form_kwargs` instance with the goal, `success_message`, mixin `get_success_url`) — covers: AC10, AC11, AC19
 
-- [ ] 3. **Create POST: invalid and boundary values.** Each of these re-renders the create page (status 200) with a form error, keeps the entered values, and stores nothing: missing URL, missing title, whitespace-only title, malformed URL, `javascript:`, `data:` and `ftp:` URLs (each exactly one `url` error), a 201-character title, a 2,049-character URL, an unknown type. Accepted: a 200-character title, a 2,048-character URL, `HTTPS://…`, each of the four types. A re-rendered entered title containing `PAYLOAD` is escaped.
+- [x] 3. **Create POST: invalid and boundary values.** Each of these re-renders the create page (status 200) with a form error, keeps the entered values, and stores nothing: missing URL, missing title, whitespace-only title, malformed URL, `javascript:`, `data:` and `ftp:` URLs (each exactly one `url` error), a 201-character title, a 2,049-character URL, an unknown type. Accepted: a 200-character title, a 2,048-character URL, `HTTPS://…`, each of the four types. A re-rendered entered title containing `PAYLOAD` is escaped.
 
   — test: `resources/tests/test_views.py` (`ResourceCreateValidationTests`) — impl: whatever the tests show is missing (expected none beyond step 2; if all pass immediately, the step is a characterisation of the model validators and is committed as tests only, saying so in the commit body) — covers: AC12, AC13, AC14, AC20
 
