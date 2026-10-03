@@ -12,6 +12,12 @@ from goals.models import Goal
 PASSWORD = "Tr4ck-Learning!"
 
 
+def get_page(client, path):
+    page = PageParser()
+    page.feed(client.get(path).content.decode())
+    return page
+
+
 def login_redirect(path):
     return f"{resolve_url(settings.LOGIN_URL)}?next={path}"
 
@@ -172,3 +178,31 @@ class DashboardStatusCountsTests(TestCase):
                 (goals, "Total"),
             ],
         )
+
+
+class DashboardEmptyStateTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.client.force_login(self.alice)
+
+    def test_without_goals_every_count_is_zero_and_a_create_link_is_shown(self):
+        bob = get_user_model().objects.create_user("bob")
+        Goal.objects.create(owner=bob, title="Bob's")
+
+        page = get_page(self.client, "/dashboard/")
+        section = status_section(self.client)
+
+        self.assertEqual(
+            section.rows[1:],
+            [["Planned", "0"], ["In progress", "0"], ["Done", "0"], ["Total", "0"]],
+        )
+        self.assertIn(
+            (reverse("goals:create"), "Create your first goal"), page.links("main")
+        )
+
+    def test_with_a_goal_the_create_link_is_not_shown(self):
+        Goal.objects.create(owner=self.alice, title="Learn Django")
+
+        page = get_page(self.client, "/dashboard/")
+
+        self.assertNotIn("Create your first goal", page.text("main"))
