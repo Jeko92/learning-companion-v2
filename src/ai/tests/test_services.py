@@ -69,6 +69,28 @@ class GetClientTests(NoNetworkTestCase):
         self.assertIs(client, client_class.return_value)
         self.assertIsInstance(client, MagicMock)
 
+    @override_settings(OPENAI_API_KEY="sk-test-client")
+    def test_the_retries_can_be_set_per_client(self):
+        with patch("ai.services.OpenAI") as client_class:
+            self.services.get_client(max_retries=0)
+
+        client_class.assert_called_once_with(
+            api_key="sk-test-client", timeout=30, max_retries=0
+        )
+
+
+class CompleteRetriesTests(NoNetworkTestCase):
+    def test_retries_are_set_per_call_and_default_to_2(self):
+        for kwargs, expected in (({}, 2), ({"max_retries": 0}, 0)):
+            with self.subTest(kwargs=kwargs):
+                with patch(
+                    "ai.services.get_client",
+                    return_value=FakeClient(reply=response("Hi")),
+                ) as get_client:
+                    self.services.complete("Be brief.", "Hi", **kwargs)
+
+                get_client.assert_called_once_with(max_retries=expected)
+
 
 class CompleteTests(NoNetworkTestCase):
     def complete_with(self, client, system="Be brief.", user="Summarise this."):

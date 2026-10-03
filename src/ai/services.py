@@ -18,20 +18,23 @@ class AIServiceError(Exception):
     SDK's error is chained as __cause__."""
 
 
-def get_client():
+def get_client(max_retries=MAX_RETRIES):
     """The only place an OpenAI client is built (tests replace this)."""
     return OpenAI(
         api_key=settings.OPENAI_API_KEY,
         timeout=TIMEOUT_SECONDS,
-        max_retries=MAX_RETRIES,
+        max_retries=max_retries,
     )
 
 
-def complete(system, user):
+def complete(system, user, *, max_retries=MAX_RETRIES):
     """Send one Chat Completions request (a system prompt, then the user's
-    message) and return the reply text, trimmed. Raises AIServiceError."""
+    message) and return the reply text, trimmed. Raises AIServiceError.
+
+    Calls made while a user waits on a page pass max_retries=0: each retry
+    can add a wait of up to two minutes (the SDK honours Retry-After)."""
     try:
-        reply = get_client().chat.completions.create(
+        reply = get_client(max_retries=max_retries).chat.completions.create(
             model=settings.OPENAI_MODEL,
             messages=[
                 {"role": "system", "content": system},

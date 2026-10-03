@@ -20,6 +20,19 @@
     <a href="{% url 'goals:delete' goal.pk %}" class="font-medium text-red-700 hover:underline">Delete goal</a>
     <a href="{% url 'goals:list' %}" class="font-medium hover:underline">Back to goals</a>
   </div>
+  <section class="mt-10" aria-labelledby="summary-heading">
+    <h2 id="summary-heading" class="text-lg font-semibold">Summary</h2>
+    {% if goal.summary %}
+      <p class="mt-2">{{ goal.summary|linebreaksbr }}</p>
+      <p class="mt-1 text-sm text-slate-500">Generated {{ goal.summary_generated_at|date:"j M Y, H:i" }}</p>
+    {% else %}
+      <p class="mt-2 text-slate-500">No summary yet.</p>
+    {% endif %}
+    <form method="post" action="{% url 'goals:summary' goal.pk %}" class="mt-4">
+      {% csrf_token %}
+      <button type="submit" class="font-medium hover:underline">{% if goal.summary %}Regenerate summary{% else %}Generate summary{% endif %}</button>
+    </form>
+  </section>
   <section class="mt-10">
     <h2 class="text-lg font-semibold">Sessions</h2>
     <p class="mt-1 text-sm text-slate-500">Total: {{ total_minutes|duration }}</p>
