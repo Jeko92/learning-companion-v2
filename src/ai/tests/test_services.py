@@ -322,3 +322,28 @@ class CompleteJsonErrorTests(NoNetworkTestCase):
                 )
                 (record,) = logs.records
                 self.assertIn("empty reply", record.getMessage())
+
+    def test_a_reply_that_is_not_a_json_object_is_an_unexpected_reply(self):
+        cases = {
+            "not JSON": "Read the docs SECRET-REPLY",
+            "truncated JSON": '{"steps": ["Read the docs SECRET-REPLY',
+            "a list": '["SECRET-REPLY"]',
+            "a string": '"SECRET-REPLY"',
+            "a number": "42",
+        }
+        for case, content in cases.items():
+            with self.subTest(case=case):
+                with (
+                    self.assertLogs("ai.services", "ERROR") as logs,
+                    self.assertRaises(self.services.AIServiceError) as raised,
+                ):
+                    self.complete_json_with(FakeClient(reply=response(content)))
+
+                self.assertEqual(
+                    str(raised.exception),
+                    "The AI service returned an unexpected reply.",
+                )
+                (record,) = logs.records
+                self.assertIn("unexpected reply", record.getMessage())
+                self.assertNotIn("SECRET-REPLY", record.getMessage())
+                self.assertIsNone(record.exc_info)

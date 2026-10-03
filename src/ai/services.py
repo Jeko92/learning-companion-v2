@@ -49,7 +49,15 @@ def complete_json(system, user, *, name, schema, max_retries=MAX_RETRIES):
             "json_schema": {"name": name, "schema": schema, "strict": True},
         },
     )
-    return json.loads(text)
+    try:
+        parsed = json.loads(text)
+    except ValueError:
+        parsed = None
+    if not isinstance(parsed, dict):
+        # Not the reply text: it is the model's output, not ours to log.
+        logger.error("OpenAI returned an unexpected reply (not a JSON object)")
+        raise AIServiceError("The AI service returned an unexpected reply.")
+    return parsed
 
 
 def _reply_text(system, user, *, max_retries, **options):
