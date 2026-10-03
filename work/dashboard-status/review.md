@@ -1,7 +1,18 @@
 # Review: dashboard-status
-## Verdict: FAIL
+## Verdict: PASS
 
-Both findings are low severity, but the verdict is FAIL on purpose. The first one puts wrong guidance into `CLAUDE.md`, which every later ticket reads as authoritative. #19 dashboard-hours does more grouped aggregation and would inherit the mistake. The two fixes are small (steps 13 and 14 in `plan.md`).
+The re-review covers only fix steps 13 and 14, base `316eb13`, commit `4d44b3f`. It confirms both findings from the first review are resolved, and finds nothing new.
+
+- **Finding 1, resolved.**
+  - `GoalStatusCountsTests.test_an_explicit_ordering_does_not_split_the_counts` chains `.order_by("-created_at")` before `status_counts()`.
+  - With `.order_by()` removed from `status_counts()`, the test fails (`planned` 1 instead of 2). This was shown during implementation and again by the code reviewer's mutation.
+  - The comments in `goals/models.py` and the test, and the `CLAUDE.md` Goals bullet, now state that `Meta.ordering` stays out of GROUP BY and that only an explicit `order_by()` splits the groups.
+- **Finding 2, resolved.** `LabelledSection.handle_endtag` checks `tag in HEADINGS` (`h1` to `h6`).
+- **Security re-review: no findings.** The query logic of `status_counts()` is unchanged; only its comment changed.
+- **Checks.** The suite passes (451 tests). `ruff check` and `ruff format --check` are clean. `makemigrations --check` reports no changes.
+
+## First review (FAIL, kept for the record)
+Both findings were low severity, but the verdict was FAIL on purpose. The first one put wrong guidance into `CLAUDE.md`, which every later ticket reads as authoritative. #19 dashboard-hours does more grouped aggregation and would have inherited the mistake.
 
 ## Acceptance criteria
 - AC1: anonymous user redirected to log in. Covered by `dashboard.tests.test_views.DashboardAccessTests.test_anonymous_visitors_are_sent_to_log_in`. PASS
@@ -31,4 +42,5 @@ The code reviewer also found these sound:
 - `{% if not total_goals %}` is correct.
 
 ## Reviewed
-commit 5cc67e8, 2026-10-03
+- First review: commit 5cc67e8, 2026-10-03.
+- Re-review: commit 4d44b3f, 2026-10-03.
