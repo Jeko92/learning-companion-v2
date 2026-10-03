@@ -3,7 +3,11 @@ import importlib.util
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import httpx2
+import openai
 from django.test import SimpleTestCase, override_settings
+
+KEY_LIKE = "sk-abc123secret"
 
 
 def response(*contents):
@@ -94,3 +98,63 @@ class CompleteTests(NoNetworkTestCase):
         client = FakeClient(reply=response("  Hi there \n"))
 
         self.assertEqual(self.complete_with(client), "Hi there")
+
+
+def sdk_errors():
+    """One of each kind of error the SDK raises, built as it builds them. The
+    authentication error's text echoes a key, as the real API's does."""
+    request = httpx2.Request("POST", "https://api.openai.com/v1/chat/completions")
+
+    def status(code):
+        return {"response": httpx2.Response(code, request=request), "body": None}
+
+    return [
+        openai.APIConnectionError(request=request),
+        openai.APITimeoutError(request=request),
+        openai.AuthenticationError(
+            f"Incorrect API key provided: {KEY_LIKE}", **status(401)
+        ),
+        openai.RateLimitError("Rate limit reached", **status(429)),
+        openai.InternalServerError("The server had an error", **status(500)),
+    ]
+
+
+@override_settings(OPENAI_API_KEY=KEY_LIKE)
+class CompleteErrorTests(NoNetworkTestCase):
+    SAFE_MESSAGE = "The AI service is unavailable right now. Please try again later."
+
+    def failing_with(self, error):
+        return patch("ai.services.get_client", return_value=FakeClient(error=error))
+
+    def test_every_sdk_error_becomes_one_safe_ai_service_error(self):
+        for error in sdk_errors():
+            with self.subTest(error=type(error).__name__):
+                with (
+                    self.failing_with(error),
+                    self.assertLogs("ai.services", "ERROR"),
+                    self.assertRaises(self.services.AIServiceError) as raised,
+                ):
+                    self.services.complete("Be brief.", "Hi")
+
+                self.assertEqual(str(raised.exception), self.SAFE_MESSAGE)
+                self.assertIs(raised.exception.__cause__, error)
+                self.assertNotIn(KEY_LIKE, str(raised.exception))
+
+    def test_each_failure_is_logged_once_by_type_without_the_key(self):
+        for error in sdk_errors():
+            with self.subTest(error=type(error).__name__):
+                with (
+                    self.failing_with(error),
+                    self.assertLogs("ai.services", "ERROR") as logs,
+                    self.assertRaises(self.services.AIServiceError),
+                ):
+                    self.services.complete("Be brief.", "Hi")
+
+                (record,) = logs.records
+                text = record.getMessage()
+                self.assertEqual(record.levelname, "ERROR")
+                self.assertIn(type(error).__name__, text)
+                self.assertNotIn(KEY_LIKE, text)
+                self.assertNotIn(str(error), text)
+                # No traceback either: the SDK error's text would be in it.
+                self.assertIsNone(record.exc_info)
