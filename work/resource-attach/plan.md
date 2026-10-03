@@ -63,7 +63,7 @@
 
   — test: `goals/tests/test_views.py` (`GoalDeleteResourceWarningTests`) — impl: `goals/views.py`, `templates/goals/goal_confirm_delete.html` — covers: AC18
 
-- [ ] 10. **Docs.** `CLAUDE.md`: the Resources bullet gets the routes, the two mixins and their rules, `ResourceForm` (allow-list, the duplicate check in `validate_constraints` plus the `IntegrityError` re-check in the view, replacing the "#14's attach form must check" note), `grouped_by_type()`, the goal page section and query count, the goal delete warning and `ResourceViewsScopingTests`; the Layout bullets for `src/resources/` and `src/templates/` add the views, URLs, form and `resources/` templates. No test (docs only).
+- [x] 10. **Docs.** `CLAUDE.md`: the Resources bullet gets the routes, the two mixins and their rules, `ResourceForm` (allow-list, the duplicate check in `validate_constraints` plus the `IntegrityError` re-check in the view, replacing the "#14's attach form must check" note), `grouped_by_type()`, the goal page section and query count, the goal delete warning and `ResourceViewsScopingTests`; the Layout bullets for `src/resources/` and `src/templates/` add the views, URLs, form and `resources/` templates. No test (docs only).
 
   — test: none (docs) — impl: `CLAUDE.md` — covers: AC21
 
