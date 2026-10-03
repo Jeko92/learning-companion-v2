@@ -208,3 +208,16 @@ class ResourceTypeTests(TestCase):
         self.assertIn(
             "Value 'book' is not a valid choice.", caught.exception.message_dict["type"]
         )
+
+    def test_the_database_only_takes_known_types(self):
+        resources = resource_models.Resource.objects.filter(
+            pk=make_resource(self.goal).pk
+        )
+        # update() skips the choices check: the database must refuse it.
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            resources.update(type="book")
+        # Every enum value passes, so the constraint's list keeps up with it.
+        for value in resource_models.Resource.Type.values:
+            with self.subTest(type=value):
+                resources.update(type=value)
+                self.assertEqual(resources.get().type, value)

@@ -22,7 +22,8 @@ class Resource(models.Model):
     Ownership is the goal's owner; look resources up through owned_by."""
 
     class Type(models.TextChoices):
-        # The value is stored, the label is shown.
+        # The value is stored, the label is shown. The type constraint in
+        # Meta lists the values too (a test keeps the two in step).
         ARTICLE = "article", "Article"
         VIDEO = "video", "Video"
         REPO = "repo", "Repo"
@@ -43,6 +44,12 @@ class Resource(models.Model):
                 condition=Q(url__istartswith="http://")
                 | Q(url__istartswith="https://"),
                 name="resources_resource_url_http",
+            ),
+            # Choices are only checked by full_clean()/forms; this stops
+            # update()/bulk_create() from storing any other type.
+            models.CheckConstraint(
+                condition=Q(type__in=("article", "video", "repo", "doc")),
+                name="resources_resource_type_valid",
             ),
         )
 
