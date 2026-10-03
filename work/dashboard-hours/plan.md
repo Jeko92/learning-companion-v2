@@ -82,7 +82,7 @@
   - The pin moves from 4 to 5 (comment: + per-week totals).
 
   — test: `src/dashboard/tests/test_views.py` (`DashboardHoursPerWeekTests`, `DashboardQueryCountTests`) — impl: `src/dashboard/views.py` (`WEEKS_SHOWN`, `week_rows`), `src/templates/dashboard/dashboard.html` — covers: AC5, AC6, AC7, AC9, AC10
-- [ ] 7. **The query count doesn't grow with sessions or tags.**
+- [x] 7. **The query count doesn't grow with sessions or tags.**
   - `DashboardQueryCountTests` setUp gives `few` (alice) 1 session with 1 tag.
   - `many` (carol) gets 40 sessions over 10 weeks and 6 tags, some with several tags and some untagged.
   - The existing equality test then also covers sessions and tags, and the page still takes 5 queries.

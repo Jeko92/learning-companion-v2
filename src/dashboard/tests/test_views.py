@@ -1,4 +1,4 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from html.parser import HTMLParser
 from unittest.mock import patch
 
@@ -331,10 +331,20 @@ class DashboardQueryCountTests(TestCase):
         User = get_user_model()
         self.few = User.objects.create_user("alice", password=PASSWORD)
         Goal.objects.create(owner=self.few, title="Only one")
+        add_session(self.few, 30, ["python"])
         self.many = User.objects.create_user("carol", password=PASSWORD)
         for n in range(30):
             status = Goal.Status.values[n % len(Goal.Status.values)]
             Goal.objects.create(owner=self.many, title=f"Goal {n}", status=status)
+        # 40 sessions over 10 weeks and 6 tags: some with several, some none.
+        tags = ["a", "b", "c", "d", "e", "f"]
+        for n in range(40):
+            add_session(
+                self.many,
+                15 + n,
+                tags[n % 6 : n % 6 + n % 3],
+                day=date(2026, 9, 30) - timedelta(days=n * 2),
+            )
 
     def queries_for(self, user):
         self.client.force_login(user)
