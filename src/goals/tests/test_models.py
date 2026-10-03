@@ -163,15 +163,16 @@ class GoalStatusCountsTests(TestCase):
         self.alice = User.objects.create_user("alice")
         self.bob = User.objects.create_user("bob")
 
-    def test_counts_every_status_in_choice_order_with_zeros(self):
-        # Distinct created_at values: the default ordering must not split groups.
-        for day, status in enumerate(
-            (Goal.Status.PLANNED, Goal.Status.DONE, Goal.Status.PLANNED), start=1
-        ):
+    def add_goals(self, *statuses):
+        # Distinct created_at values, so ordering by it could split a group.
+        for day, status in enumerate(statuses, start=1):
             goal = Goal.objects.create(owner=self.alice, title="Mine", status=status)
             Goal.objects.filter(pk=goal.pk).update(
                 created_at=datetime(2026, 1, day, tzinfo=UTC)
             )
+
+    def test_counts_every_status_in_choice_order_with_zeros(self):
+        self.add_goals(Goal.Status.PLANNED, Goal.Status.DONE, Goal.Status.PLANNED)
         for status in Goal.Status.values:
             Goal.objects.create(owner=self.bob, title="Bob's", status=status)
 
@@ -180,6 +181,16 @@ class GoalStatusCountsTests(TestCase):
         self.assertEqual(
             list(counts.items()), [("planned", 2), ("in-progress", 0), ("done", 1)]
         )
+
+    def test_an_explicit_ordering_does_not_split_the_counts(self):
+        # Meta.ordering stays out of GROUP BY, but an explicit order_by() on the
+        # incoming queryset would add its columns; status_counts() clears it.
+        self.add_goals(Goal.Status.PLANNED, Goal.Status.PLANNED, Goal.Status.DONE)
+
+        counts = Goal.objects.owned_by(self.alice).order_by("-created_at")
+        counts = counts.status_counts()
+
+        self.assertEqual(counts, {"planned": 2, "in-progress": 0, "done": 1})
 
     def test_a_user_without_goals_gets_zero_for_every_status_in_one_query(self):
         Goal.objects.create(owner=self.bob, title="Bob's")

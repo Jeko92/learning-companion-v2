@@ -83,7 +83,7 @@
   — test: none (docs) — impl: `CLAUDE.md`, `README.md` — covers: docs obligation from ticket notes
 
 ### Review findings (work/dashboard-status/review.md)
-- [ ] 13. **`status_counts()` holds on an explicitly ordered queryset.**
+- [x] 13. **`status_counts()` holds on an explicitly ordered queryset.**
   - Test: chain `.order_by("-created_at")` before `status_counts()` (goals with distinct `created_at` in the same status). It must still return one count per status. Removing the `.order_by()` call in `status_counts()` splits the groups, so this test fails without it.
   - It is expected to be green on first run with today's code (a regression pin for the call). Verify it goes red by temporarily removing `.order_by()`, and note this in the commit.
   - Drop the wrong "default ordering" comment from `GoalStatusCountsTests`.

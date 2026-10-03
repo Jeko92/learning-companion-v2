@@ -17,7 +17,8 @@ class GoalQuerySet(models.QuerySet):
 
     def status_counts(self):
         """Goals per status, every status in choice order (0 if none), one query."""
-        # order_by() drops the default ordering, which would split the groups.
+        # Meta.ordering stays out of GROUP BY, but an explicit order_by() on the
+        # incoming queryset would add its columns and split the groups.
         counted = self.order_by().values_list("status").annotate(count=Count("id"))
         found = dict(counted)
         return {status: found.get(status, 0) for status in Goal.Status.values}
