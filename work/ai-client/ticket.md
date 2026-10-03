@@ -10,7 +10,7 @@ As the developer of the learning companion, I want one small, tested service tha
 - [ ] AC1 `OPENAI_API_KEY` is required, like `SECRET_KEY`. If it is missing, empty or whitespace-only, settings fail to load with `ImproperlyConfigured` naming the variable. The value is read literally (a `$` is not expanded) and never appears in the error message.
 - [ ] AC2 `OPENAI_MODEL` is optional and defaults to `gpt-4.1-mini`. The value is trimmed, and an empty or whitespace-only value means the default.
 - [ ] AC3 Both are read through `resolve_settings()`: the process environment beats `.env`, and the given environment is never modified. `settings.OPENAI_API_KEY` and `settings.OPENAI_MODEL` come from the environment, and no key is hardcoded in `settings.py`.
-- [ ] AC4 `.env.example` documents `OPENAI_API_KEY` (an empty placeholder, never a real key) and `OPENAI_MODEL`, each with a comment line above it, and `test_env_example.py` lists them.
+- [ ] AC4 `.env.example` documents `OPENAI_API_KEY` (with the placeholder `sk-dummy`, never a real key) and `OPENAI_MODEL`, each with a comment line above it, and `test_env_example.py` lists them.
 - [ ] AC5 The `openai` SDK is in `requirements.txt`, range-pinned like the other dependencies.
 
 **Service (`ai` app)**
@@ -39,3 +39,4 @@ As the developer of the learning companion, I want one small, tested service tha
 - **Error path:** callers catch only `AIServiceError`; it hides the SDK's exception types from the views.
 - The issue's open questions (default model and env configuration, timeout and retries) were answered in the interview on 2026-10-03.
 - **Approval:** the user approved the acceptance criteria (AC1–AC12) on 2026-10-03, keeping the key required at startup.
+- **Placeholder:** after approval the user asked for `sk-dummy` as the `.env.example` key placeholder (AC4 updated). Their uncommitted `.env.example` edit was stashed (`git stash list`) because it turned `test_env_example` red and blocked commits; the AC4 step re-adds it test-first. The real key is in the local `.env`.
