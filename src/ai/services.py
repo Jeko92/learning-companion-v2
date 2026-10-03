@@ -16,3 +16,16 @@ def get_client():
         timeout=TIMEOUT_SECONDS,
         max_retries=MAX_RETRIES,
     )
+
+
+def complete(system, user):
+    """Send one Chat Completions request (a system prompt, then the user's
+    message) and return the reply text, trimmed."""
+    reply = get_client().chat.completions.create(
+        model=settings.OPENAI_MODEL,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+    )
+    return reply.choices[0].message.content.strip()
