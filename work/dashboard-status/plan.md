@@ -70,7 +70,7 @@
   - These tests are expected to be green on first run (regression pins for the redirect change); the commit notes this.
 
   — test: `src/accounts/tests/test_logout.py`, `src/core/tests/test_home.py` — impl: none expected — covers: AC11
-- [ ] 12. **Docs.**
+- [x] 12. **Docs.**
   - `CLAUDE.md`:
     - Auth bullet: `LOGIN_REDIRECT_URL = "dashboard:index"`.
     - A new Dashboard stack bullet: route, view, `status_counts()`, table and links, the empty state, the query count, and where #19 adds its sections.
