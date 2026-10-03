@@ -63,7 +63,7 @@
   - Green: `LOGIN_REDIRECT_URL = "dashboard:index"`, with its settings comment kept accurate.
 
   — test: `src/accounts/tests/test_signup.py`, `src/accounts/tests/test_login.py` — impl: `src/config/settings.py` — covers: AC9, AC10
-- [ ] 11. **Log-out and home are unchanged.**
+- [x] 11. **Log-out and home are unchanged.**
   - After a POST to `/accounts/logout/` the redirect target is `/`.
   - A logged-in GET to `/` returns 200 with `home.html` and isn't redirected.
   - Anonymous `/` is already covered by `core/tests/test_home.py`.
