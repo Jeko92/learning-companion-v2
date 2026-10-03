@@ -165,3 +165,30 @@ class GoalUrlTests(TestCase):
         )
 
         self.assertEqual(goal.get_absolute_url(), f"/goals/{goal.pk}/")
+
+
+class GoalSummaryFieldTests(TestCase):
+    def setUp(self):
+        self.goal = Goal.objects.create(
+            owner=get_user_model().objects.create_user("alice"), title="Learn Django"
+        )
+
+    def test_a_new_goal_has_no_summary(self):
+        self.goal.refresh_from_db()
+
+        self.assertEqual(getattr(self.goal, "summary", None), "")
+        self.assertIsNone(getattr(self.goal, "summary_generated_at", "missing"))
+
+    def test_a_summary_and_its_time_are_stored(self):
+        generated = datetime(2026, 3, 1, 9, 30, tzinfo=UTC)
+        self.goal.summary = "Five hours on Django so far.\nNext: forms."
+        self.goal.summary_generated_at = generated
+        self.goal.save()
+
+        # A fresh instance: refresh_from_db() would keep non-field attributes.
+        stored = Goal.objects.get(pk=self.goal.pk)
+        self.assertEqual(
+            getattr(stored, "summary", None),
+            "Five hours on Django so far.\nNext: forms.",
+        )
+        self.assertEqual(getattr(stored, "summary_generated_at", None), generated)

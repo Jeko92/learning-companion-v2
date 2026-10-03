@@ -37,6 +37,10 @@ class Goal(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # The latest AI progress summary (see goals.views.GoalSummaryView). Not in
+    # GoalForm; saved with update_fields, so it doesn't move updated_at.
+    summary = models.TextField(blank=True)
+    summary_generated_at = models.DateTimeField(null=True, blank=True)
 
     objects = GoalQuerySet.as_manager()
 
