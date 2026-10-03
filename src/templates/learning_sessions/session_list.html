@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1 class="text-2xl font-bold">Sessions</h1>
+  <p class="mt-2 text-sm text-slate-500">For {{ goal.title }}</p>
+  <div class="mt-4 flex gap-6">
+    <a href="{% url 'learning_sessions:create' goal.pk %}" class="font-medium hover:underline">Add session</a>
+    <a href="{{ goal.get_absolute_url }}" class="hover:underline">Back to goal</a>
+  </div>
+  <ul class="mt-6 space-y-3">
+    {% for session in session_list %}
+      {% include "learning_sessions/_session_item.html" %}
+    {% empty %}
+      <li>No sessions yet.</li>
+    {% endfor %}
+  </ul>
+  {% if is_paginated %}
+    <nav class="mt-6 flex gap-6 text-sm" aria-label="Pages">
+      {% if page_obj.has_previous %}
+        <a href="{% querystring page=page_obj.previous_page_number %}" class="hover:underline">Previous</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <a href="{% querystring page=page_obj.next_page_number %}" class="hover:underline">Next</a>
+      {% endif %}
+    </nav>
+  {% endif %}
+{% endblock %}

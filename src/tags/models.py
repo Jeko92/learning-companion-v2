@@ -27,8 +27,8 @@ def reject_invisible_characters(value):
 
 
 def reject_commas(value):
-    """The comma separates typed focus areas, so a name containing one could
-    not be typed back unchanged."""
+    """The comma separates typed tag lists (tags.forms.TagListField), so a
+    name containing one could not be typed back unchanged."""
     if "," in value:
         raise ValidationError("Tag names can't contain commas.", code="comma")
 
