@@ -322,13 +322,10 @@ class ProfilePrivacyTests(TestCase):
         )
 
         self.assertNotIn("select", [tag for tag, _ in page.elements])
-        self.assertFalse(
-            [
-                a
-                for tag, a in page.elements
-                if tag == "input" and a.get("type") == "checkbox"
-            ]
-        )
+        # Only the profile form: the layout's nav drawer toggle is a checkbox
+        # too (ui-polish), and has nothing to do with the tags on offer.
+        ((_, inputs),) = page.forms("main")
+        self.assertFalse([a for a in inputs if a.get("type") == "checkbox"])
 
 
 class ProfileEscapingTests(TestCase):
