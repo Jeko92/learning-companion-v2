@@ -152,7 +152,7 @@
   - Scoping set becomes `{"create", "edit", "delete"}`.
 
   — test: `learning_sessions/tests/test_views.py` (`SessionDeleteTests`, `SessionDeleteAccessTests`, `SessionDeleteCsrfTests`) — impl: `learning_sessions/views.py` (`SessionDeleteView`), `learning_sessions/urls.py`, `templates/learning_sessions/session_confirm_delete.html`, `learning_sessions/templatetags/session_format.py` (`duration` filter, first use) — covers: AC1, AC3, AC4, AC22, AC23, AC24, AC26, AC27
-- [ ] 9. **List page.** GET `/goals/<goal_pk>/sessions/`:
+- [x] 9. **List page.** GET `/goals/<goal_pk>/sessions/`:
   - Shows the goal title, a link back to the goal, an "Add session" link, and only that goal's sessions (not alice's other goal's, not bob's), newest first by date and then creation.
   - Each item shows the date, the duration formatted as "45 min", "2 h" or "1 h 30 min", tags in alphabetical order ignoring case, notes, and Edit and Delete links to the right URLs.
   - A goal with no sessions shows the empty state.

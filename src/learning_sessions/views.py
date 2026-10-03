@@ -1,7 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.shortcuts import get_object_or_404
-from django.views.generic import CreateView, DeleteView, UpdateView
+from django.views.generic import CreateView, DeleteView, ListView, UpdateView
 
 from goals.models import Goal
 from learning_sessions.forms import LearningSessionForm
@@ -46,6 +46,15 @@ class GoalSessionsMixin(OwnSessionsMixin):
 
     def get_context_data(self, **kwargs):
         return super().get_context_data(goal=self.goal, **kwargs)
+
+
+class SessionListView(GoalSessionsMixin, ListView):
+    template_name = "learning_sessions/session_list.html"
+    context_object_name = "session_list"
+    paginate_by = 20
+
+    def get_queryset(self):
+        return super().get_queryset().with_tags()
 
 
 class SessionCreateView(GoalSessionsMixin, SuccessMessageMixin, CreateView):

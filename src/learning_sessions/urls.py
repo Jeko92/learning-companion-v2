@@ -7,6 +7,7 @@ app_name = "learning_sessions"
 # Shallow nesting: the routes that need the goal (list, create) sit under it,
 # the ones for one session (edit, delete) take only the session's pk.
 urlpatterns = [
+    path("goals/<int:goal_pk>/sessions/", views.SessionListView.as_view(), name="list"),
     path(
         "goals/<int:goal_pk>/sessions/new/",
         views.SessionCreateView.as_view(),

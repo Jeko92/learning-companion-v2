@@ -1,11 +1,14 @@
+import re
 from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.http import Http404
 from django.shortcuts import resolve_url
 from django.test import Client, RequestFactory, TestCase, override_settings
+from django.test.utils import CaptureQueriesContext
 from django.urls import get_resolver, reverse
 from django.utils import timezone
 from django.views.generic.detail import SingleObjectMixin
@@ -708,12 +711,171 @@ class SessionDeleteCsrfTests(TestCase):
         self.assertFalse(LearningSession.objects.exists())
 
 
+class SessionListTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.alice = User.objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.client.force_login(self.alice)
+        self.path = f"/goals/{self.goal.pk}/sessions/"
+
+    def test_the_list_has_a_route_under_the_goal(self):
+        self.assertEqual(
+            reverse("learning_sessions:list", args=[self.goal.pk]), self.path
+        )
+
+    def test_the_page_names_the_goal_and_links_back_and_to_add(self):
+        response = self.client.get(self.path)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "learning_sessions/session_list.html")
+        page = get_page(self.client, self.path)
+
+        self.assertIn("Learn Django", page.text("main"))
+        links = page.links("main")
+        self.assertIn((self.goal.get_absolute_url(), "Back to goal"), links)
+        self.assertIn((f"{self.path}new/", "Add session"), links)
+
+    def test_only_this_goals_sessions_newest_first(self):
+        other = Goal.objects.create(owner=self.alice, title="Other")
+        bobs = Goal.objects.create(
+            owner=get_user_model().objects.create_user("bob"), title="B"
+        )
+        create_session(self.goal, date="2026-02-01", notes="oldest")
+        create_session(self.goal, date="2026-03-01", notes="earlier entry")
+        create_session(self.goal, date="2026-03-01", notes="later entry")
+        create_session(other, notes="other goal")
+        create_session(bobs, notes="bobs goal")
+
+        text = get_page(self.client, self.path).text("main")
+
+        self.assertNotIn("other goal", text)
+        self.assertNotIn("bobs goal", text)
+        positions = [text.index(n) for n in ("later entry", "earlier entry", "oldest")]
+        self.assertEqual(positions, sorted(positions))
+
+    def test_each_session_shows_its_details_and_links(self):
+        session = create_session(
+            self.goal,
+            tags=("zebra", "Django", "apple"),
+            duration_minutes=90,
+            notes="Read the docs.",
+        )
+
+        page = get_page(self.client, self.path)
+
+        text = page.text("main")
+        for shown in (
+            "1 Mar 2026",
+            "1 h 30 min",
+            "apple Django zebra",
+            "Read the docs.",
+        ):
+            self.assertIn(shown, text)
+        links = page.links("main")
+        self.assertIn((f"/sessions/{session.pk}/edit/", "Edit"), links)
+        self.assertIn((f"/sessions/{session.pk}/delete/", "Delete"), links)
+
+    def test_a_goal_without_sessions_says_so(self):
+        self.assertIn("No sessions yet.", get_page(self.client, self.path).text("main"))
+
+    def test_user_text_is_escaped(self):
+        create_session(self.goal, tags=(PAYLOAD,), notes=PAYLOAD)
+
+        response = self.client.get(self.path)
+
+        self.assertNotContains(response, PAYLOAD)
+        self.assertContains(response, ESCAPED)
+
+
+class SessionListPaginationTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        alice = User.objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=alice, title="Learn Django")
+        for n in range(21):
+            create_session(self.goal, date=f"2026-01-{n + 1:02}", notes=f"#{n + 1}#")
+        bobs = Goal.objects.create(owner=User.objects.create_user("bob"), title="B")
+        for _ in range(30):
+            create_session(bobs)
+        self.client.force_login(alice)
+        self.path = f"/goals/{self.goal.pk}/sessions/"
+
+    def numbers(self, page):
+        return [int(n) for n in re.findall(r"#(\d+)#", page.text("main"))]
+
+    def test_twenty_sessions_per_page(self):
+        first = get_page(self.client, self.path)
+        second = get_page(self.client, f"{self.path}?page=2")
+
+        self.assertEqual(self.numbers(first), list(range(21, 1, -1)))
+        self.assertEqual(self.numbers(second), [1])
+        self.assertIn(("?page=2", "Next"), first.links("main"))
+        self.assertNotIn("Previous", first.text("main"))
+        self.assertIn(("?page=1", "Previous"), second.links("main"))
+
+    def test_pages_past_the_end_or_not_numbers_are_404(self):
+        for page in ("99", "abc"):
+            with self.subTest(page=page):
+                response = self.client.get(self.path, {"page": page})
+
+                self.assertEqual(response.status_code, 404)
+
+
+class SessionListAccessTests(TestCase):
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=alice, title="Learn Django")
+        create_session(self.goal, notes="private")
+        self.path = f"/goals/{self.goal.pk}/sessions/"
+
+    def test_anonymous_visitors_are_sent_to_log_in(self):
+        response = self.client.get(self.path)
+
+        self.assertRedirects(
+            response, login_redirect(self.path), fetch_redirect_response=False
+        )
+
+    def test_another_users_goal_is_the_same_404_as_a_missing_one(self):
+        self.client.force_login(get_user_model().objects.create_user("bob"))
+
+        response = self.client.get(self.path)
+        missing = self.client.get("/goals/999999/sessions/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.content, missing.content)
+
+
+class SessionListQueryCountTests(TestCase):
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.client.force_login(alice)
+        self.small = Goal.objects.create(owner=alice, title="Small")
+        create_session(self.small, tags=("a",))
+        self.large = Goal.objects.create(owner=alice, title="Large")
+        for _ in range(20):
+            create_session(self.large, tags=("a", "b", "c"))
+
+    def queries_for(self, goal):
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.get(f"/goals/{goal.pk}/sessions/")
+        self.assertEqual(response.status_code, 200)
+        return len(queries)
+
+    def test_the_query_count_does_not_grow_with_sessions_or_tags(self):
+        self.assertEqual(self.queries_for(self.large), self.queries_for(self.small))
+
+    def test_the_list_takes_a_fixed_number_of_queries(self):
+        # Login session, user, goal, page count, sessions, their tags.
+        with self.assertNumQueries(6):
+            self.client.get(f"/goals/{self.large.pk}/sessions/")
+
+
 class SessionViewsScopingTests(TestCase):
     def test_every_session_view_scopes_through_the_own_sessions_mixins(self):
         routes = {p.name: p for p in session_routes()}
 
         # A new route must be added here deliberately, not slip past the check.
-        self.assertEqual(set(routes), {"create", "edit", "delete"})
+        self.assertEqual(set(routes), {"list", "create", "edit", "delete"})
 
         from learning_sessions.views import GoalSessionsMixin, OwnSessionsMixin
 

@@ -5,7 +5,8 @@ from django.core.validators import (
     MinValueValidator,
 )
 from django.db import models
-from django.db.models import Q
+from django.db.models import Prefetch, Q
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 
@@ -19,6 +20,14 @@ class LearningSessionQuerySet(models.QuerySet):
     def owned_by(self, user):
         """The one way views look up sessions: only those on the user's goals."""
         return self.filter(goal__owner=user)
+
+    def with_tags(self):
+        """Tags fetched in one query for all the sessions, alphabetical
+        regardless of case (Tag's own ordering is case-sensitive)."""
+        from tags.models import Tag
+
+        tags = Tag.objects.order_by(Lower("name"), "id")
+        return self.prefetch_related(Prefetch("tags", queryset=tags))
 
 
 class LearningSession(models.Model):
