@@ -47,7 +47,7 @@
 
 ## Steps
 
-- [ ] 1. **App installed.** `apps.is_installed("resources")` is true. — test: `resources/tests/test_apps.py` (`InstalledAppsTests`) — impl: `resources/__init__.py`, `resources/apps.py` (`ResourcesConfig`), `resources/models.py` (empty), `resources/migrations/__init__.py`, `config/settings.py` (`INSTALLED_APPS`) — covers: AC12
+- [x] 1. **App installed.** `apps.is_installed("resources")` is true. — test: `resources/tests/test_apps.py` (`InstalledAppsTests`) — impl: `resources/__init__.py`, `resources/apps.py` (`ResourcesConfig`), `resources/models.py` (empty), `resources/migrations/__init__.py`, `config/settings.py` (`INSTALLED_APPS`) — covers: AC12
 - [ ] 2. **A resource belongs to one goal.**
   - The `goal` FK is required, targets `Goal`, uses CASCADE, and has `related_name="resources"`.
   - `goal.resources` lists them.
