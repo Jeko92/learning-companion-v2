@@ -158,3 +158,29 @@ class CompleteErrorTests(NoNetworkTestCase):
                 self.assertNotIn(str(error), text)
                 # No traceback either: the SDK error's text would be in it.
                 self.assertIsNone(record.exc_info)
+
+
+class CompleteEmptyReplyTests(NoNetworkTestCase):
+    def test_a_reply_without_content_is_an_ai_service_error(self):
+        cases = {
+            "no choices": response(),
+            "no content": response(None),
+            "blank content": response(" \n\t "),
+        }
+        for case, reply in cases.items():
+            with self.subTest(case=case):
+                with (
+                    patch(
+                        "ai.services.get_client",
+                        return_value=FakeClient(reply=reply),
+                    ),
+                    self.assertLogs("ai.services", "ERROR") as logs,
+                    self.assertRaises(self.services.AIServiceError) as raised,
+                ):
+                    self.services.complete("Be brief.", "Hi")
+
+                self.assertEqual(
+                    str(raised.exception), "The AI service returned an empty reply."
+                )
+                (record,) = logs.records
+                self.assertIn("empty reply", record.getMessage())

@@ -45,4 +45,8 @@ def complete(system, user):
         raise AIServiceError(
             "The AI service is unavailable right now. Please try again later."
         ) from error
-    return reply.choices[0].message.content.strip()
+    text = (reply.choices[0].message.content or "").strip() if reply.choices else ""
+    if not text:
+        logger.error("OpenAI returned an empty reply")
+        raise AIServiceError("The AI service returned an empty reply.")
+    return text
