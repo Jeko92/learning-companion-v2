@@ -18,7 +18,12 @@ from django.views.generic.detail import SingleObjectMixin
 from ai import services
 from goals.forms import GoalForm
 from goals.models import Goal
-from goals.prompts import summary_messages
+from goals.prompts import (
+    NEXT_STEPS_SCHEMA,
+    next_steps_messages,
+    parse_next_steps,
+    summary_messages,
+)
 from learning_sessions.models import LearningSession
 from resources.forms import ResourceForm
 from resources.models import Resource
@@ -126,29 +131,38 @@ class GoalDeleteView(OwnGoalsMixin, SuccessMessageMixin, DeleteView):
         return context
 
 
+PROMPT_SESSIONS = 10
+PROMPT_RESOURCES = 20
+
+
+def prompt_data(goal, user):
+    """What the AI actions send about `goal`, all through owned_by(user): its
+    PROMPT_SESSIONS newest sessions (tags prefetched), the total minutes over
+    all its sessions, and its PROMPT_RESOURCES newest resources."""
+    sessions = LearningSession.objects.owned_by(user).filter(goal=goal)
+    resources = Resource.objects.owned_by(user).filter(goal=goal)
+    return (
+        list(sessions.with_tags()[:PROMPT_SESSIONS]),
+        sessions.aggregate(total=Sum("duration_minutes"))["total"] or 0,
+        list(resources[:PROMPT_RESOURCES]),
+    )
+
+
 class GoalSummaryView(OwnGoalsMixin, SingleObjectMixin, View):
     """POST only (anything else is a 405): generate the goal's AI progress
     summary, then back to the goal page."""
 
     http_method_names = ("post",)
-    SUMMARY_SESSIONS = 10
-    SUMMARY_RESOURCES = 20
 
     def post(self, request, *args, **kwargs):
         # Through OwnGoalsMixin: another user's goal is a 404 like a missing one.
         goal = self.get_object()
-        sessions = LearningSession.objects.owned_by(request.user).filter(goal=goal)
-        resources = Resource.objects.owned_by(request.user).filter(goal=goal)
-        if not sessions.exists() and not resources.exists():
+        sessions, total_minutes, resources = prompt_data(goal, request.user)
+        if not sessions and not resources:
             # Nothing to summarise: don't spend an API call on it.
             messages.info(request, "Log a session or attach a resource first.")
             return redirect(goal)
-        system, user = summary_messages(
-            goal,
-            list(sessions.with_tags()[: self.SUMMARY_SESSIONS]),
-            sessions.aggregate(total=Sum("duration_minutes"))["total"] or 0,
-            list(resources[: self.SUMMARY_RESOURCES]),
-        )
+        system, user = summary_messages(goal, sessions, total_minutes, resources)
         try:
             # No retries: the user is waiting on this page (see
             # ai.services.complete).
@@ -175,4 +189,13 @@ class GoalNextStepsView(OwnGoalsMixin, SingleObjectMixin, View):
     def post(self, request, *args, **kwargs):
         # Through OwnGoalsMixin: another user's goal is a 404 like a missing one.
         goal = self.get_object()
+        system, user = next_steps_messages(goal, *prompt_data(goal, request.user))
+        reply = services.complete_json(
+            system, user, name="next_steps", schema=NEXT_STEPS_SCHEMA, max_retries=0
+        )
+        goal.next_steps = parse_next_steps(reply)
+        goal.next_steps_generated_at = timezone.now()
+        # update_fields leaves updated_at alone: the goal itself didn't change.
+        goal.save(update_fields=["next_steps", "next_steps_generated_at"])
+        messages.success(request, "Next steps suggested.")
         return redirect(goal)

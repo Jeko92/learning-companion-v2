@@ -1545,3 +1545,103 @@ class GoalNextStepsAccessTests(NextStepsTestCase):
         self.assertEqual(response.content, missing.content)
         self.complete_json.assert_not_called()
         self.assert_nothing_stored()
+
+
+class GoalNextStepsSuggestTests(NextStepsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.alice)
+        # 12 sessions of 10 minutes on 1-12 March, then 22 resources.
+        self.sessions = [
+            add_session(
+                self.goal,
+                tags=("django",) if n == 12 else (),
+                date=f"2026-03-{n:02d}",
+                duration_minutes=10,
+                notes=f"session {n:02d}",
+            )
+            for n in range(1, 13)
+        ]
+        self.resources = [
+            add_resource(self.goal, title=f"Resource {n:02d}") for n in range(1, 23)
+        ]
+        other = Goal.objects.create(owner=self.alice, title="Other")
+        add_session(other, notes="elsewhere")
+        add_resource(other, title="Elsewhere")
+        bobs = Goal.objects.create(
+            owner=get_user_model().objects.create_user("bob"), title="B"
+        )
+        add_session(bobs, notes="bobs session")
+        add_resource(bobs, title="Bobs")
+
+    def suggest(self, at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC)):
+        with patch("django.utils.timezone.now", return_value=at):
+            return self.client.post(self.path)
+
+    def test_one_call_without_retries_with_the_recent_sessions_and_resources(self):
+        from goals.prompts import NEXT_STEPS_SCHEMA, next_steps_messages
+
+        self.suggest()
+
+        newest_ten = LearningSession.objects.filter(
+            pk__in=[s.pk for s in self.sessions[2:]]
+        ).with_tags()
+        expected = next_steps_messages(
+            self.goal, list(newest_ten), 120, self.resources[2:][::-1]
+        )
+        self.complete_json.assert_called_once_with(
+            *expected, name="next_steps", schema=NEXT_STEPS_SCHEMA, max_retries=0
+        )
+        (_, user), _ = self.complete_json.call_args
+        self.assertIn("session 12", user)
+        self.assertIn("tags: django", user)
+        self.assertIn("Total time: 2 h", user)
+        for absent in (
+            "session 01",
+            "session 02",
+            "Resource 01",
+            "Resource 02",
+            "elsewhere",
+            "Elsewhere",
+            "bobs session",
+            "Bobs",
+        ):
+            self.assertNotIn(absent, user)
+
+    def test_the_steps_are_stored_trimmed_in_order_with_their_time(self):
+        self.complete_json.return_value = {
+            "steps": [" Build a form \n", "Read the ORM docs", "Write a test"]
+        }
+
+        response = self.suggest(at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC))
+
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        self.goal.refresh_from_db()
+        self.assertEqual(
+            self.goal.next_steps, ["Build a form", "Read the ORM docs", "Write a test"]
+        )
+        self.assertEqual(
+            self.goal.next_steps_generated_at, datetime(2026, 10, 1, 9, 30, tzinfo=UTC)
+        )
+        self.assertContains(self.client.get(response.url), "Next steps suggested.")
+
+    def test_suggesting_does_not_change_the_goals_updated_time(self):
+        updated = Goal.objects.get(pk=self.goal.pk).updated_at
+
+        self.suggest(at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC))
+
+        self.assertEqual(Goal.objects.get(pk=self.goal.pk).updated_at, updated)
+
+    def test_new_steps_replace_the_last_ones(self):
+        self.suggest(at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC))
+        self.complete_json.return_value = {"steps": ["Second", "Third"]}
+
+        self.suggest(at=datetime(2026, 10, 2, 8, 0, tzinfo=UTC))
+
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.next_steps, ["Second", "Third"])
+        self.assertEqual(
+            self.goal.next_steps_generated_at, datetime(2026, 10, 2, 8, 0, tzinfo=UTC)
+        )

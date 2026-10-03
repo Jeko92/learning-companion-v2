@@ -66,7 +66,7 @@
   - Another user's goal is the same 404 as a missing pk, with nothing called or stored.
   - `next_steps` is added to `GoalViewsScopingTests`.
   — test: `src/goals/tests/test_views.py` (`NextStepsTestCase`, `GoalNextStepsAccessTests`, `GoalViewsScopingTests`) — impl: `src/goals/views.py`, `src/goals/urls.py` — covers: AC1, AC2, AC3
-- [ ] 8. **Suggesting stores the steps.**
+- [x] 8. **Suggesting stores the steps.**
   - There's exactly one `complete_json` call, made with `next_steps_messages()` over the 10 newest sessions (`with_tags()`), the total over all sessions and the 20 newest resources (other goals' data excluded), plus `name="next_steps"`, `schema=NEXT_STEPS_SCHEMA` and `max_retries=0`.
   - The parsed steps are stored trimmed with the patched time, replacing any earlier ones.
   - The user is redirected to the goal with "Next steps suggested.", and `updated_at` is unchanged.
