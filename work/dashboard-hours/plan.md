@@ -89,7 +89,7 @@
   - This is expected to be green on first run (a regression pin); the commit notes it.
 
   — test: `src/dashboard/tests/test_views.py` (`DashboardQueryCountTests`) — impl: none expected — covers: AC11
-- [ ] 8. **Docs.**
+- [x] 8. **Docs.**
   - `CLAUDE.md`:
     - The Dashboard bullet: the two sections, `minutes_per_tag()` / `minutes_per_week()`, `WEEKS_SHOWN`, the Untagged row and the multi-tag note, the empty state, and 5 queries.
     - The Learning sessions bullet: both queryset methods and the grouping rule.
