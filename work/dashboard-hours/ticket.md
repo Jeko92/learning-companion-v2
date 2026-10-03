@@ -42,3 +42,4 @@ As a logged-in learner, I want my dashboard to show how much time I have logged 
   - `date` rejects future dates only through `full_clean()`, so AC7 has to exclude them in the query.
 - Updating `CLAUDE.md` (the dashboard bullet) and `README.md` is part of this ticket.
 - Handout: `instructions/challenge.md` → "Learning Companion - Dashboard and reporting". Depends on #12 and #18, both done.
+- **Approval:** the user approved the acceptance criteria (AC1–AC11) on 2026-10-03, including the defaults above.
