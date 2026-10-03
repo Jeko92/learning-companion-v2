@@ -45,11 +45,20 @@ class TailwindSourceTests(SimpleTestCase):
         self.assertRegex(css, r"daisyUI \d+\.\d+\.\d+")
 
 
-THEME_BLOCK = re.compile(r'@plugin "\./daisyui-theme\.mjs"\s*\{(.*?)\}', re.S)
+THEME_BLOCK = re.compile(r'@plugin "\./daisyui-theme\.mjs"\s*\{(.*?)\}', re.DOTALL)
 DECLARATION = re.compile(r"([\w-]+)\s*:\s*([^;]+);")
 OKLCH = re.compile(r"oklch\(\s*([\d.]+)%\s+([\d.]+)\s+([\d.]+)\s*\)")
 
-COLOURS = ("primary", "secondary", "accent", "neutral", "info", "success", "warning", "error")
+COLOURS = (
+    "primary",
+    "secondary",
+    "accent",
+    "neutral",
+    "info",
+    "success",
+    "warning",
+    "error",
+)
 REQUIRED = (
     "--color-base-100",
     "--color-base-200",
@@ -128,7 +137,9 @@ class ContrastHelperTests(SimpleTestCase):
     """The test's own colour maths matches known values."""
 
     def test_black_on_white_is_21_to_1(self):
-        self.assertAlmostEqual(contrast("oklch(0% 0 0)", "oklch(100% 0 0)"), 21, places=1)
+        self.assertAlmostEqual(
+            contrast("oklch(0% 0 0)", "oklch(100% 0 0)"), 21, places=1
+        )
 
     def test_known_srgb_colours_match_their_published_contrast(self):
         # #0000ff on white is 8.59:1 and #777777 on white is 4.48:1.
