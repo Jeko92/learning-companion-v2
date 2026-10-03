@@ -68,3 +68,4 @@ Routes follow the sessions' shallow nesting, in `resources/urls.py` (namespace `
 - **Links:** stored URLs are always `http(s)` (validator plus database `CheckConstraint`), so they are safe as `href`s. They open in a new tab with `rel="noopener noreferrer"`.
 - **Goal delete warning:** the user chose to include the resource count on the goal delete confirmation in this ticket.
 - The issue's open questions (grouped vs badges, removal) were answered in the interview on 2026-10-03.
+- **Approval:** the user approved the acceptance criteria (AC1–AC21) on 2026-10-03.
