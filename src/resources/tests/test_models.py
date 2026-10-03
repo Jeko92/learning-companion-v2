@@ -332,3 +332,56 @@ class ResourceOwnedByTests(TestCase):
         owned = resource_models.Resource.objects.owned_by(self.alice)
 
         self.assertEqual(list(owned.filter(goal=self.goal)), [self.newest, self.mine])
+
+
+class ResourceGroupedByTypeTests(TestCase):
+    def setUp(self):
+        self.assertTrue(hasattr(resource_models.ResourceQuerySet, "grouped_by_type"))
+        alice = get_user_model().objects.create_user("alice")
+        self.goal = Goal.objects.create(owner=alice, title="Learn Django")
+        self.Type = resource_models.Resource.Type
+
+    def test_groups_come_in_type_order_and_skip_empty_types(self):
+        doc = make_resource(self.goal, type=self.Type.DOC)
+        article = make_resource(self.goal, type=self.Type.ARTICLE)
+        old_video = make_resource(self.goal, type=self.Type.VIDEO)
+        new_video = make_resource(self.goal, type=self.Type.VIDEO)
+
+        groups = resource_models.Resource.objects.grouped_by_type()
+
+        self.assertEqual(
+            groups,
+            [
+                ("Articles", [article]),
+                ("Videos", [new_video, old_video]),
+                ("Docs", [doc]),
+            ],
+        )
+
+    def test_every_type_has_a_heading(self):
+        # A new type must get a heading, not silently vanish from the page.
+        for value in self.Type.values:
+            make_resource(self.goal, type=value)
+
+        groups = resource_models.Resource.objects.grouped_by_type()
+
+        self.assertEqual(len(groups), len(self.Type.values))
+        self.assertEqual(
+            [heading for heading, _ in groups], ["Articles", "Videos", "Repos", "Docs"]
+        )
+
+    def test_it_runs_one_query_and_follows_the_queryset(self):
+        other_goal = Goal.objects.create(owner=self.goal.owner, title="Other")
+        mine = make_resource(self.goal, type=self.Type.REPO)
+        make_resource(other_goal, type=self.Type.REPO)
+        make_resource(other_goal, type=self.Type.DOC)
+
+        with self.assertNumQueries(1):
+            groups = resource_models.Resource.objects.filter(
+                goal=self.goal
+            ).grouped_by_type()
+
+        self.assertEqual(groups, [("Repos", [mine])])
+
+    def test_no_resources_means_no_groups(self):
+        self.assertEqual(resource_models.Resource.objects.grouped_by_type(), [])
