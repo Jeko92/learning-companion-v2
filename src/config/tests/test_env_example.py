@@ -2,7 +2,7 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 ENV_EXAMPLE = settings.BASE_DIR.parent / ".env.example"
-VARIABLES = ["SECRET_KEY", "DEBUG", "ALLOWED_HOSTS"]
+VARIABLES = ["SECRET_KEY", "DEBUG", "ALLOWED_HOSTS", "OPENAI_API_KEY", "OPENAI_MODEL"]
 
 
 class EnvExampleTests(SimpleTestCase):
@@ -33,3 +33,10 @@ class EnvExampleTests(SimpleTestCase):
 
     def test_debug_is_on_for_local_development(self):
         self.assertEqual(self.assignments()["DEBUG"], "True")
+
+    def test_the_openai_key_is_an_obvious_placeholder(self):
+        # Never a real key in a committed file; a dummy is enough for tests.
+        self.assertEqual(self.assignments().get("OPENAI_API_KEY"), "sk-dummy")
+
+    def test_the_openai_model_shows_the_default(self):
+        self.assertEqual(self.assignments().get("OPENAI_MODEL"), "gpt-4.1-mini")

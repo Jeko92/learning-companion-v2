@@ -32,7 +32,7 @@
 
 - [x] 5. **Settings wiring.** After reloading with `PATCHED_ENVIRON`, `settings.OPENAI_API_KEY` equals the patched key (compared without printing it) and `settings.OPENAI_MODEL` the patched model; with `OPENAI_MODEL` removed it is `gpt-4.1-mini`. `settings.py` contains no `sk-` literal. — test: `config/tests/test_settings.py` — impl: `config/settings.py` — covers: AC3
 
-- [ ] 6. **`.env.example` documents both.** `VARIABLES` adds `OPENAI_API_KEY` and `OPENAI_MODEL`; each has a comment line above; the key's value is exactly `sk-dummy` and the model's is `gpt-4.1-mini`. Then `git stash drop` the user's earlier edit (its content is now in the commit). — test: `config/tests/test_env_example.py` — impl: `.env.example` — covers: AC4
+- [x] 6. **`.env.example` documents both.** `VARIABLES` adds `OPENAI_API_KEY` and `OPENAI_MODEL`; each has a comment line above; the key's value is exactly `sk-dummy` and the model's is `gpt-4.1-mini`. Then `git stash drop` the user's earlier edit (its content is now in the commit). — test: `config/tests/test_env_example.py` — impl: `.env.example` — covers: AC4
 
 - [ ] 7. **`get_client()` builds the one client.** With `ai.services.OpenAI` patched to a mock and `override_settings(OPENAI_API_KEY=…)`, `get_client()` returns the mock's instance, constructed once with that key, `timeout=30` and `max_retries=2`. The test base class that fails on any real `OpenAI` construction is added here and used by every service test. — test: `ai/tests/test_services.py` (new: `NoNetworkTestCase` base, `GetClientTests`) — impl: `src/ai/services.py` (`get_client`, `TIMEOUT_SECONDS`, `MAX_RETRIES`) — covers: AC7, AC11
 
