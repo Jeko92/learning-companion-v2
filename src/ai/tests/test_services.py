@@ -122,6 +122,67 @@ class CompleteTests(NoNetworkTestCase):
         self.assertEqual(self.complete_with(client), "Hi there")
 
 
+STEPS_SCHEMA = {
+    "type": "object",
+    "properties": {"steps": {"type": "array", "items": {"type": "string"}}},
+    "required": ["steps"],
+    "additionalProperties": False,
+}
+
+
+class CompleteJsonTests(NoNetworkTestCase):
+    def complete_json_with(self, client, **kwargs):
+        with patch("ai.services.get_client", return_value=client):
+            return self.services.complete_json(
+                "Be brief.", "Suggest.", name="steps", schema=STEPS_SCHEMA, **kwargs
+            )
+
+    @override_settings(OPENAI_MODEL="test-model")
+    def test_one_request_asking_for_a_reply_that_matches_the_schema(self):
+        client = FakeClient(reply=response('{"steps": ["a", "b"]}'))
+
+        self.complete_json_with(client)
+
+        self.assertEqual(
+            client.calls,
+            [
+                {
+                    "model": "test-model",
+                    "messages": [
+                        {"role": "system", "content": "Be brief."},
+                        {"role": "user", "content": "Suggest."},
+                    ],
+                    "response_format": {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "steps",
+                            "schema": STEPS_SCHEMA,
+                            "strict": True,
+                        },
+                    },
+                }
+            ],
+        )
+
+    def test_the_reply_comes_back_parsed(self):
+        client = FakeClient(reply=response(' \n{"steps": ["Read", "Build"]} \n'))
+
+        self.assertEqual(self.complete_json_with(client), {"steps": ["Read", "Build"]})
+
+    def test_retries_are_set_per_call_and_default_to_2(self):
+        for kwargs, expected in (({}, 2), ({"max_retries": 0}, 0)):
+            with self.subTest(kwargs=kwargs):
+                with patch(
+                    "ai.services.get_client",
+                    return_value=FakeClient(reply=response('{"steps": []}')),
+                ) as get_client:
+                    self.services.complete_json(
+                        "Be brief.", "Hi", name="steps", schema=STEPS_SCHEMA, **kwargs
+                    )
+
+                get_client.assert_called_once_with(max_retries=expected)
+
+
 def sdk_errors():
     """One of each kind of error the SDK raises, built as it builds them. The
     authentication error's text echoes a key, as the real API's does."""

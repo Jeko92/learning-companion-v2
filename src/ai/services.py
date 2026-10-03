@@ -1,5 +1,6 @@
 """The one way the app talks to the OpenAI Chat Completions API."""
 
+import json
 import logging
 
 from django.conf import settings
@@ -53,3 +54,20 @@ def complete(system, user, *, max_retries=MAX_RETRIES):
         logger.error("OpenAI returned an empty reply")
         raise AIServiceError("The AI service returned an empty reply.")
     return text
+
+
+def complete_json(system, user, *, name, schema, max_retries=MAX_RETRIES):
+    """Like complete(), but asks for a reply matching the JSON schema (strict
+    Structured Outputs) and returns it parsed."""
+    reply = get_client(max_retries=max_retries).chat.completions.create(
+        model=settings.OPENAI_MODEL,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        response_format={
+            "type": "json_schema",
+            "json_schema": {"name": name, "schema": schema, "strict": True},
+        },
+    )
+    return json.loads(reply.choices[0].message.content)
