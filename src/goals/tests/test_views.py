@@ -1666,3 +1666,58 @@ class GoalNextStepsEmptyGoalTests(NextStepsTestCase):
         self.assertIn("No resources.", user.splitlines())
         self.goal.refresh_from_db()
         self.assertEqual(self.goal.next_steps, list(self.STEPS))
+
+
+class GoalNextStepsErrorTests(NextStepsTestCase):
+    MESSAGES = (
+        "The AI service is unavailable right now. Please try again later.",
+        "The AI service returned an empty reply.",
+        "The AI service returned an unexpected reply.",
+    )
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.alice)
+        self.earlier = datetime(2026, 9, 1, 8, 0, tzinfo=UTC)
+        Goal.objects.filter(pk=self.goal.pk).update(
+            next_steps=["Earlier step", "Another step"],
+            next_steps_generated_at=self.earlier,
+        )
+
+    def assert_back_on_the_goal_with(self, response, message):
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        page = self.client.get(response.url)
+        self.assertContains(page, message)
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.next_steps, ["Earlier step", "Another step"])
+        self.assertEqual(self.goal.next_steps_generated_at, self.earlier)
+        return page
+
+    def test_an_ai_failure_goes_back_to_the_goal_with_its_message(self):
+        from ai.services import AIServiceError
+
+        for message in self.MESSAGES:
+            with self.subTest(message=message):
+                # Chained like the service's own errors, which must not reach
+                # a 500 page (the SDK's text can echo part of the key).
+                error = AIServiceError(message)
+                error.__cause__ = RuntimeError("sk-secret-tail")
+                self.complete_json.side_effect = error
+
+                page = self.assert_back_on_the_goal_with(
+                    self.client.post(self.path), message
+                )
+
+                self.assertNotContains(page, "sk-secret-tail")
+
+    def test_a_reply_with_the_wrong_number_of_steps_keeps_the_last_ones(self):
+        for steps in (["Only one"], ["One", "Two", "Three", "Four"]):
+            with self.subTest(steps=steps):
+                self.complete_json.return_value = {"steps": steps}
+
+                self.assert_back_on_the_goal_with(
+                    self.client.post(self.path),
+                    "The AI service returned an unexpected reply.",
+                )

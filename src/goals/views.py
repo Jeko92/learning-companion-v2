@@ -190,10 +190,17 @@ class GoalNextStepsView(OwnGoalsMixin, SingleObjectMixin, View):
         # Through OwnGoalsMixin: another user's goal is a 404 like a missing one.
         goal = self.get_object()
         system, user = next_steps_messages(goal, *prompt_data(goal, request.user))
-        reply = services.complete_json(
-            system, user, name="next_steps", schema=NEXT_STEPS_SCHEMA, max_retries=0
-        )
-        goal.next_steps = parse_next_steps(reply)
+        try:
+            # No retries, as for the summary: the user is waiting on this page.
+            reply = services.complete_json(
+                system, user, name="next_steps", schema=NEXT_STEPS_SCHEMA, max_retries=0
+            )
+            steps = parse_next_steps(reply)
+        except services.AIServiceError as error:
+            # Always caught, as for the summary; the earlier steps are kept.
+            messages.error(request, str(error))
+            return redirect(goal)
+        goal.next_steps = steps
         goal.next_steps_generated_at = timezone.now()
         # update_fields leaves updated_at alone: the goal itself didn't change.
         goal.save(update_fields=["next_steps", "next_steps_generated_at"])
