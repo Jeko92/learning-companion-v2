@@ -576,12 +576,144 @@ class SessionEditCsrfTests(TestCase):
         self.assertEqual(response.status_code, 302)
 
 
+class SessionDeleteTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.alice = User.objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.session = create_session(self.goal, tags=("Python",), duration_minutes=90)
+        self.client.force_login(self.alice)
+        self.path = f"/sessions/{self.session.pk}/delete/"
+
+    def test_the_delete_page_has_a_route_of_its_own(self):
+        self.assertEqual(
+            reverse("learning_sessions:delete", args=[self.session.pk]), self.path
+        )
+
+    def test_a_get_asks_for_confirmation_and_deletes_nothing(self):
+        response = self.client.get(self.path)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(
+            response, "learning_sessions/session_confirm_delete.html"
+        )
+        page = get_page(self.client, self.path)
+
+        text = page.text("main")
+        for shown in ("1 Mar 2026", "1 h 30 min", "Learn Django"):
+            self.assertIn(shown, text)
+        ((form, _),) = page.forms("main")
+        self.assertEqual(form.get("method"), "post")
+        self.assertEqual(form.get("action"), self.path)
+        self.assertIn((self.goal.get_absolute_url(), "Cancel"), page.links("main"))
+        self.assertTrue(LearningSession.objects.filter(pk=self.session.pk).exists())
+
+    def test_durations_read_as_hours_and_minutes(self):
+        for minutes, shown in ((45, "45 min"), (120, "2 h"), (90, "1 h 30 min")):
+            with self.subTest(minutes=minutes):
+                self.session.duration_minutes = minutes
+                self.session.save()
+
+                self.assertIn(shown, get_page(self.client, self.path).text("main"))
+
+    def test_a_post_deletes_the_session_only(self):
+        bobs_goal = Goal.objects.create(
+            owner=get_user_model().objects.create_user("bob"), title="B"
+        )
+        bobs_session = create_session(bobs_goal, tags=("python",))
+
+        response = self.client.post(self.path)
+
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        self.assertFalse(LearningSession.objects.filter(pk=self.session.pk).exists())
+        self.assertTrue(Goal.objects.filter(pk=self.goal.pk).exists())
+        self.assertTrue(Tag.objects.filter(name="Python").exists())
+        self.assertEqual([t.name for t in bobs_session.tags.all()], ["Python"])
+        self.assertContains(self.client.get(response.url), "Session deleted.")
+
+    def test_the_goal_title_is_escaped(self):
+        self.goal.title = PAYLOAD
+        self.goal.save()
+
+        response = self.client.get(self.path)
+
+        self.assertNotContains(response, PAYLOAD)
+        self.assertContains(response, ESCAPED)
+
+
+class SessionDeleteAccessTests(TestCase):
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        goal = Goal.objects.create(owner=alice, title="Learn Django")
+        self.session = create_session(goal)
+        self.path = f"/sessions/{self.session.pk}/delete/"
+
+    def assert_untouched(self):
+        self.assertTrue(LearningSession.objects.filter(pk=self.session.pk).exists())
+
+    def test_anonymous_visitors_are_sent_to_log_in(self):
+        for method in ("get", "post"):
+            with self.subTest(method=method):
+                response = getattr(self.client, method)(self.path)
+
+                self.assertRedirects(
+                    response, login_redirect(self.path), fetch_redirect_response=False
+                )
+                self.assert_untouched()
+
+    def test_another_users_session_is_the_same_404_as_a_missing_one(self):
+        self.client.force_login(get_user_model().objects.create_user("bob"))
+        for method in ("get", "post"):
+            with self.subTest(method=method):
+                response = getattr(self.client, method)(self.path)
+                missing = getattr(self.client, method)("/sessions/999999/delete/")
+
+                self.assertEqual(response.status_code, 404)
+                self.assertEqual(response.content, missing.content)
+                self.assert_untouched()
+
+
+class SessionDeleteCsrfTests(TestCase):
+    # The default test client skips CSRF checks; this one enforces them.
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        goal = Goal.objects.create(owner=alice, title="Learn Django")
+        self.session = create_session(goal)
+        self.csrf_client = Client(enforce_csrf_checks=True)
+        self.csrf_client.force_login(alice)
+        self.path = f"/sessions/{self.session.pk}/delete/"
+
+    def token(self):
+        # GET first: sets the CSRF cookie and yields the form's token.
+        page = get_page(self.csrf_client, self.path)
+        ((_, inputs),) = page.forms("main")
+        return [a["value"] for a in inputs if a.get("name") == "csrfmiddlewaretoken"]
+
+    def test_a_post_without_a_token_is_rejected(self):
+        self.token()
+
+        response = self.csrf_client.post(self.path)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(LearningSession.objects.filter(pk=self.session.pk).exists())
+
+    def test_a_post_with_the_forms_token_succeeds(self):
+        tokens = self.token()
+        self.assertEqual(len(tokens), 1)
+
+        response = self.csrf_client.post(self.path, {"csrfmiddlewaretoken": tokens[0]})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(LearningSession.objects.exists())
+
+
 class SessionViewsScopingTests(TestCase):
     def test_every_session_view_scopes_through_the_own_sessions_mixins(self):
         routes = {p.name: p for p in session_routes()}
 
         # A new route must be added here deliberately, not slip past the check.
-        self.assertEqual(set(routes), {"create", "edit"})
+        self.assertEqual(set(routes), {"create", "edit", "delete"})
 
         from learning_sessions.views import GoalSessionsMixin, OwnSessionsMixin
 

@@ -1,7 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.shortcuts import get_object_or_404
-from django.views.generic import CreateView, UpdateView
+from django.views.generic import CreateView, DeleteView, UpdateView
 
 from goals.models import Goal
 from learning_sessions.forms import LearningSessionForm
@@ -69,3 +69,11 @@ class SessionUpdateView(OwnSessionsMixin, SuccessMessageMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         return super().get_context_data(goal=self.object.goal, **kwargs)
+
+
+class SessionDeleteView(OwnSessionsMixin, SuccessMessageMixin, DeleteView):
+    template_name = "learning_sessions/session_confirm_delete.html"
+
+    def get_success_message(self, cleaned_data):
+        # A fixed text: DeleteView's cleaned_data is empty.
+        return "Session deleted."

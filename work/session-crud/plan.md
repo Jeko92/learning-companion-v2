@@ -144,7 +144,7 @@
   - CSRF: 403 without a token, 302 with it.
 
   — test: `learning_sessions/tests/test_views.py` (`SessionEditTests`, `SessionEditCsrfTests`), `learning_sessions/tests/test_forms.py` (edit rollback) — impl: `learning_sessions/views.py` (`SessionUpdateView` success URL and message) — covers: AC19, AC21, AC24, AC26
-- [ ] 8. **Delete.**
+- [x] 8. **Delete.**
   - GET `/sessions/<pk>/delete/` shows the session's date, duration and goal title, a POST form to itself, and a Cancel link to the goal. It deletes nothing.
   - POST deletes the session, redirects to the goal and shows "Session deleted.". The goal still exists, the tags still exist, and bob's session with the same tag keeps it.
   - Anonymous and cross-user/missing requests: login redirect or identical 404 for GET and POST, and nothing deleted.
