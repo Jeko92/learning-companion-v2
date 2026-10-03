@@ -1,0 +1,19 @@
+/*
+ * Tailwind source for the site stylesheet (TAILWIND_CLI_SRC_CSS); built into
+ * assets/css/tailwind.css by `manage.py tailwind build`.
+ *
+ * daisyUI 5.7.47 is vendored next to this file (its documented standalone
+ * setup, used with the official Tailwind binary). To update it, download both
+ * files from https://github.com/saadeghi/daisyui/releases/download/v<version>/
+ * and update the version and the hashes below (core/tests/test_theme.py
+ * checks them):
+ *
+ * sha256 daisyui.mjs: 85819d3fe86a852237b439b13f481481aac58e562ac47694cd11c3038e994f2a
+ * sha256 daisyui-theme.mjs: d92d2f488933dab757f046e81ebd4986e51e9423307798dc3545d09a15542c89
+ */
+@import "tailwindcss";
+
+/* The vendored plugin files are code, not templates: don't scan them for classes. */
+@source not "./daisyui{,*}.mjs";
+
+@plugin "./daisyui.mjs";

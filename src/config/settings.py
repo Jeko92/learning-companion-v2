@@ -151,6 +151,9 @@ STATICFILES_DIRS = [BASE_DIR / "assets"]
 
 # Pinned, so builds are reproducible and don't look up the latest release.
 TAILWIND_CLI_VERSION = "4.3.3"
+# The committed source stylesheet with the vendored daisyUI plugin. Relative
+# to BASE_DIR, and outside STATICFILES_DIRS so collectstatic doesn't publish it.
+TAILWIND_CLI_SRC_CSS = "tailwind/source.css"
 
 
 # Email
