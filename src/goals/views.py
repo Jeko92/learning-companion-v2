@@ -13,6 +13,8 @@ from django.views.generic import (
 from goals.forms import GoalForm
 from goals.models import Goal
 from learning_sessions.models import LearningSession
+from resources.forms import ResourceForm
+from resources.models import Resource
 
 
 class OwnGoalsMixin(LoginRequiredMixin):
@@ -66,6 +68,13 @@ class GoalDetailView(OwnGoalsMixin, DetailView):
         context["total_minutes"] = (
             sessions.aggregate(total=Sum("duration_minutes"))["total"] or 0
         )
+        # Resources too only through owned_by; one query for all the groups.
+        context["resource_groups"] = (
+            Resource.objects.owned_by(self.request.user)
+            .filter(goal=self.object)
+            .grouped_by_type()
+        )
+        context["resource_form"] = ResourceForm()
         return context
 
 

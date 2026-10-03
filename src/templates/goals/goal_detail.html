@@ -35,4 +35,25 @@
       {% endfor %}
     </ul>
   </section>
+  <section class="mt-10">
+    <h2 class="text-lg font-semibold">Resources</h2>
+    {% for heading, resources in resource_groups %}
+      <h3 class="mt-4 font-medium">{{ heading }}</h3>
+      <ul class="mt-2 space-y-3">
+        {% for resource in resources %}
+          <li class="flex items-start justify-between gap-4 rounded border border-slate-200 bg-white px-4 py-3">
+            <a href="{{ resource.url }}" target="_blank" rel="noopener noreferrer" class="break-all font-medium hover:underline">{{ resource.title }}</a>
+            <a href="{% url 'resources:delete' resource.pk %}" class="font-medium text-red-700 hover:underline">Delete</a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% empty %}
+      <p class="mt-4">No resources yet.</p>
+    {% endfor %}
+    <form method="post" action="{% url 'resources:create' goal.pk %}" class="mt-6">
+      {% csrf_token %}
+      {{ resource_form }}
+      <button type="submit">Attach resource</button>
+    </form>
+  </section>
 {% endblock %}

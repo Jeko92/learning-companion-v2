@@ -18,6 +18,7 @@ from goals import urls as goal_urls
 from goals.models import Goal
 from goals.views import OwnGoalsMixin
 from learning_sessions.models import LearningSession
+from resources.models import Resource
 from tags.models import Tag
 
 PASSWORD = "Tr4ck-Learning!"
@@ -860,15 +861,117 @@ class GoalDetailSessionsTests(TestCase):
         self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
 
 
+def add_resource(goal, **fields):
+    n = Resource.objects.count() + 1
+    fields = {"url": f"https://example.com/{n}", "title": f"Resource {n}", **fields}
+    return Resource.objects.create(goal=goal, **fields)
+
+
+class GoalDetailResourcesTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.client.force_login(self.alice)
+        self.path = self.goal.get_absolute_url()
+
+    def resources_text(self, page):
+        # The Resources section comes after the Sessions one.
+        return page.text("main").split("Resources", 1)[1]
+
+    def test_resources_are_grouped_by_type_in_a_fixed_order(self):
+        add_resource(self.goal, title="The docs", type=Resource.Type.DOC)
+        add_resource(self.goal, title="Older talk", type=Resource.Type.VIDEO)
+        add_resource(self.goal, title="A tutorial", type=Resource.Type.ARTICLE)
+        add_resource(self.goal, title="Newer talk", type=Resource.Type.VIDEO)
+
+        text = self.resources_text(get_page(self.client, self.path))
+
+        self.assertIn(
+            "Articles A tutorial Delete Videos Newer talk Delete Older talk Delete "
+            "Docs The docs Delete",
+            text,
+        )
+        self.assertNotIn("Repos", text)
+
+    def test_each_resource_links_to_its_url_in_a_new_tab_and_can_be_deleted(self):
+        resource = add_resource(
+            self.goal, url="https://docs.djangoproject.com/", title="Django docs"
+        )
+
+        page = get_page(self.client, self.path)
+
+        links = page.links("main")
+        self.assertIn(("https://docs.djangoproject.com/", "Django docs"), links)
+        self.assertIn((f"/resources/{resource.pk}/delete/", "Delete"), links)
+        (anchor,) = [
+            a
+            for t, a in page.elements
+            if t == "a" and a.get("href") == "https://docs.djangoproject.com/"
+        ]
+        self.assertEqual(anchor.get("target"), "_blank")
+        self.assertEqual(anchor.get("rel"), "noopener noreferrer")
+
+    def test_resources_of_other_goals_never_appear(self):
+        other = Goal.objects.create(owner=self.alice, title="Other")
+        add_resource(other, title="Elsewhere")
+        bobs = Goal.objects.create(
+            owner=get_user_model().objects.create_user("bob"), title="B"
+        )
+        add_resource(bobs, title="Bobs")
+
+        text = get_page(self.client, self.path).text("main")
+
+        self.assertNotIn("Elsewhere", text)
+        self.assertNotIn("Bobs", text)
+
+    def test_a_goal_without_resources_says_so_and_offers_the_form(self):
+        page = get_page(self.client, self.path)
+
+        self.assertIn("No resources yet.", self.resources_text(page))
+        self.assertTrue(page.forms("main"))
+
+    def test_the_attach_form_posts_to_the_create_route(self):
+        add_resource(self.goal)
+
+        page = get_page(self.client, self.path)
+
+        ((form, inputs),) = page.forms("main")
+        self.assertEqual(form.get("method"), "post")
+        self.assertEqual(form.get("action"), f"/goals/{self.goal.pk}/resources/new/")
+        names = {a.get("name") for a in inputs}
+        self.assertEqual(names, {"csrfmiddlewaretoken", "url", "title"})
+        (select,) = [a for t, a in page.elements if t == "select"]
+        self.assertEqual(select.get("name"), "type")
+        options = [a for t, a in page.elements if t == "option"]
+        self.assertEqual(
+            [o.get("value") for o in options], ["article", "video", "repo", "doc"]
+        )
+        self.assertEqual(
+            [o.get("value") for o in options if "selected" in o], ["article"]
+        )
+
+    def test_resource_title_and_url_are_escaped(self):
+        payload = "<script>alert(1)</script>"
+        add_resource(self.goal, title=payload, url=f"https://example.com/?q={payload}")
+
+        response = self.client.get(self.path)
+
+        self.assertNotContains(response, payload)
+        self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;", 2)
+
+
 class GoalDetailQueryCountTests(TestCase):
     def setUp(self):
         alice = get_user_model().objects.create_user("alice", password=PASSWORD)
         self.client.force_login(alice)
         self.small = Goal.objects.create(owner=alice, title="Small")
         add_session(self.small, tags=("a",))
+        add_resource(self.small)
         self.large = Goal.objects.create(owner=alice, title="Large")
         for _ in range(6):
             add_session(self.large, tags=("a", "b", "c"))
+        for value in Resource.Type.values * 2:
+            add_resource(self.large, type=value)
 
     def queries_for(self, goal):
         with CaptureQueriesContext(connection) as queries:
@@ -876,12 +979,13 @@ class GoalDetailQueryCountTests(TestCase):
         self.assertEqual(response.status_code, 200)
         return len(queries)
 
-    def test_the_query_count_does_not_grow_with_sessions_or_tags(self):
+    def test_the_query_count_does_not_grow_with_sessions_tags_or_resources(self):
         self.assertEqual(self.queries_for(self.large), self.queries_for(self.small))
 
     def test_the_goal_page_takes_a_fixed_number_of_queries(self):
-        # Login session, user, goal, total, recent sessions, their tags.
-        with self.assertNumQueries(6):
+        # Login session, user, goal, total, recent sessions, their tags,
+        # resources.
+        with self.assertNumQueries(7):
             self.client.get(self.large.get_absolute_url())
 
 
