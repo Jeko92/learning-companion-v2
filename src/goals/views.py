@@ -1,8 +1,10 @@
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import Sum
 from django.shortcuts import redirect
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.views import View
 from django.views.generic import (
     CreateView,
@@ -13,8 +15,10 @@ from django.views.generic import (
 )
 from django.views.generic.detail import SingleObjectMixin
 
+from ai import services
 from goals.forms import GoalForm
 from goals.models import Goal
+from goals.prompts import summary_messages
 from learning_sessions.models import LearningSession
 from resources.forms import ResourceForm
 from resources.models import Resource
@@ -127,8 +131,24 @@ class GoalSummaryView(OwnGoalsMixin, SingleObjectMixin, View):
     summary, then back to the goal page."""
 
     http_method_names = ("post",)
+    SUMMARY_SESSIONS = 10
+    SUMMARY_RESOURCES = 20
 
     def post(self, request, *args, **kwargs):
         # Through OwnGoalsMixin: another user's goal is a 404 like a missing one.
         goal = self.get_object()
+        sessions = LearningSession.objects.owned_by(request.user).filter(goal=goal)
+        resources = Resource.objects.owned_by(request.user).filter(goal=goal)
+        system, user = summary_messages(
+            goal,
+            list(sessions.with_tags()[: self.SUMMARY_SESSIONS]),
+            sessions.aggregate(total=Sum("duration_minutes"))["total"] or 0,
+            list(resources[: self.SUMMARY_RESOURCES]),
+        )
+        # No retries: the user is waiting on this page (see ai.services.complete).
+        goal.summary = services.complete(system, user, max_retries=0).strip()
+        goal.summary_generated_at = timezone.now()
+        # update_fields leaves updated_at alone: the goal itself didn't change.
+        goal.save(update_fields=["summary", "summary_generated_at"])
+        messages.success(request, "Summary generated.")
         return redirect(goal)

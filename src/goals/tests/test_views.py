@@ -1196,3 +1196,97 @@ class GoalSummaryAccessTests(SummaryTestCase):
         self.assertEqual(response.content, missing.content)
         self.complete.assert_not_called()
         self.assert_nothing_stored()
+
+
+class GoalSummaryGenerateTests(SummaryTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.alice)
+        # 12 sessions of 10 minutes on 1-12 March, then 22 resources.
+        self.sessions = [
+            add_session(
+                self.goal,
+                tags=("django",) if n == 12 else (),
+                date=f"2026-03-{n:02d}",
+                duration_minutes=10,
+                notes=f"session {n:02d}",
+            )
+            for n in range(1, 13)
+        ]
+        self.resources = [
+            add_resource(self.goal, title=f"Resource {n:02d}") for n in range(1, 23)
+        ]
+        other = Goal.objects.create(owner=self.alice, title="Other")
+        add_session(other, notes="elsewhere")
+        add_resource(other, title="Elsewhere")
+        bobs = Goal.objects.create(
+            owner=get_user_model().objects.create_user("bob"), title="B"
+        )
+        add_session(bobs, notes="bobs session")
+        add_resource(bobs, title="Bobs")
+
+    def generate(self, at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC)):
+        with patch("django.utils.timezone.now", return_value=at):
+            return self.client.post(self.path)
+
+    def test_one_call_without_retries_with_the_recent_sessions_and_resources(self):
+        from goals.prompts import summary_messages
+
+        self.generate()
+
+        newest_ten = LearningSession.objects.filter(
+            pk__in=[s.pk for s in self.sessions[2:]]
+        ).with_tags()
+        expected = summary_messages(
+            self.goal, list(newest_ten), 120, self.resources[2:][::-1]
+        )
+        self.complete.assert_called_once_with(*expected, max_retries=0)
+        (_, user), _ = self.complete.call_args
+        self.assertIn("session 12", user)
+        self.assertIn("tags: django", user)
+        self.assertIn("Total time: 2 h", user)
+        for absent in (
+            "session 01",
+            "session 02",
+            "Resource 01",
+            "Resource 02",
+            "elsewhere",
+            "Elsewhere",
+            "bobs session",
+            "Bobs",
+        ):
+            self.assertNotIn(absent, user)
+
+    def test_the_reply_is_stored_trimmed_with_its_time(self):
+        self.complete.return_value = "  Keep going \n"
+
+        response = self.generate(at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC))
+
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.summary, "Keep going")
+        self.assertEqual(
+            self.goal.summary_generated_at, datetime(2026, 10, 1, 9, 30, tzinfo=UTC)
+        )
+        self.assertContains(self.client.get(response.url), "Summary generated.")
+
+    def test_generating_does_not_change_the_goals_updated_time(self):
+        updated = Goal.objects.get(pk=self.goal.pk).updated_at
+
+        self.generate(at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC))
+
+        self.assertEqual(Goal.objects.get(pk=self.goal.pk).updated_at, updated)
+
+    def test_a_new_summary_replaces_the_last_one(self):
+        self.generate(at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC))
+        self.complete.return_value = "Second"
+
+        self.generate(at=datetime(2026, 10, 2, 8, 0, tzinfo=UTC))
+
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.summary, "Second")
+        self.assertEqual(
+            self.goal.summary_generated_at, datetime(2026, 10, 2, 8, 0, tzinfo=UTC)
+        )
