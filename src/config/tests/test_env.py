@@ -92,6 +92,43 @@ class ResolveSettingsTests(SimpleTestCase):
 
         self.assertEqual(settings.allowed_hosts, ["localhost", "127.0.0.1"])
 
+    def test_openai_api_key_comes_from_environment(self):
+        settings = self.resolve(environ(SECRET_KEY="x"))
+
+        self.assertEqual(settings.openai_api_key, TEST_OPENAI_API_KEY)
+
+    def test_openai_api_key_starting_with_dollar_is_used_literally(self):
+        settings = self.resolve(
+            {"SECRET_KEY": "x", "OPENAI_API_KEY": "$abc", "abc": "other"}
+        )
+
+        self.assertEqual(settings.openai_api_key, "$abc")
+
+    def test_a_missing_or_blank_openai_api_key_raises_improperly_configured(self):
+        for given in (
+            {"SECRET_KEY": "x"},
+            {"SECRET_KEY": "x", "OPENAI_API_KEY": ""},
+            {"SECRET_KEY": "x", "OPENAI_API_KEY": "  \t "},
+        ):
+            with self.subTest(environ=given):
+                with self.assertRaises(ImproperlyConfigured) as raised:
+                    self.resolve(given)
+
+                # A fixed message: it names the variable and never echoes a value.
+                self.assertEqual(
+                    str(raised.exception),
+                    "The OPENAI_API_KEY environment variable must be set and not empty",
+                )
+
+    def test_openai_api_key_from_environment_wins_over_env_file(self):
+        env_file = self.write_env_file("OPENAI_API_KEY=sk-from-file\n")
+
+        from_file = self.resolve({"SECRET_KEY": "x"}, env_file)
+        from_env = self.resolve(environ(SECRET_KEY="x"), env_file)
+
+        self.assertEqual(from_file.openai_api_key, "sk-from-file")
+        self.assertEqual(from_env.openai_api_key, TEST_OPENAI_API_KEY)
+
     def test_openai_model_defaults_to_gpt_4_1_mini(self):
         for given in (
             environ(SECRET_KEY="x"),

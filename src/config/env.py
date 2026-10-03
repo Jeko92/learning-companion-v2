@@ -17,7 +17,20 @@ class EnvSettings:
     secret_key: str
     debug: bool
     allowed_hosts: list[str]
+    openai_api_key: str
     openai_model: str
+
+
+def required_raw(environ: Mapping[str, str], name: str) -> str:
+    """A required secret, read raw: env.str() would expand a leading "$" as a
+    reference to another variable, and generated keys can start with "$".
+    The error names the variable, never the value."""
+    value = environ.get(name, "")
+    if not value.strip():
+        raise ImproperlyConfigured(
+            f"The {name} environment variable must be set and not empty"
+        )
+    return value
 
 
 def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
@@ -28,21 +41,15 @@ def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
 
     Env.read_env(env_file)
     env = Env()
-    # Read the raw value: env.str() would expand a leading "$" as a reference
-    # to another variable, and generated keys can start with "$".
-    secret_key = Env.ENVIRON.get("SECRET_KEY", "")
-    if not secret_key.strip():
-        raise ImproperlyConfigured(
-            "The SECRET_KEY environment variable must be set and not empty"
-        )
     return EnvSettings(
-        secret_key=secret_key,
+        secret_key=required_raw(Env.ENVIRON, "SECRET_KEY"),
         debug=env.bool("DEBUG", default=False),
         allowed_hosts=[
             host.strip()
             for host in env.list("ALLOWED_HOSTS", default=DEFAULT_ALLOWED_HOSTS)
             if host.strip()
         ],
+        openai_api_key=required_raw(Env.ENVIRON, "OPENAI_API_KEY"),
         # Set but blank means the default, like unset.
         openai_model=Env.ENVIRON.get("OPENAI_MODEL", "").strip()
         or DEFAULT_OPENAI_MODEL,
