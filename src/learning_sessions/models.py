@@ -31,8 +31,8 @@ class LearningSessionQuerySet(models.QuerySet):
 
     def minutes_per_tag(self):
         """(tag name, minutes) per tag, largest total first and ties by name
-        regardless of case, in one query. A session with several tags counts
-        in full under each."""
+        regardless of case, then (None, minutes) for untagged time if any, in
+        one query. A session with several tags counts in full under each."""
         # The explicit order_by() replaces any incoming ordering, which would
         # otherwise add its columns to GROUP BY and split the groups.
         rows = (
@@ -40,7 +40,9 @@ class LearningSessionQuerySet(models.QuerySet):
             .annotate(total=Sum("duration_minutes"))
             .order_by("-total", Lower("tags__name"))
         )
-        return [(row["tags__name"], row["total"]) for row in rows]
+        totals = [(row["tags__name"], row["total"]) for row in rows]
+        # Untagged sessions form the one group without a tag (the outer join).
+        return sorted(totals, key=lambda total: total[0] is None)
 
 
 class LearningSession(models.Model):

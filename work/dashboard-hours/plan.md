@@ -44,7 +44,7 @@
   `owned_by(alice).minutes_per_tag()` must equal `[("python", 135), ("django", 105), ("apple", 45), ("Zebra", 45)]`: largest first, ties case-insensitive, the multi-tag session counted under both, bob's minutes and his tag never appearing.
 
   — test: `src/learning_sessions/tests/test_models.py` (`MinutesPerTagTests`) — impl: `src/learning_sessions/models.py` — covers: AC1, AC2, AC3, AC8
-- [ ] 2. **Untagged time, one query, ordered input.**
+- [x] 2. **Untagged time, one query, ordered input.**
   - Alice's untagged sessions (20 + 25 min) come last as `(None, 45)`, after a larger and a smaller tag. The row is left out when there is no untagged time; the step 1 fixture shows that.
   - `owned_by(alice).order_by("-date").minutes_per_tag()` gives the same list, in one query (`assertNumQueries(1)`).
 

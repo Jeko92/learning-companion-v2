@@ -331,3 +331,17 @@ class MinutesPerTagTests(AggregateTestCase):
             totals,
             [("python", 135), ("django", 105), ("apple", 45), ("Zebra", 45)],
         )
+
+    def test_untagged_time_comes_last_in_one_query_whatever_the_ordering(self):
+        self.add_session(self.alice, 90, ["big"])
+        self.add_session(self.alice, 20)
+        self.add_session(self.alice, 25, day=date(2026, 9, 2))
+        self.add_session(self.alice, 10, ["small"])
+        self.add_session(self.bob, 500)
+
+        # An explicit ordering on the incoming queryset must not split groups.
+        sessions = LearningSession.objects.owned_by(self.alice).order_by("-date")
+        with self.assertNumQueries(1):
+            totals = sessions.minutes_per_tag()
+
+        self.assertEqual(totals, [("big", 90), ("small", 10), (None, 45)])
