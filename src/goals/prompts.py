@@ -1,6 +1,7 @@
 """Prompts for the goal pages' AI features. Pure functions: the views gather
 the data (through owned_by) and pass it in."""
 
+from ai.services import AIServiceError
 from learning_sessions.templatetags.session_format import duration
 
 SUMMARY_SYSTEM = (
@@ -27,6 +28,18 @@ NEXT_STEPS_SCHEMA = {
     "required": ["steps"],
     "additionalProperties": False,
 }
+
+
+def parse_next_steps(reply):
+    """The steps from a complete_json() reply, trimmed, blank ones dropped.
+    Anything else than 2-3 strings is the AI service's unexpected reply."""
+    steps = reply.get("steps")
+    if not isinstance(steps, list) or not all(isinstance(s, str) for s in steps):
+        steps = []
+    steps = [step.strip() for step in steps if step.strip()]
+    if not 2 <= len(steps) <= 3:
+        raise AIServiceError("The AI service returned an unexpected reply.")
+    return steps
 
 
 def one_line(text):

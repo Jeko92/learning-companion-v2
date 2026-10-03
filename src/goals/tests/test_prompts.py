@@ -2,8 +2,9 @@ import importlib
 import importlib.util
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 
+from ai.services import AIServiceError
 from goals.models import Goal
 from learning_sessions.models import LearningSession
 from resources.models import Resource
@@ -157,3 +158,42 @@ class NextStepsMessagesTests(PromptTestCase):
                 "additionalProperties": False,
             },
         )
+
+
+class ParseNextStepsTests(SimpleTestCase):
+    UNEXPECTED = "The AI service returned an unexpected reply."
+
+    def parse(self, reply):
+        prompts = importlib.import_module("goals.prompts")
+        self.assertTrue(hasattr(prompts, "parse_next_steps"))
+        return prompts.parse_next_steps(reply)
+
+    def test_the_steps_come_back_trimmed_in_order_without_blank_ones(self):
+        cases = {
+            "two": (["Read", "Build"], ["Read", "Build"]),
+            "three, trimmed": (
+                [" Read \n", "\tBuild", "Test "],
+                ["Read", "Build", "Test"],
+            ),
+            "blank ones dropped": (["Read", " ", "", "Build"], ["Read", "Build"]),
+        }
+        for case, (steps, expected) in cases.items():
+            with self.subTest(case=case):
+                self.assertEqual(self.parse({"steps": steps}), expected)
+
+    def test_a_reply_that_does_not_fit_is_an_unexpected_reply(self):
+        cases = {
+            "no steps": {},
+            "steps not a list": {"steps": "Read, Build"},
+            "a step not a string": {"steps": ["Read", 2]},
+            "one step": {"steps": ["Read"]},
+            "one step after blanks": {"steps": ["Read", "  "]},
+            "no steps at all": {"steps": []},
+            "four steps": {"steps": ["Read", "Build", "Test", "Ship"]},
+        }
+        for case, reply in cases.items():
+            with self.subTest(case=case):
+                with self.assertRaises(AIServiceError) as raised:
+                    self.parse(reply)
+
+                self.assertEqual(str(raised.exception), self.UNEXPECTED)
