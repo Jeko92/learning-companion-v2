@@ -1,7 +1,9 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import Sum
+from django.shortcuts import redirect
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -9,6 +11,7 @@ from django.views.generic import (
     ListView,
     UpdateView,
 )
+from django.views.generic.detail import SingleObjectMixin
 
 from goals.forms import GoalForm
 from goals.models import Goal
@@ -117,3 +120,15 @@ class GoalDeleteView(OwnGoalsMixin, SuccessMessageMixin, DeleteView):
             .count()
         )
         return context
+
+
+class GoalSummaryView(OwnGoalsMixin, SingleObjectMixin, View):
+    """POST only (anything else is a 405): generate the goal's AI progress
+    summary, then back to the goal page."""
+
+    http_method_names = ("post",)
+
+    def post(self, request, *args, **kwargs):
+        # Through OwnGoalsMixin: another user's goal is a 404 like a missing one.
+        goal = self.get_object()
+        return redirect(goal)

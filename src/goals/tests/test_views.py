@@ -1,6 +1,7 @@
 import re
 from datetime import UTC, datetime
 from html.parser import HTMLParser
+from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -777,7 +778,7 @@ class GoalViewsScopingTests(TestCase):
         }
 
         # A new route must be added here deliberately, not slip past the check.
-        self.assertEqual(set(views), {"list", "detail", "edit", "delete"})
+        self.assertEqual(set(views), {"list", "detail", "edit", "delete", "summary"})
         for name, view in views.items():
             with self.subTest(view=name):
                 # A model on the view plus a wrong base order would serve
@@ -1133,3 +1134,65 @@ class GoalDeleteResourceWarningTests(TestCase):
         text = get_page(self.client, self.path).text("main")
 
         self.assertNotIn("resource", text)
+
+
+class SummaryTestCase(TestCase):
+    """Alice, her goal, and the AI service replaced: `self.complete` is a mock
+    of ai.services.complete, and building a real OpenAI client fails the
+    test, so no summary test can reach the network."""
+
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.path = f"/goals/{self.goal.pk}/summary/"
+        self.enterContext(
+            patch(
+                "ai.services.OpenAI",
+                side_effect=AssertionError("a test tried to build a real client"),
+            )
+        )
+        self.complete = self.enterContext(
+            patch("ai.services.complete", return_value="Keep going")
+        )
+
+    def assert_nothing_stored(self):
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.summary, "")
+        self.assertIsNone(self.goal.summary_generated_at)
+
+
+class GoalSummaryAccessTests(SummaryTestCase):
+    def setUp(self):
+        super().setUp()
+        add_session(self.goal)
+
+    def test_the_summary_route_is_under_the_goal(self):
+        self.assertEqual(reverse("goals:summary", args=[self.goal.pk]), self.path)
+
+    def test_a_get_is_not_allowed(self):
+        self.client.force_login(self.alice)
+
+        response = self.client.get(self.path)
+
+        self.assertEqual(response.status_code, 405)
+        self.complete.assert_not_called()
+
+    def test_anonymous_visitors_are_sent_to_log_in(self):
+        response = self.client.post(self.path)
+
+        self.assertRedirects(
+            response, login_redirect(self.path), fetch_redirect_response=False
+        )
+        self.complete.assert_not_called()
+        self.assert_nothing_stored()
+
+    def test_another_users_goal_is_the_same_404_as_a_missing_one(self):
+        self.client.force_login(get_user_model().objects.create_user("bob"))
+
+        response = self.client.post(self.path)
+        missing = self.client.post("/goals/999999/summary/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.content, missing.content)
+        self.complete.assert_not_called()
+        self.assert_nothing_stored()
