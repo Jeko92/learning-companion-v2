@@ -41,6 +41,10 @@ class Goal(models.Model):
     # GoalForm; saved with update_fields, so it doesn't move updated_at.
     summary = models.TextField(blank=True)
     summary_generated_at = models.DateTimeField(null=True, blank=True)
+    # The latest 2-3 AI next steps, a list of strings in order (see
+    # goals.views.GoalNextStepsView). Kept like the summary.
+    next_steps = models.JSONField(default=list, blank=True)
+    next_steps_generated_at = models.DateTimeField(null=True, blank=True)
 
     objects = GoalQuerySet.as_manager()
 

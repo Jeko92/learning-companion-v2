@@ -405,6 +405,29 @@ class GoalEditTests(TestCase):
         self.assertEqual(self.goal.summary, "Earlier summary")
         self.assertEqual(self.goal.summary_generated_at, generated)
 
+    def test_editing_keeps_the_next_steps_and_the_form_cannot_set_them(self):
+        generated = datetime(2026, 3, 1, 9, 30, tzinfo=UTC)
+        Goal.objects.filter(pk=self.goal.pk).update(
+            next_steps=["Earlier step", "Another step"],
+            next_steps_generated_at=generated,
+        )
+
+        self.client.post(
+            self.path,
+            {
+                "title": "Learn Django well",
+                "description": "",
+                "status": "done",
+                "next_steps": '["Posted step"]',
+                "next_steps_generated_at": "2000-01-01 00:00",
+            },
+        )
+
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.title, "Learn Django well")
+        self.assertEqual(self.goal.next_steps, ["Earlier step", "Another step"])
+        self.assertEqual(self.goal.next_steps_generated_at, generated)
+
     def test_the_detail_page_links_to_the_edit_page(self):
         links = get_page(self.client, self.goal.get_absolute_url()).links("main")
 
