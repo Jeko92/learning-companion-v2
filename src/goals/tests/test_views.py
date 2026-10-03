@@ -1645,3 +1645,24 @@ class GoalNextStepsSuggestTests(NextStepsTestCase):
         self.assertEqual(
             self.goal.next_steps_generated_at, datetime(2026, 10, 2, 8, 0, tzinfo=UTC)
         )
+
+
+class GoalNextStepsEmptyGoalTests(NextStepsTestCase):
+    def test_a_goal_without_sessions_or_resources_still_gets_steps(self):
+        # Another goal's session and resource don't count.
+        other = Goal.objects.create(owner=self.alice, title="Other")
+        add_session(other)
+        add_resource(other)
+        self.client.force_login(self.alice)
+
+        response = self.client.post(self.path)
+
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        self.complete_json.assert_called_once()
+        (_, user), _ = self.complete_json.call_args
+        self.assertIn("No sessions.", user.splitlines())
+        self.assertIn("No resources.", user.splitlines())
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.next_steps, list(self.STEPS))
