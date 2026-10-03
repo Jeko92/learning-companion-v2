@@ -16,4 +16,79 @@
 /* The vendored plugin files are code, not templates: don't scan them for classes. */
 @source not "./daisyui{,*}.mjs";
 
-@plugin "./daisyui.mjs";
+/* No built-in themes: only the two below are emitted. */
+@plugin "./daisyui.mjs" { themes: false; }
+
+/*
+ * Colours are oklch() inside the sRGB gamut, and every *-content colour has at
+ * least 4.5:1 contrast on its background (core/tests/test_theme.py).
+ */
+@plugin "./daisyui-theme.mjs" {
+  name: "companion";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+  --color-base-100: oklch(100% 0 0);
+  --color-base-200: oklch(97.5% 0.006 255);
+  --color-base-300: oklch(92.5% 0.014 255);
+  --color-base-content: oklch(27.5% 0.040 262);
+  --color-primary: oklch(49% 0.260 277);
+  --color-primary-content: oklch(99% 0.004 277);
+  --color-secondary: oklch(50% 0.260 293);
+  --color-secondary-content: oklch(99% 0.004 293);
+  --color-accent: oklch(50% 0.088 186);
+  --color-accent-content: oklch(99% 0.010 186);
+  --color-neutral: oklch(32% 0.040 262);
+  --color-neutral-content: oklch(97% 0.006 255);
+  --color-info: oklch(50% 0.122 243);
+  --color-info-content: oklch(99% 0.004 243);
+  --color-success: oklch(50% 0.138 150);
+  --color-success-content: oklch(99% 0.010 150);
+  --color-warning: oklch(83% 0.170 84);
+  --color-warning-content: oklch(28% 0.070 46);
+  --color-error: oklch(50% 0.200 27);
+  --color-error-content: oklch(99% 0.004 27);
+  --radius-selector: 1rem;
+  --radius-field: 0.5rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@plugin "./daisyui-theme.mjs" {
+  name: "companion-dark";
+  default: false;
+  prefersdark: true;
+  color-scheme: dark;
+  --color-base-100: oklch(21% 0.035 266);
+  --color-base-200: oklch(17.5% 0.030 266);
+  --color-base-300: oklch(14% 0.025 266);
+  --color-base-content: oklch(93% 0.013 255);
+  --color-primary: oklch(70% 0.158 277);
+  --color-primary-content: oklch(22% 0.080 281);
+  --color-secondary: oklch(72% 0.160 293);
+  --color-secondary-content: oklch(24% 0.100 291);
+  --color-accent: oklch(78% 0.130 182);
+  --color-accent-content: oklch(25% 0.040 192);
+  --color-neutral: oklch(37% 0.040 257);
+  --color-neutral-content: oklch(96% 0.007 248);
+  --color-info: oklch(75% 0.140 233);
+  --color-info-content: oklch(25% 0.060 243);
+  --color-success: oklch(78% 0.170 152);
+  --color-success-content: oklch(25% 0.060 153);
+  --color-warning: oklch(83% 0.170 84);
+  --color-warning-content: oklch(25% 0.070 46);
+  --color-error: oklch(72% 0.170 22);
+  --color-error-content: oklch(24% 0.090 26);
+  --radius-selector: 1rem;
+  --radius-field: 0.5rem;
+  --radius-box: 1rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
