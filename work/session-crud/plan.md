@@ -134,7 +134,7 @@
   - Scoping set becomes `{"create", "edit"}`.
 
   — test: `learning_sessions/tests/test_views.py` (`SessionEditPageTests`, `SessionEditAccessTests`, scoping set) — impl: `learning_sessions/views.py` (`SessionUpdateView`, `OwnSessionsMixin.get_queryset` with `select_related("goal")`), `learning_sessions/forms.py` (`__init__` tag initial), `learning_sessions/urls.py`, `session_form.html` (edit heading and action) — covers: AC1, AC3, AC4, AC20, AC27
-- [ ] 7. **Edit POST.**
+- [x] 7. **Edit POST.**
   - A valid POST updates the fields, replaces the tags, redirects to the goal and shows "Session updated.".
   - An empty tags field clears all tags.
   - A posted `goal` (alice's other goal or bob's) leaves the goal unchanged.

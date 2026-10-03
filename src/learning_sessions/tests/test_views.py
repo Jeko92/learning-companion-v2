@@ -468,6 +468,114 @@ class SessionEditAccessTests(TestCase):
                 self.assert_untouched()
 
 
+class SessionEditTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.alice = User.objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.session = create_session(self.goal, tags=("Python",), notes="Old")
+        self.bob = User.objects.create_user("bob")
+        self.bobs_goal = Goal.objects.create(owner=self.bob, title="B")
+        self.client.force_login(self.alice)
+        self.path = f"/sessions/{self.session.pk}/edit/"
+
+    def tag_names(self, session):
+        return sorted(t.name for t in session.tags.all())
+
+    def test_a_valid_post_updates_the_session_and_replaces_its_tags(self):
+        response = self.client.post(
+            self.path,
+            valid_data(
+                date="2026-02-01", duration_minutes="90", notes="New", tags="Rust, Go"
+            ),
+        )
+
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        self.session.refresh_from_db()
+        self.assertEqual(str(self.session.date), "2026-02-01")
+        self.assertEqual(self.session.duration_minutes, 90)
+        self.assertEqual(self.session.notes, "New")
+        self.assertEqual(self.tag_names(self.session), ["Go", "Rust"])
+        self.assertContains(self.client.get(response.url), "Session updated.")
+
+    def test_an_empty_tags_field_removes_all_tags(self):
+        self.client.post(self.path, valid_data(tags=""))
+
+        self.assertEqual(self.tag_names(self.session), [])
+
+    def test_the_goal_cannot_be_changed(self):
+        other = Goal.objects.create(owner=self.alice, title="Other")
+        for goal in (other, self.bobs_goal):
+            with self.subTest(goal=goal.title):
+                response = self.client.post(self.path, valid_data(goal=goal.pk))
+
+                self.assertEqual(response.status_code, 302)
+                self.session.refresh_from_db()
+                self.assertEqual(self.session.goal, self.goal)
+
+    def test_an_invalid_post_changes_nothing(self):
+        tomorrow = str(timezone.localdate() + timedelta(days=1))
+
+        response = self.client.post(
+            self.path, valid_data(date=tomorrow, duration_minutes="90", tags="Rust")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFormError(
+            response.context["form"], "date", "A session can't be in the future."
+        )
+        self.session.refresh_from_db()
+        self.assertEqual(self.session.duration_minutes, 45)
+        self.assertEqual(self.tag_names(self.session), ["Python"])
+        self.assertFalse(Tag.objects.filter(name="Rust").exists())
+
+    def test_another_users_session_keeps_a_shared_tag(self):
+        bobs_session = create_session(self.bobs_goal, tags=("python",))
+
+        self.client.post(self.path, valid_data(tags="Rust"))
+
+        self.assertEqual(self.tag_names(bobs_session), ["Python"])
+        self.assertTrue(Tag.objects.filter(name="Python").exists())
+
+
+class SessionEditCsrfTests(TestCase):
+    # The default test client skips CSRF checks; this one enforces them.
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        goal = Goal.objects.create(owner=alice, title="Learn Django")
+        self.session = create_session(goal)
+        self.csrf_client = Client(enforce_csrf_checks=True)
+        self.csrf_client.force_login(alice)
+        self.path = f"/sessions/{self.session.pk}/edit/"
+
+    def token(self):
+        # GET first: sets the CSRF cookie and yields the form's token.
+        page = get_page(self.csrf_client, self.path)
+        ((_, inputs),) = page.forms("main")
+        return [a["value"] for a in inputs if a.get("name") == "csrfmiddlewaretoken"]
+
+    def test_a_post_without_a_token_is_rejected(self):
+        self.token()
+
+        response = self.csrf_client.post(self.path, valid_data(duration_minutes="90"))
+
+        self.assertEqual(response.status_code, 403)
+        self.session.refresh_from_db()
+        self.assertEqual(self.session.duration_minutes, 45)
+
+    def test_a_post_with_the_forms_token_succeeds(self):
+        tokens = self.token()
+        self.assertEqual(len(tokens), 1)
+
+        response = self.csrf_client.post(
+            self.path, valid_data(duration_minutes="90", csrfmiddlewaretoken=tokens[0])
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+
 class SessionViewsScopingTests(TestCase):
     def test_every_session_view_scopes_through_the_own_sessions_mixins(self):
         routes = {p.name: p for p in session_routes()}

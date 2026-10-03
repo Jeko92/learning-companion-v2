@@ -38,3 +38,17 @@ class LearningSessionFormAtomicTests(TestCase):
 
         self.assertFalse(LearningSession.objects.exists())
         self.assertFalse(Tag.objects.filter(name="Rust").exists())
+
+    def test_a_failing_tag_step_leaves_an_edited_session_as_it_was(self):
+        session = LearningSession.objects.create(goal=self.goal, duration_minutes=30)
+        session.tags.set([Tag.objects.get_or_create_by_name("Python")[0]])
+        form = LearningSessionForm(self.data, instance=session)
+        self.assertTrue(form.is_valid(), form.errors)
+
+        with failing_on_second_tag(), self.assertRaises(RuntimeError):
+            form.save()
+
+        session.refresh_from_db()
+        self.assertEqual(session.duration_minutes, 30)
+        self.assertEqual([t.name for t in session.tags.all()], ["Python"])
+        self.assertFalse(Tag.objects.filter(name="Rust").exists())

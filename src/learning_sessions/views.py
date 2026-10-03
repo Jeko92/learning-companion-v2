@@ -21,6 +21,10 @@ class OwnSessionsMixin(LoginRequiredMixin):
             "goal"
         )
 
+    def get_success_url(self):
+        # Sessions have no page of their own: back to the goal after a change.
+        return self.object.goal.get_absolute_url()
+
 
 class GoalSessionsMixin(OwnSessionsMixin):
     """For the routes under /goals/<goal_pk>/sessions/: the goal is looked up
@@ -57,13 +61,11 @@ class SessionCreateView(GoalSessionsMixin, SuccessMessageMixin, CreateView):
             "instance": LearningSession(goal=self.goal),
         }
 
-    def get_success_url(self):
-        return self.object.goal.get_absolute_url()
-
 
 class SessionUpdateView(OwnSessionsMixin, SuccessMessageMixin, UpdateView):
     form_class = LearningSessionForm
     template_name = "learning_sessions/session_form.html"
+    success_message = "Session updated."
 
     def get_context_data(self, **kwargs):
         return super().get_context_data(goal=self.object.goal, **kwargs)
