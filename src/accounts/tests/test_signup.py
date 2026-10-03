@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import URLResolver, get_resolver, reverse
@@ -10,6 +9,8 @@ SIGNUP_PATH = "/accounts/signup/"
 USERNAME = "alice"
 # Passes all four configured password validators for USERNAME.
 PASSWORD = "Tr4ck-Learning!"
+# Where sign-up lands (dashboard-status AC10).
+DASHBOARD = "/dashboard/"
 
 
 def signup_data(username=USERNAME, password1=PASSWORD, password2=PASSWORD):
@@ -71,15 +72,12 @@ class SignUpSubmitTests(TestCase):
 
         user = get_user_model().objects.get(username=USERNAME)
         self.assertEqual(self.client.session.get("_auth_user_id"), str(user.pk))
-        self.assertEqual(settings.LOGIN_REDIRECT_URL, "/")
-        self.assertRedirects(
-            response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
-        )
+        self.assertRedirects(response, DASHBOARD, fetch_redirect_response=False)
 
-    def test_home_welcomes_the_new_user_after_signup(self):
+    def test_the_dashboard_welcomes_the_new_user_after_signup(self):
         response = self.client.post(SIGNUP_PATH, signup_data(), follow=True)
 
-        self.assertEqual(response.request["PATH_INFO"], "/")
+        self.assertEqual(response.request["PATH_INFO"], DASHBOARD)
         self.assertContains(response, f"Welcome, {USERNAME}!")
 
     def test_signup_marks_the_passwords_as_sensitive(self):
@@ -160,15 +158,11 @@ class SignUpLoggedInTests(TestCase):
     def test_logged_in_get_redirects_without_the_form(self):
         response = self.client.get(SIGNUP_PATH)
 
-        self.assertRedirects(
-            response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
-        )
+        self.assertRedirects(response, DASHBOARD, fetch_redirect_response=False)
         self.assertTemplateNotUsed(response, "accounts/signup.html")
 
     def test_logged_in_post_redirects_without_creating_a_user(self):
         response = self.client.post(SIGNUP_PATH, signup_data("bob"))
 
-        self.assertRedirects(
-            response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
-        )
+        self.assertRedirects(response, DASHBOARD, fetch_redirect_response=False)
         self.assertEqual(get_user_model().objects.count(), 1)

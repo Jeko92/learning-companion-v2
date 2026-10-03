@@ -56,7 +56,8 @@
   - The anonymous nav still has only Log in and Sign up.
 
   — test: `src/accounts/tests/test_nav.py` — impl: `src/templates/base.html` — covers: AC8
-- [ ] 10. **Logged-in users land on the dashboard.**
+- [x] 10. **Logged-in users land on the dashboard.**
+  - *As implemented:* the existing tests already cover each case: no `next`, same-site `next` (`SAFE_NEXT`), every off-site `next` in `UNSAFE_NEXTS`, the logged-in GET and POST to log-in and sign-up, and the followed sign-up and log-in. So instead of adding duplicates, they now assert a literal `DASHBOARD = "/dashboard/"` in place of `settings.LOGIN_REDIRECT_URL`, which as a URL name is no longer a path to compare against. That was the red: 30 failures, all `'/' != '/dashboard/'`. The followed log-in test also asserts it ends at `/dashboard/`.
   - Red: `test_signup.py:74` now expects `resolve_url(settings.LOGIN_REDIRECT_URL) == "/dashboard/"`, and `:82` expects the followed sign-up redirect to end at `/dashboard/`, still showing "Welcome, alice!".
   - New tests in `test_login.py`: a login without `next` redirects to `/dashboard/`; a same-site `next=/goals/` is still followed; an off-site `next=https://evil.example/` falls back to `/dashboard/`. An already-authenticated GET to `/accounts/login/` and to `/accounts/signup/` each redirect to `/dashboard/`.
   - Green: `LOGIN_REDIRECT_URL = "dashboard:index"`, with its settings comment kept accurate.

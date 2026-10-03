@@ -12,6 +12,8 @@ from core.tests.html import PageParser
 LOGIN_PATH = "/accounts/login/"
 USERNAME = "alice"
 PASSWORD = "Tr4ck-Learning!"
+# Where log-in lands without a usable next (dashboard-status AC9, AC10).
+DASHBOARD = "/dashboard/"
 
 
 def get_page(client, path):
@@ -66,15 +68,14 @@ class LoginSubmitTests(TestCase):
         response = self.log_in()
 
         self.assertEqual(self.client.session.get("_auth_user_id"), str(self.user.pk))
-        self.assertRedirects(
-            response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
-        )
+        self.assertRedirects(response, DASHBOARD, fetch_redirect_response=False)
 
-    def test_landing_page_welcomes_the_user_back(self):
+    def test_the_dashboard_welcomes_the_user_back(self):
         response = self.client.post(
             LOGIN_PATH, {"username": USERNAME, "password": PASSWORD}, follow=True
         )
 
+        self.assertEqual(response.request["PATH_INFO"], DASHBOARD)
         self.assertContains(response, f"Welcome back, {USERNAME}!")
 
 
@@ -127,7 +128,7 @@ class LoginNextTests(TestCase):
                     self.assertIn("_auth_user_id", self.client.session)
                     self.assertRedirects(
                         response,
-                        settings.LOGIN_REDIRECT_URL,
+                        DASHBOARD,
                         fetch_redirect_response=False,
                     )
                     location = response["Location"]
@@ -159,9 +160,7 @@ class LoginNextTests(TestCase):
                 )
 
                 self.assertIn("_auth_user_id", self.client.session)
-                self.assertRedirects(
-                    response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
-                )
+                self.assertRedirects(response, DASHBOARD, fetch_redirect_response=False)
 
     def test_next_cannot_inject_markup_into_the_login_page(self):
         script = "<script>alert(1)</script>"
@@ -243,9 +242,7 @@ class LoginLoggedInTests(TestCase):
     def test_logged_in_get_redirects_without_the_form(self):
         response = self.client.get(LOGIN_PATH)
 
-        self.assertRedirects(
-            response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
-        )
+        self.assertRedirects(response, DASHBOARD, fetch_redirect_response=False)
         self.assertTemplateNotUsed(response, "accounts/login.html")
 
     def test_logged_in_get_never_follows_an_unsafe_next(self):
@@ -257,7 +254,7 @@ class LoginLoggedInTests(TestCase):
 
                 self.assertRedirects(
                     response,
-                    settings.LOGIN_REDIRECT_URL,
+                    DASHBOARD,
                     fetch_redirect_response=False,
                 )
 
@@ -266,8 +263,6 @@ class LoginLoggedInTests(TestCase):
         # same place, so only the logged-in short-circuit can pass this.
         response = self.client.post(LOGIN_PATH, {})
 
-        self.assertRedirects(
-            response, settings.LOGIN_REDIRECT_URL, fetch_redirect_response=False
-        )
+        self.assertRedirects(response, DASHBOARD, fetch_redirect_response=False)
         self.assertTemplateNotUsed(response, "accounts/login.html")
         self.assertEqual(list(get_messages(response.wsgi_request)), [])
