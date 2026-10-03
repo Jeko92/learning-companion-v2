@@ -5,17 +5,17 @@ Issue: #19 · Branch: feature/dashboard-hours
 As a logged-in learner, I want my dashboard to show how much time I have logged per tag and per week, so that I can see where my learning time goes and how steady it has been lately.
 
 ## Acceptance criteria
-- [ ] AC1 The dashboard has an "Hours per tag" section, labelled by its `<h2>` through `aria-labelledby`. It contains a table with a Tag / Time header and one row per tag on the user's sessions. Each row shows the sum of `duration_minutes` of the user's sessions with that tag.
-- [ ] AC2 Per-tag rows are ordered by total time, largest first. Ties are ordered by tag name, case-insensitively.
-- [ ] AC3 A session with several tags counts its full duration under each of them. The per-tag table has no Total row, and a note under it says that a session with several tags counts under each.
-- [ ] AC4 Time from sessions without tags is shown as a final "Untagged" row. The row appears only when the user has untagged time.
-- [ ] AC5 The dashboard has an "Hours per week" section, labelled by its `<h2>` through `aria-labelledby`. It contains a table with a Week / Time header and exactly 8 rows: the current week and the 7 weeks before it, newest first. The current week is the one containing `timezone.localdate()`.
-- [ ] AC6 Weeks run Monday to Sunday. Each row is labelled "Week of <Monday>", formatted like "Week of Sep 28, 2026". A Sunday session counts in the week that started the Monday before, and a Monday session starts a new week.
-- [ ] AC7 Each week row shows the sum of `duration_minutes` of the user's sessions dated in that week. A week without sessions shows "0 min". Sessions dated before the oldest of the 8 weeks, or after the current week, are not counted.
-- [ ] AC8 Only the current user's sessions are counted, through `LearningSession.objects.owned_by`. Another user's sessions never change a total, even when they use the same tag. A tag used only by another user never appears.
-- [ ] AC9 Times are shown with the existing `duration` format ("45 min", "2 h", "1 h 30 min"), as on the goal page.
-- [ ] AC10 A user with no sessions sees "No sessions logged yet." in the per-tag section instead of the table. The per-week table still shows all 8 weeks at "0 min".
-- [ ] AC11 Both totals come from ORM aggregation: per tag, `values` + `annotate(Sum("duration_minutes"))`; per week, `TruncWeek("date")` + `Sum`. The dashboard's query count stays fixed as sessions, tags and goals grow. The existing pin moves from 3 to 5 queries: session, user, status counts, per-tag totals, per-week totals.
+- [x] AC1 The dashboard has an "Hours per tag" section, labelled by its `<h2>` through `aria-labelledby`. It contains a table with a Tag / Time header and one row per tag on the user's sessions. Each row shows the sum of `duration_minutes` of the user's sessions with that tag.
+- [x] AC2 Per-tag rows are ordered by total time, largest first. Ties are ordered by tag name, case-insensitively.
+- [x] AC3 A session with several tags counts its full duration under each of them. The per-tag table has no Total row, and a note under it says that a session with several tags counts under each.
+- [x] AC4 Time from sessions without tags is shown as a final "Untagged" row. The row appears only when the user has untagged time.
+- [x] AC5 The dashboard has an "Hours per week" section, labelled by its `<h2>` through `aria-labelledby`. It contains a table with a Week / Time header and exactly 8 rows: the current week and the 7 weeks before it, newest first. The current week is the one containing `timezone.localdate()`.
+- [x] AC6 Weeks run Monday to Sunday. Each row is labelled "Week of <Monday>", formatted like "Week of Sep 28, 2026". A Sunday session counts in the week that started the Monday before, and a Monday session starts a new week.
+- [x] AC7 Each week row shows the sum of `duration_minutes` of the user's sessions dated in that week. A week without sessions shows "0 min". Sessions dated before the oldest of the 8 weeks, or after the current week, are not counted.
+- [x] AC8 Only the current user's sessions are counted, through `LearningSession.objects.owned_by`. Another user's sessions never change a total, even when they use the same tag. A tag used only by another user never appears.
+- [x] AC9 Times are shown with the existing `duration` format ("45 min", "2 h", "1 h 30 min"), as on the goal page.
+- [x] AC10 A user with no sessions sees "No sessions logged yet." in the per-tag section instead of the table. The per-week table still shows all 8 weeks at "0 min".
+- [x] AC11 Both totals come from ORM aggregation: per tag, `values` + `annotate(Sum("duration_minutes"))`; per week, `TruncWeek("date")` + `Sum`. The dashboard's query count stays fixed as sessions, tags and goals grow. The existing pin moves from 3 to 5 queries: session, user, status counts, per-tag totals, per-week totals.
 
 ## Out of scope
 - Chart libraries, CSS bars and date-range pickers. Both are plain tables.
