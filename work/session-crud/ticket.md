@@ -85,3 +85,4 @@ URLs use shallow nesting. Collection routes are nested under the goal: `/goals/<
 - **After create, edit and delete**, the user is redirected to the goal detail page, since there is no session detail page. No `next` parameter is followed.
 - **Ownership** is `goal.owner`. Sessions are looked up only through `LearningSession.objects.owned_by(request.user)`, and goals through `Goal.objects.owned_by(request.user)`.
 - **Review round:** AC2/AC3 (404 before form handling), AC4 (mixin rules), AC6, AC9, AC10, AC11, AC12, AC15, AC19, AC20, AC21, AC24, AC25 and AC27 were tightened or added after the user asked for a best-practice, robustness and security review of the first draft. The user chose to include the goal delete warning (AC25) in this ticket.
+- **Approval:** the user approved the acceptance criteria (AC1–AC28) on 2026-10-03.
