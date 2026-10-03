@@ -22,7 +22,7 @@
 
 ## Steps
 
-- [ ] 1. **`ai` app and the `openai` dependency.** `ai` is installed (`apps.is_installed("ai")`), and `requirements.txt` has a range-pinned `openai` line (`openai>=` with an upper bound `<`). — test: `ai/tests/test_apps.py` (new: `AiAppTests`) — impl: `src/ai/__init__.py`, `src/ai/apps.py` (`AiConfig`), `src/ai/tests/__init__.py`, `config/settings.py` (`INSTALLED_APPS`), `requirements.txt` — covers: AC5, AC6 (app)
+- [x] 1. **`ai` app and the `openai` dependency.** `ai` is installed (`apps.is_installed("ai")`), and `requirements.txt` has a range-pinned `openai` line (`openai>=` with an upper bound `<`). — test: `ai/tests/test_apps.py` (new: `AiAppTests`) — impl: `src/ai/__init__.py`, `src/ai/apps.py` (`AiConfig`), `src/ai/tests/__init__.py`, `config/settings.py` (`INSTALLED_APPS`), `requirements.txt` — covers: AC5, AC6 (app)
 
 - [ ] 2. **`OPENAI_MODEL` is optional with a default.** `resolve_settings` returns `openai_model`: `gpt-4.1-mini` when unset, empty or whitespace-only; a given value trimmed; the environment beats `.env`. — test: `config/tests/test_env.py` — impl: `config/env.py` (`EnvSettings.openai_model`, `DEFAULT_OPENAI_MODEL`) — covers: AC2, AC3
 
