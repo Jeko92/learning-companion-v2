@@ -42,7 +42,7 @@
 
 - [x] 10. **An empty reply is an error too.** No choices, `content=None`, and whitespace-only content each raise `AIServiceError` with the empty-reply message (logged like step 9). — test: `ai/tests/test_services.py` (`CompleteEmptyReplyTests`) — impl: `src/ai/services.py` — covers: AC10
 
-- [ ] 11. **Docs.** `CLAUDE.md`: Stack (the settings bullet: `OPENAI_API_KEY` required like `SECRET_KEY`, a dummy is enough for tests and the dev server; `OPENAI_MODEL` default; the OpenAI bullet: `ai.services.complete`, `AIServiceError`, `get_client` as the patch point, 30 s / 2 retries, no network in tests), Commands (the `cp .env.example .env` comment), Layout (`src/ai/`). `README.md`: the Setup steps and the variable table get both variables, and the note that the suite needs the key. No test (docs only). — test: none — impl: `CLAUDE.md`, `README.md` — covers: AC12
+- [x] 11. **Docs.** `CLAUDE.md`: Stack (the settings bullet: `OPENAI_API_KEY` required like `SECRET_KEY`, a dummy is enough for tests and the dev server; `OPENAI_MODEL` default; the OpenAI bullet: `ai.services.complete`, `AIServiceError`, `get_client` as the patch point, 30 s / 2 retries, no network in tests), Commands (the `cp .env.example .env` comment), Layout (`src/ai/`). `README.md`: the Setup steps and the variable table get both variables, and the note that the suite needs the key. No test (docs only). — test: none — impl: `CLAUDE.md`, `README.md` — covers: AC12
 
 ## AC coverage
 
