@@ -82,7 +82,7 @@
   - A POST without a token is a 403 that calls nothing; with the form's token it suggests.
   - `GoalDetailQueryCountTests` stores steps on its goal and still pins 7 queries.
   — test: `src/goals/tests/test_views.py` (`GoalDetailNextStepsTests`, `GoalNextStepsCsrfTests`, `GoalDetailQueryCountTests`) — impl: `src/templates/goals/goal_detail.html` — covers: AC4, AC11, AC13
-- [ ] 12. **Docs.**
+- [x] 12. **Docs.**
   - `CLAUDE.md`:
     - The Goals bullet: the next-steps route, view, stored fields, prompt and parsing, the no-empty-goal-check choice and `NextStepsTestCase`.
     - The OpenAI bullet: `complete_json()`, strict JSON schema, the unexpected-reply error, no `minItems`/`maxItems`.
