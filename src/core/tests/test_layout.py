@@ -106,3 +106,27 @@ class MessageTests(TestCase):
                 (alert,) = self.render_with_message(level, "Something happened.")
                 self.assertIn(css_class, alert["class"].split())
                 self.assertEqual(alert.get("role"), role)
+
+
+SITE = "Learning Companion"
+
+
+class PageTitleTests(AllPagesMixin, TestCase):
+    """Each page type has its own title, so tabs and history are told apart."""
+
+    def test_the_home_page_title_is_the_site_name(self):
+        titles = {page.name: parser.text("title") for page, parser in self.walk()}
+        self.assertEqual(titles["home"], SITE)
+        self.assertEqual(titles["dashboard"], f"Dashboard · {SITE}")
+
+    def test_every_other_page_title_names_the_page_then_the_site(self):
+        for page, parser in self.walk():
+            if page.name != "home":
+                with self.subTest(page=page.name):
+                    title = parser.text("title")
+                    self.assertTrue(title.endswith(f" · {SITE}"), title)
+                    self.assertNotEqual(title, f" · {SITE}")
+
+    def test_the_page_titles_are_all_different(self):
+        titles = [parser.text("title") for _, parser in self.walk()]
+        self.assertEqual(len(set(titles)), len(titles), titles)

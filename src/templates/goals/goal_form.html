@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block title %}{% if object %}Edit goal{% else %}New goal{% endif %} · Learning Companion{% endblock %}
+
 {% block content %}
   {# Shared by create and edit: `object` is only set when editing. #}
   <h1 class="text-2xl font-bold">{% if object %}Edit goal{% else %}New goal{% endif %}</h1>

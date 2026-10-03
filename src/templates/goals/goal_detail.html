@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% load session_format %}
 
+{% block title %}{{ goal.title }} · Learning Companion{% endblock %}
+
 {% block content %}
   <h1 class="text-2xl font-bold">{{ goal.title }}</h1>
   <p class="mt-2 text-sm text-slate-500">{{ goal.get_status_display }}</p>
