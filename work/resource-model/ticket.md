@@ -62,3 +62,4 @@ The model is `resources.Resource`, in a new app `resources`.
   - class-level options as tuples (RUF012)
   - admin autocomplete for the goal, through `GoalAdmin`'s existing search
 - The app label `resources` is free (Django has no built-in app by that name).
+- **Approval:** the user approved the acceptance criteria (AC1–AC13) on 2026-10-03.
