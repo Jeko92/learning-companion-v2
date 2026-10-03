@@ -3,7 +3,7 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
-from django.views.generic import CreateView
+from django.views.generic import CreateView, DeleteView
 
 from goals.models import Goal
 from resources.forms import ResourceForm
@@ -72,3 +72,11 @@ class ResourceCreateView(GoalResourcesMixin, SuccessMessageMixin, CreateView):
                 form.add_error(None, error)
                 return self.form_invalid(form)
             raise
+
+
+class ResourceDeleteView(OwnResourcesMixin, SuccessMessageMixin, DeleteView):
+    template_name = "resources/resource_confirm_delete.html"
+
+    def get_success_message(self, cleaned_data):
+        # A fixed text: DeleteView's cleaned_data is empty.
+        return "Resource deleted."

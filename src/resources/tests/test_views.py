@@ -374,12 +374,141 @@ class ResourceCreateRaceTests(TestCase):
         self.assertFalse(Resource.objects.exists())
 
 
+def create_resource(goal, **fields):
+    fields = {"url": "https://docs.djangoproject.com/", "title": "Django docs",
+              "type": Resource.Type.DOC, **fields}  # fmt: skip
+    return Resource.objects.create(goal=goal, **fields)
+
+
+class ResourceDeleteTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.resource = create_resource(self.goal)
+        self.client.force_login(self.alice)
+        self.path = f"/resources/{self.resource.pk}/delete/"
+
+    def test_the_delete_page_has_a_route_of_its_own(self):
+        self.assertEqual(
+            reverse("resources:delete", args=[self.resource.pk]), self.path
+        )
+
+    def test_a_get_asks_for_confirmation_and_deletes_nothing(self):
+        response = self.client.get(self.path)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "resources/resource_confirm_delete.html")
+        page = get_page(self.client, self.path)
+
+        text = page.text("main")
+        for shown in ("Django docs", "https://docs.djangoproject.com/", "Learn Django"):
+            self.assertIn(shown, text)
+        ((form, _),) = page.forms("main")
+        self.assertEqual(form.get("method"), "post")
+        self.assertEqual(form.get("action"), self.path)
+        self.assertIn((self.goal.get_absolute_url(), "Cancel"), page.links("main"))
+        self.assertTrue(Resource.objects.filter(pk=self.resource.pk).exists())
+
+    def test_a_post_deletes_the_resource_only(self):
+        other = create_resource(self.goal, url="https://example.com/other")
+
+        response = self.client.post(self.path)
+
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        self.assertFalse(Resource.objects.filter(pk=self.resource.pk).exists())
+        self.assertTrue(Goal.objects.filter(pk=self.goal.pk).exists())
+        self.assertEqual(list(Resource.objects.all()), [other])
+        self.assertContains(self.client.get(response.url), "Resource deleted.")
+
+    def test_the_title_url_and_goal_title_are_escaped(self):
+        self.goal.title = PAYLOAD
+        self.goal.save()
+        for field, value in (
+            ("title", PAYLOAD),
+            ("url", f"https://example.com/?q={PAYLOAD}"),
+        ):
+            with self.subTest(field=field):
+                Resource.objects.filter(pk=self.resource.pk).update(**{field: value})
+
+                response = self.client.get(self.path)
+
+                self.assertNotContains(response, PAYLOAD)
+                self.assertContains(response, ESCAPED)
+
+
+class ResourceDeleteAccessTests(TestCase):
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        goal = Goal.objects.create(owner=alice, title="Learn Django")
+        self.resource = create_resource(goal)
+        self.path = f"/resources/{self.resource.pk}/delete/"
+
+    def assert_untouched(self):
+        self.assertTrue(Resource.objects.filter(pk=self.resource.pk).exists())
+
+    def test_anonymous_visitors_are_sent_to_log_in(self):
+        for method in ("get", "post"):
+            with self.subTest(method=method):
+                response = getattr(self.client, method)(self.path)
+
+                self.assertRedirects(
+                    response, login_redirect(self.path), fetch_redirect_response=False
+                )
+                self.assert_untouched()
+
+    def test_another_users_resource_is_the_same_404_as_a_missing_one(self):
+        self.client.force_login(get_user_model().objects.create_user("bob"))
+        for method in ("get", "post"):
+            with self.subTest(method=method):
+                response = getattr(self.client, method)(self.path)
+                missing = getattr(self.client, method)("/resources/999999/delete/")
+
+                self.assertEqual(response.status_code, 404)
+                self.assertEqual(response.content, missing.content)
+                self.assert_untouched()
+
+
+class ResourceDeleteCsrfTests(TestCase):
+    # The default test client skips CSRF checks; this one enforces them.
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        goal = Goal.objects.create(owner=alice, title="Learn Django")
+        self.resource = create_resource(goal)
+        self.csrf_client = Client(enforce_csrf_checks=True)
+        self.csrf_client.force_login(alice)
+        self.path = f"/resources/{self.resource.pk}/delete/"
+
+    def token(self):
+        # GET first: sets the CSRF cookie and yields the form's token.
+        page = get_page(self.csrf_client, self.path)
+        ((_, inputs),) = page.forms("main")
+        return [a["value"] for a in inputs if a.get("name") == "csrfmiddlewaretoken"]
+
+    def test_a_post_without_a_token_is_rejected(self):
+        self.token()
+
+        response = self.csrf_client.post(self.path)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Resource.objects.filter(pk=self.resource.pk).exists())
+
+    def test_a_post_with_the_forms_token_succeeds(self):
+        tokens = self.token()
+        self.assertEqual(len(tokens), 1)
+
+        response = self.csrf_client.post(self.path, {"csrfmiddlewaretoken": tokens[0]})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Resource.objects.exists())
+
+
 class ResourceViewsScopingTests(TestCase):
     def test_every_resource_view_scopes_through_the_own_resources_mixins(self):
         routes = {p.name: p for p in resource_routes()}
 
         # A new route must be added here deliberately, not slip past the check.
-        self.assertEqual(set(routes), {"create"})
+        self.assertEqual(set(routes), {"create", "delete"})
 
         from resources.views import GoalResourcesMixin, OwnResourcesMixin
 

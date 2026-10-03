@@ -12,4 +12,9 @@ urlpatterns = [
         views.ResourceCreateView.as_view(),
         name="create",
     ),
+    path(
+        "resources/<int:pk>/delete/",
+        views.ResourceDeleteView.as_view(),
+        name="delete",
+    ),
 ]
