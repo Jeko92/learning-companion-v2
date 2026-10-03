@@ -316,6 +316,26 @@ class ResourceCreateValidationTests(TestCase):
         self.assertEqual(Resource.objects.count(), len(cases))
 
 
+class ResourceCreateDuplicateTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        Resource.objects.create(goal=self.goal, url=valid_data()["url"], title="Docs")
+        self.client.force_login(self.alice)
+        self.path = f"/goals/{self.goal.pk}/resources/new/"
+
+    def test_a_url_the_goal_already_has_is_a_form_error(self):
+        response = self.client.post(self.path, valid_data(title="Again"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "resources/resource_form.html")
+        self.assertFormError(
+            response.context["form"], None, "This goal already has this resource."
+        )
+        self.assertContains(response, "This goal already has this resource.")
+        self.assertEqual(Resource.objects.count(), 1)
+
+
 class ResourceViewsScopingTests(TestCase):
     def test_every_resource_view_scopes_through_the_own_resources_mixins(self):
         routes = {p.name: p for p in resource_routes()}

@@ -12,7 +12,7 @@
 ## Design decisions
 
 - **Mirror the sessions views.** `resources/views.py` gets `OwnResourcesMixin(LoginRequiredMixin)` and `GoalResourcesMixin(OwnResourcesMixin)`, with the same rules (listed first, no `model`), and `ResourceCreateView` / `ResourceDeleteView`. Rationale: one proven scoping pattern, and `ResourceViewsScopingTests` can mirror `SessionViewsScopingTests`.
-- **Duplicates are checked in the form.** `ResourceForm.validate_unique()` also validates the `(goal, url)` constraint, using the goal the view sets on the instance, so the error is the model's own message, reported as a non-field error. Rationale: one message, one source, and `form.is_valid()` stays honest without view code.
+- **Duplicates are checked in the form.** `ResourceForm.validate_constraints()` also validates the `(goal, url)` constraint (in Django 6.1 a `UniqueConstraint` is checked there, not in `validate_unique()`; corrected during step 4), using the goal the view sets on the instance, so the error is the model's own message, reported as a non-field error. Rationale: one message, one source, and `form.is_valid()` stays honest without view code.
 - **The race is handled in the view.** `ResourceCreateView.form_valid` saves inside `transaction.atomic()`. On `IntegrityError` it checks whether the goal now has that URL: if so, it adds the same non-field error (no duplicated literal) and returns `form_invalid`; otherwise it re-raises, so unrelated integrity errors are not masked.
 - **The URL form field stays Django's default.** The model validator already limits schemes to http/https with one error. The `assume_scheme="https"` behaviour (`example.com` saved as `https://example.com`) is kept and pinned by a test, so a Django change shows up.
 - **Grouping lives on the queryset.** `ResourceQuerySet.grouped_by_type()` evaluates the queryset once and returns `[(heading, [resources])]` in `Resource.Type` order, skipping empty types. Headings are "Articles", "Videos", "Repos", "Docs", and a test requires one heading for every `Type` value, so a new type can't be silently dropped. Rationale: one query, and the template stays a plain loop.
@@ -39,11 +39,11 @@
 
   — test: `resources/tests/test_views.py` (`ResourceCreateValidationTests`) — impl: whatever the tests show is missing (expected none beyond step 2; if all pass immediately, the step is a characterisation of the model validators and is committed as tests only, saying so in the commit body) — covers: AC12, AC13, AC14, AC20
 
-- [ ] 4. **Duplicate URL on the same goal.** `ResourceForm` with `instance=Resource(goal=goal)` and a URL the goal already has (also with surrounding whitespace) is invalid with the non-field error "This goal already has this resource."; the same URL for another goal (including another user's) is valid. Through the view, the POST re-renders with that error and stores nothing.
+- [x] 4. **Duplicate URL on the same goal.** `ResourceForm` with `instance=Resource(goal=goal)` and a URL the goal already has (also with surrounding whitespace) is invalid with the non-field error "This goal already has this resource."; the same URL for another goal (including another user's) is valid. Through the view, the POST re-renders with that error and stores nothing.
 
-  — test: `resources/tests/test_forms.py` (new, `ResourceFormDuplicateTests`), `resources/tests/test_views.py` (`ResourceCreateDuplicateTests`) — impl: `resources/forms.py` (`validate_unique` covering the `(goal, url)` constraint) — covers: AC15
+  — test: `resources/tests/test_forms.py` (new, `ResourceFormDuplicateTests`), `resources/tests/test_views.py` (`ResourceCreateDuplicateTests`) — impl: `resources/forms.py` (`validate_constraints` covering the `(goal, url)` constraint) — covers: AC15
 
-- [ ] 5. **Duplicate that only the database catches.** With `ResourceForm.validate_unique` patched to a no-op (so a duplicate reaches the insert, as in a race), posting an existing URL returns the create page (200) with "This goal already has this resource.", no 500, and the goal still has one such resource. A different `IntegrityError` (the URL is not a duplicate; `Resource.save` patched to raise) is re-raised, not reported as a duplicate.
+- [ ] 5. **Duplicate that only the database catches.** With `ResourceForm.validate_constraints` patched to a no-op (so a duplicate reaches the insert, as in a race), posting an existing URL returns the create page (200) with "This goal already has this resource.", no 500, and the goal still has one such resource. A different `IntegrityError` (the URL is not a duplicate; `Resource.save` patched to raise) is re-raised, not reported as a duplicate.
 
   — test: `resources/tests/test_views.py` (`ResourceCreateRaceTests`) — impl: `resources/views.py` (`form_valid`: `transaction.atomic()`, catch `IntegrityError`, re-check, `form.add_error(None, …)`) — covers: AC15
 
@@ -63,7 +63,7 @@
 
   — test: `goals/tests/test_views.py` (`GoalDeleteResourceWarningTests`) — impl: `goals/views.py`, `templates/goals/goal_confirm_delete.html` — covers: AC18
 
-- [ ] 10. **Docs.** `CLAUDE.md`: the Resources bullet gets the routes, the two mixins and their rules, `ResourceForm` (allow-list, the duplicate check in `validate_unique` plus the `IntegrityError` re-check in the view, replacing the "#14's attach form must check" note), `grouped_by_type()`, the goal page section and query count, the goal delete warning and `ResourceViewsScopingTests`; the Layout bullets for `src/resources/` and `src/templates/` add the views, URLs, form and `resources/` templates. No test (docs only).
+- [ ] 10. **Docs.** `CLAUDE.md`: the Resources bullet gets the routes, the two mixins and their rules, `ResourceForm` (allow-list, the duplicate check in `validate_constraints` plus the `IntegrityError` re-check in the view, replacing the "#14's attach form must check" note), `grouped_by_type()`, the goal page section and query count, the goal delete warning and `ResourceViewsScopingTests`; the Layout bullets for `src/resources/` and `src/templates/` add the views, URLs, form and `resources/` templates. No test (docs only).
 
   — test: none (docs) — impl: `CLAUDE.md` — covers: AC21
 
