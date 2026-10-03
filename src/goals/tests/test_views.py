@@ -4,8 +4,10 @@ from datetime import UTC, datetime
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ImproperlyConfigured
+from django.db import connection
 from django.shortcuts import resolve_url
 from django.test import Client, RequestFactory, TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.views.generic import DetailView
 from django.views.generic.detail import SingleObjectMixin
@@ -15,6 +17,8 @@ from core.tests.html import PageParser
 from goals import urls as goal_urls
 from goals.models import Goal
 from goals.views import OwnGoalsMixin
+from learning_sessions.models import LearningSession
+from tags.models import Tag
 
 PASSWORD = "Tr4ck-Learning!"
 
@@ -779,3 +783,135 @@ class GoalViewsScopingTests(TestCase):
                 goals = set(instance.get_queryset())
                 self.assertIn(alices_goal, goals)
                 self.assertNotIn(bobs_goal, goals)
+
+
+def add_session(goal, tags=(), **fields):
+    fields = {"date": "2026-03-01", "duration_minutes": 15, **fields}
+    session = LearningSession.objects.create(goal=goal, **fields)
+    session.tags.set(Tag.objects.get_or_create_by_name(n)[0] for n in tags)
+    return session
+
+
+class GoalDetailSessionsTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.client.force_login(self.alice)
+        self.path = self.goal.get_absolute_url()
+
+    def numbers(self, page):
+        return [int(n) for n in re.findall(r"#(\d+)#", page.text("main"))]
+
+    def test_the_five_most_recent_sessions_of_this_goal_are_shown(self):
+        for n in range(1, 7):
+            add_session(self.goal, date=f"2026-03-0{n}", notes=f"#{n}#")
+        other = Goal.objects.create(owner=self.alice, title="Other")
+        add_session(other, date="2026-03-09", notes="#99#")
+
+        page = get_page(self.client, self.path)
+
+        self.assertEqual(self.numbers(page), [6, 5, 4, 3, 2])
+
+    def test_each_session_shows_its_details_and_links(self):
+        session = add_session(
+            self.goal,
+            tags=("zebra", "Django", "apple"),
+            duration_minutes=90,
+            notes="Hi",
+        )
+
+        page = get_page(self.client, self.path)
+
+        text = page.text("main")
+        for shown in ("1 Mar 2026", "1 h 30 min", "apple Django zebra", "Hi"):
+            self.assertIn(shown, text)
+        links = page.links("main")
+        self.assertIn((f"/sessions/{session.pk}/edit/", "Edit"), links)
+        self.assertIn((f"/sessions/{session.pk}/delete/", "Delete"), links)
+
+    def test_the_total_counts_every_session_not_just_those_shown(self):
+        for n in range(1, 7):
+            add_session(self.goal, date=f"2026-03-0{n}")
+        add_session(Goal.objects.create(owner=self.alice, title="Other"))
+
+        text = get_page(self.client, self.path).text("main")
+
+        self.assertIn("Total: 1 h 30 min", text)
+
+    def test_the_section_links_to_add_and_to_all_sessions(self):
+        links = get_page(self.client, self.path).links("main")
+
+        self.assertIn((f"/goals/{self.goal.pk}/sessions/new/", "Add session"), links)
+        self.assertIn((f"/goals/{self.goal.pk}/sessions/", "All sessions"), links)
+
+    def test_a_goal_without_sessions_says_so_with_a_zero_total(self):
+        text = get_page(self.client, self.path).text("main")
+
+        self.assertIn("No sessions yet.", text)
+        self.assertIn("Total: 0 min", text)
+
+    def test_session_text_is_escaped(self):
+        payload = "<script>alert(1)</script>"
+        add_session(self.goal, tags=(payload,), notes=payload)
+
+        response = self.client.get(self.path)
+
+        self.assertNotContains(response, payload)
+        self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
+
+
+class GoalDetailQueryCountTests(TestCase):
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.client.force_login(alice)
+        self.small = Goal.objects.create(owner=alice, title="Small")
+        add_session(self.small, tags=("a",))
+        self.large = Goal.objects.create(owner=alice, title="Large")
+        for _ in range(6):
+            add_session(self.large, tags=("a", "b", "c"))
+
+    def queries_for(self, goal):
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.get(goal.get_absolute_url())
+        self.assertEqual(response.status_code, 200)
+        return len(queries)
+
+    def test_the_query_count_does_not_grow_with_sessions_or_tags(self):
+        self.assertEqual(self.queries_for(self.large), self.queries_for(self.small))
+
+    def test_the_goal_page_takes_a_fixed_number_of_queries(self):
+        # Login session, user, goal, total, recent sessions, their tags.
+        with self.assertNumQueries(6):
+            self.client.get(self.large.get_absolute_url())
+
+
+class GoalDeleteSessionWarningTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.alice = User.objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        # Sessions elsewhere must not be counted.
+        add_session(Goal.objects.create(owner=self.alice, title="Other"))
+        add_session(
+            Goal.objects.create(owner=User.objects.create_user("bob"), title="B")
+        )
+        self.client.force_login(self.alice)
+        self.path = reverse("goals:delete", args=[self.goal.pk])
+
+    def test_the_confirmation_says_how_many_sessions_go_with_the_goal(self):
+        for count, warning in (
+            (1, "Its 1 session will be deleted too."),
+            (3, "Its 3 sessions will be deleted too."),
+        ):
+            with self.subTest(count=count):
+                while self.goal.sessions.count() < count:
+                    add_session(self.goal)
+
+                text = get_page(self.client, self.path).text("main")
+
+                self.assertIn(warning, text)
+
+    def test_a_goal_without_sessions_has_no_warning(self):
+        text = get_page(self.client, self.path).text("main")
+
+        self.assertNotIn("will be deleted too", text)

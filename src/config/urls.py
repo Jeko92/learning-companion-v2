@@ -23,5 +23,6 @@ urlpatterns = [
     path("accounts/", include("accounts.urls")),
     path("profile/", include("profiles.urls")),
     path("goals/", include("goals.urls")),
+    path("", include("learning_sessions.urls")),
     path("", include("core.urls")),
 ]
