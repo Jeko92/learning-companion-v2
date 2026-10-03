@@ -1,6 +1,7 @@
 import re
 from datetime import UTC, datetime
 from html.parser import HTMLParser
+from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -382,6 +383,28 @@ class GoalEditTests(TestCase):
         self.assertNotIn("New goal", page.text("main"))
         self.assertIn((self.goal.get_absolute_url(), "Cancel"), page.links("main"))
 
+    def test_editing_keeps_the_summary_and_the_form_cannot_set_it(self):
+        generated = datetime(2026, 3, 1, 9, 30, tzinfo=UTC)
+        Goal.objects.filter(pk=self.goal.pk).update(
+            summary="Earlier summary", summary_generated_at=generated
+        )
+
+        self.client.post(
+            self.path,
+            {
+                "title": "Learn Django well",
+                "description": "",
+                "status": "done",
+                "summary": "Posted summary",
+                "summary_generated_at": "2000-01-01 00:00",
+            },
+        )
+
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.title, "Learn Django well")
+        self.assertEqual(self.goal.summary, "Earlier summary")
+        self.assertEqual(self.goal.summary_generated_at, generated)
+
     def test_the_detail_page_links_to_the_edit_page(self):
         links = get_page(self.client, self.goal.get_absolute_url()).links("main")
 
@@ -755,7 +778,7 @@ class GoalViewsScopingTests(TestCase):
         }
 
         # A new route must be added here deliberately, not slip past the check.
-        self.assertEqual(set(views), {"list", "detail", "edit", "delete"})
+        self.assertEqual(set(views), {"list", "detail", "edit", "delete", "summary"})
         for name, view in views.items():
             with self.subTest(view=name):
                 # A model on the view plus a wrong base order would serve
@@ -980,9 +1003,12 @@ class GoalDetailResourcesTests(TestCase):
 
         page = get_page(self.client, self.path)
 
-        ((form, inputs),) = page.forms("main")
+        # Found by its action: the goal page has other forms too.
+        action = f"/goals/{self.goal.pk}/resources/new/"
+        ((form, inputs),) = [
+            (f, i) for f, i in page.forms("main") if f.get("action") == action
+        ]
         self.assertEqual(form.get("method"), "post")
-        self.assertEqual(form.get("action"), f"/goals/{self.goal.pk}/resources/new/")
         names = {a.get("name") for a in inputs}
         self.assertEqual(names, {"csrfmiddlewaretoken", "url", "title"})
         (select,) = [a for t, a in page.elements if t == "select"]
@@ -1017,6 +1043,10 @@ class GoalDetailQueryCountTests(TestCase):
             add_session(self.large, tags=("a", "b", "c"))
         for value in Resource.Type.values * 2:
             add_resource(self.large, type=value)
+        # The summary comes with the goal row: no extra query.
+        Goal.objects.filter(pk=self.large.pk).update(
+            summary="A summary", summary_generated_at=datetime(2026, 10, 1, tzinfo=UTC)
+        )
 
     def queries_for(self, goal):
         with CaptureQueriesContext(connection) as queries:
@@ -1111,3 +1141,321 @@ class GoalDeleteResourceWarningTests(TestCase):
         text = get_page(self.client, self.path).text("main")
 
         self.assertNotIn("resource", text)
+
+
+class SummaryTestCase(TestCase):
+    """Alice, her goal, and the AI service replaced: `self.complete` is a mock
+    of ai.services.complete, and building a real OpenAI client fails the
+    test, so no summary test can reach the network."""
+
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.path = f"/goals/{self.goal.pk}/summary/"
+        self.enterContext(
+            patch(
+                "ai.services.OpenAI",
+                side_effect=AssertionError("a test tried to build a real client"),
+            )
+        )
+        self.complete = self.enterContext(
+            patch("ai.services.complete", return_value="Keep going")
+        )
+
+    def assert_nothing_stored(self):
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.summary, "")
+        self.assertIsNone(self.goal.summary_generated_at)
+
+
+class GoalSummaryAccessTests(SummaryTestCase):
+    def setUp(self):
+        super().setUp()
+        add_session(self.goal)
+
+    def test_the_summary_route_is_under_the_goal(self):
+        self.assertEqual(reverse("goals:summary", args=[self.goal.pk]), self.path)
+
+    def test_a_get_is_not_allowed(self):
+        self.client.force_login(self.alice)
+
+        response = self.client.get(self.path)
+
+        self.assertEqual(response.status_code, 405)
+        self.complete.assert_not_called()
+
+    def test_anonymous_visitors_are_sent_to_log_in(self):
+        response = self.client.post(self.path)
+
+        self.assertRedirects(
+            response, login_redirect(self.path), fetch_redirect_response=False
+        )
+        self.complete.assert_not_called()
+        self.assert_nothing_stored()
+
+    def test_another_users_goal_is_the_same_404_as_a_missing_one(self):
+        self.client.force_login(get_user_model().objects.create_user("bob"))
+
+        response = self.client.post(self.path)
+        missing = self.client.post("/goals/999999/summary/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.content, missing.content)
+        self.complete.assert_not_called()
+        self.assert_nothing_stored()
+
+
+class GoalSummaryGenerateTests(SummaryTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.alice)
+        # 12 sessions of 10 minutes on 1-12 March, then 22 resources.
+        self.sessions = [
+            add_session(
+                self.goal,
+                tags=("django",) if n == 12 else (),
+                date=f"2026-03-{n:02d}",
+                duration_minutes=10,
+                notes=f"session {n:02d}",
+            )
+            for n in range(1, 13)
+        ]
+        self.resources = [
+            add_resource(self.goal, title=f"Resource {n:02d}") for n in range(1, 23)
+        ]
+        other = Goal.objects.create(owner=self.alice, title="Other")
+        add_session(other, notes="elsewhere")
+        add_resource(other, title="Elsewhere")
+        bobs = Goal.objects.create(
+            owner=get_user_model().objects.create_user("bob"), title="B"
+        )
+        add_session(bobs, notes="bobs session")
+        add_resource(bobs, title="Bobs")
+
+    def generate(self, at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC)):
+        with patch("django.utils.timezone.now", return_value=at):
+            return self.client.post(self.path)
+
+    def test_one_call_without_retries_with_the_recent_sessions_and_resources(self):
+        from goals.prompts import summary_messages
+
+        self.generate()
+
+        newest_ten = LearningSession.objects.filter(
+            pk__in=[s.pk for s in self.sessions[2:]]
+        ).with_tags()
+        expected = summary_messages(
+            self.goal, list(newest_ten), 120, self.resources[2:][::-1]
+        )
+        self.complete.assert_called_once_with(*expected, max_retries=0)
+        (_, user), _ = self.complete.call_args
+        self.assertIn("session 12", user)
+        self.assertIn("tags: django", user)
+        self.assertIn("Total time: 2 h", user)
+        for absent in (
+            "session 01",
+            "session 02",
+            "Resource 01",
+            "Resource 02",
+            "elsewhere",
+            "Elsewhere",
+            "bobs session",
+            "Bobs",
+        ):
+            self.assertNotIn(absent, user)
+
+    def test_the_reply_is_stored_trimmed_with_its_time(self):
+        self.complete.return_value = "  Keep going \n"
+
+        response = self.generate(at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC))
+
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.summary, "Keep going")
+        self.assertEqual(
+            self.goal.summary_generated_at, datetime(2026, 10, 1, 9, 30, tzinfo=UTC)
+        )
+        self.assertContains(self.client.get(response.url), "Summary generated.")
+
+    def test_generating_does_not_change_the_goals_updated_time(self):
+        updated = Goal.objects.get(pk=self.goal.pk).updated_at
+
+        self.generate(at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC))
+
+        self.assertEqual(Goal.objects.get(pk=self.goal.pk).updated_at, updated)
+
+    def test_a_new_summary_replaces_the_last_one(self):
+        self.generate(at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC))
+        self.complete.return_value = "Second"
+
+        self.generate(at=datetime(2026, 10, 2, 8, 0, tzinfo=UTC))
+
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.summary, "Second")
+        self.assertEqual(
+            self.goal.summary_generated_at, datetime(2026, 10, 2, 8, 0, tzinfo=UTC)
+        )
+
+
+class GoalSummaryEmptyGoalTests(SummaryTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.alice)
+        # Another goal's data doesn't make this one summarisable.
+        other = Goal.objects.create(owner=self.alice, title="Other")
+        add_session(other)
+        add_resource(other)
+
+    def test_a_goal_without_sessions_or_resources_is_not_sent_to_the_ai(self):
+        response = self.client.post(self.path)
+
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        self.complete.assert_not_called()
+        self.assert_nothing_stored()
+        self.assertContains(
+            self.client.get(response.url), "Log a session or attach a resource first."
+        )
+
+    def test_one_session_or_one_resource_is_enough(self):
+        for add in (add_session, add_resource):
+            with self.subTest(add=add.__name__):
+                goal = Goal.objects.create(owner=self.alice, title=add.__name__)
+                add(goal)
+                self.complete.reset_mock()
+
+                self.client.post(f"/goals/{goal.pk}/summary/")
+
+                self.complete.assert_called_once()
+
+
+class GoalSummaryErrorTests(SummaryTestCase):
+    MESSAGES = (
+        "The AI service is unavailable right now. Please try again later.",
+        "The AI service returned an empty reply.",
+    )
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.alice)
+        add_session(self.goal)
+        self.earlier = datetime(2026, 9, 1, 8, 0, tzinfo=UTC)
+        Goal.objects.filter(pk=self.goal.pk).update(
+            summary="Earlier summary", summary_generated_at=self.earlier
+        )
+
+    def test_an_ai_failure_goes_back_to_the_goal_with_its_message(self):
+        from ai.services import AIServiceError
+
+        for message in self.MESSAGES:
+            with self.subTest(message=message):
+                # Chained like the service's own errors, which must not reach
+                # a 500 page (the SDK's text can echo part of the key).
+                cause = RuntimeError("sk-secret-tail")
+                error = AIServiceError(message)
+                error.__cause__ = cause
+                self.complete.side_effect = error
+
+                response = self.client.post(self.path)
+
+                self.assertRedirects(
+                    response,
+                    self.goal.get_absolute_url(),
+                    fetch_redirect_response=False,
+                )
+                page = self.client.get(response.url)
+                self.assertContains(page, message)
+                self.assertNotContains(page, "sk-secret-tail")
+                self.goal.refresh_from_db()
+                self.assertEqual(self.goal.summary, "Earlier summary")
+                self.assertEqual(self.goal.summary_generated_at, self.earlier)
+
+
+class GoalDetailSummaryTests(SummaryTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.alice)
+        self.detail = self.goal.get_absolute_url()
+
+    def summary_text(self):
+        section = LabelledSectionText("summary-heading")
+        section.feed(self.client.get(self.detail).content.decode())
+        return section.text()
+
+    def summary_form(self):
+        page = get_page(self.client, self.detail)
+        forms = [(f, i) for f, i in page.forms("main") if f.get("action") == self.path]
+        self.assertEqual(len(forms), 1, "one form posts to the summary route")
+        return forms[0]
+
+    def test_without_a_summary_the_section_offers_to_generate_one(self):
+        text = self.summary_text()
+
+        self.assertTrue(text.startswith("Summary"), text)
+        self.assertIn("No summary yet.", text)
+        self.assertIn("Generate summary", text)
+        self.assertNotIn("Regenerate", text)
+        form, inputs = self.summary_form()
+        self.assertEqual(form.get("method"), "post")
+        self.assertIn("csrfmiddlewaretoken", {a.get("name") for a in inputs})
+
+    def test_a_stored_summary_is_shown_with_its_time_and_can_be_regenerated(self):
+        Goal.objects.filter(pk=self.goal.pk).update(
+            summary="Two hours so far.\nNext: forms.",
+            summary_generated_at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC),
+        )
+
+        text = self.summary_text()
+
+        self.assertIn("Two hours so far. Next: forms.", text)
+        self.assertIn("Generated 1 Oct 2026, 09:30", text)
+        self.assertIn("Regenerate summary", text)
+        self.assertNotIn("No summary yet.", text)
+        self.assertContains(self.client.get(self.detail), "Two hours so far.<br>")
+        self.summary_form()
+
+    def test_the_summary_is_escaped(self):
+        payload = "<script>alert(1)</script>"
+        Goal.objects.filter(pk=self.goal.pk).update(
+            summary=payload, summary_generated_at=datetime(2026, 10, 1, tzinfo=UTC)
+        )
+
+        response = self.client.get(self.detail)
+
+        self.assertNotContains(response, payload)
+        self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
+
+
+class GoalSummaryCsrfTests(SummaryTestCase):
+    # The default test client skips CSRF checks; this one enforces them.
+    def setUp(self):
+        super().setUp()
+        add_session(self.goal)
+        self.csrf_client = Client(enforce_csrf_checks=True)
+        self.csrf_client.force_login(self.alice)
+
+    def token(self):
+        # GET the goal page first: sets the CSRF cookie and yields the token
+        # of the form that posts to the summary route.
+        page = get_page(self.csrf_client, self.goal.get_absolute_url())
+        (inputs,) = [i for f, i in page.forms("main") if f.get("action") == self.path]
+        return [a["value"] for a in inputs if a.get("name") == "csrfmiddlewaretoken"]
+
+    def test_a_post_without_a_token_is_rejected(self):
+        self.token()
+
+        response = self.csrf_client.post(self.path)
+
+        self.assertEqual(response.status_code, 403)
+        self.complete.assert_not_called()
+
+    def test_a_post_with_the_forms_token_generates(self):
+        (token,) = self.token()
+
+        response = self.csrf_client.post(self.path, {"csrfmiddlewaretoken": token})
+
+        self.assertEqual(response.status_code, 302)
+        self.complete.assert_called_once()

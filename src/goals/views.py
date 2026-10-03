@@ -1,7 +1,11 @@
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.db.models import Sum
+from django.shortcuts import redirect
 from django.urls import reverse_lazy
+from django.utils import timezone
+from django.views import View
 from django.views.generic import (
     CreateView,
     DeleteView,
@@ -9,9 +13,12 @@ from django.views.generic import (
     ListView,
     UpdateView,
 )
+from django.views.generic.detail import SingleObjectMixin
 
+from ai import services
 from goals.forms import GoalForm
 from goals.models import Goal
+from goals.prompts import summary_messages
 from learning_sessions.models import LearningSession
 from resources.forms import ResourceForm
 from resources.models import Resource
@@ -117,3 +124,43 @@ class GoalDeleteView(OwnGoalsMixin, SuccessMessageMixin, DeleteView):
             .count()
         )
         return context
+
+
+class GoalSummaryView(OwnGoalsMixin, SingleObjectMixin, View):
+    """POST only (anything else is a 405): generate the goal's AI progress
+    summary, then back to the goal page."""
+
+    http_method_names = ("post",)
+    SUMMARY_SESSIONS = 10
+    SUMMARY_RESOURCES = 20
+
+    def post(self, request, *args, **kwargs):
+        # Through OwnGoalsMixin: another user's goal is a 404 like a missing one.
+        goal = self.get_object()
+        sessions = LearningSession.objects.owned_by(request.user).filter(goal=goal)
+        resources = Resource.objects.owned_by(request.user).filter(goal=goal)
+        if not sessions.exists() and not resources.exists():
+            # Nothing to summarise: don't spend an API call on it.
+            messages.info(request, "Log a session or attach a resource first.")
+            return redirect(goal)
+        system, user = summary_messages(
+            goal,
+            list(sessions.with_tags()[: self.SUMMARY_SESSIONS]),
+            sessions.aggregate(total=Sum("duration_minutes"))["total"] or 0,
+            list(resources[: self.SUMMARY_RESOURCES]),
+        )
+        try:
+            # No retries: the user is waiting on this page (see
+            # ai.services.complete).
+            reply = services.complete(system, user, max_retries=0)
+        except services.AIServiceError as error:
+            # Always caught: a 500 would print the chained SDK error, whose
+            # text can echo part of the key. The message itself is user-safe.
+            messages.error(request, str(error))
+            return redirect(goal)
+        goal.summary = reply.strip()
+        goal.summary_generated_at = timezone.now()
+        # update_fields leaves updated_at alone: the goal itself didn't change.
+        goal.save(update_fields=["summary", "summary_generated_at"])
+        messages.success(request, "Summary generated.")
+        return redirect(goal)
