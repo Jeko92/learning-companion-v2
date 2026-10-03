@@ -48,3 +48,4 @@ As a logged-in learner, I want the AI to suggest 2-3 concrete next learning step
 - **Empty goal:** the user chose to still suggest for a goal with no sessions and no resources (unlike the summary), since "how to start" steps are most useful then.
 - **Wait time and errors:** same rules as the summary: no retries for a page action, and every `AIServiceError` is caught and shown, because its chained SDK error can echo part of the key.
 - The interview took place on 2026-10-03.
+- **Approval:** the user approved the acceptance criteria (AC1–AC16) on 2026-10-03.
