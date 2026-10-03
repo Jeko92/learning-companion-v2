@@ -13,6 +13,8 @@ from django.views.generic import (
 from goals.forms import GoalForm
 from goals.models import Goal
 from learning_sessions.models import LearningSession
+from resources.forms import ResourceForm
+from resources.models import Resource
 
 
 class OwnGoalsMixin(LoginRequiredMixin):
@@ -66,6 +68,13 @@ class GoalDetailView(OwnGoalsMixin, DetailView):
         context["total_minutes"] = (
             sessions.aggregate(total=Sum("duration_minutes"))["total"] or 0
         )
+        # Resources too only through owned_by; one query for all the groups.
+        context["resource_groups"] = (
+            Resource.objects.owned_by(self.request.user)
+            .filter(goal=self.object)
+            .grouped_by_type()
+        )
+        context["resource_form"] = ResourceForm()
         return context
 
 
@@ -96,9 +105,14 @@ class GoalDeleteView(OwnGoalsMixin, SuccessMessageMixin, DeleteView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # The sessions that cascade with the goal, for the warning.
+        # The sessions and resources that cascade with the goal, for the warnings.
         context["session_count"] = (
             LearningSession.objects.owned_by(self.request.user)
+            .filter(goal=self.object)
+            .count()
+        )
+        context["resource_count"] = (
+            Resource.objects.owned_by(self.request.user)
             .filter(goal=self.object)
             .count()
         )

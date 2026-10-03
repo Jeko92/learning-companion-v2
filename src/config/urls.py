@@ -24,5 +24,6 @@ urlpatterns = [
     path("profile/", include("profiles.urls")),
     path("goals/", include("goals.urls")),
     path("", include("learning_sessions.urls")),
+    path("", include("resources.urls")),
     path("", include("core.urls")),
 ]
