@@ -1,4 +1,6 @@
+from datetime import UTC, date, datetime, timedelta
 from html.parser import HTMLParser
+from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -10,6 +12,8 @@ from django.urls import reverse
 
 from core.tests.html import VOID_ELEMENTS, PageParser, collapse
 from goals.models import Goal
+from learning_sessions.models import LearningSession
+from tags.models import Tag
 
 PASSWORD = "Tr4ck-Learning!"
 
@@ -28,15 +32,16 @@ HEADINGS = ("h1", "h2", "h3", "h4", "h5", "h6")
 
 
 class LabelledSection(HTMLParser):
-    """The element labelled by `heading_id` (its aria-labelledby): its
-    heading's text, its table rows as lists of cell texts and its links as
-    (href, text), so a check can't pick up the same words elsewhere on the
+    """The element labelled by `heading_id` (its aria-labelledby): its text,
+    its heading's text, its table rows as lists of cell texts and its links
+    as (href, text), so a check can't pick up the same words elsewhere on the
     page."""
 
     def __init__(self, heading_id):
         super().__init__()
         self.heading_id = heading_id
         self.depth = 0
+        self.pieces = []
         self.heading_pieces = None
         self.in_heading = False
         self.rows = []
@@ -75,10 +80,15 @@ class LabelledSection(HTMLParser):
     def handle_data(self, data):
         if self.in_heading:
             self.heading_pieces.append(data)
+        if self.depth:
+            self.pieces.append(data)
         if self.depth and self.cell is not None:
             self.cell.append(data)
         if self.depth and self.link is not None:
             self.link.append(data)
+
+    def text(self):
+        return collapse(self.pieces)
 
     def heading(self):
         return collapse(self.heading_pieces or [])
@@ -87,10 +97,25 @@ class LabelledSection(HTMLParser):
         return [(href, collapse(pieces)) for href, pieces in self.link_pieces]
 
 
+def section(client, heading_id):
+    labelled = LabelledSection(heading_id)
+    labelled.feed(client.get("/dashboard/").content.decode())
+    return labelled
+
+
 def status_section(client):
-    section = LabelledSection("goals-by-status-heading")
-    section.feed(client.get("/dashboard/").content.decode())
-    return section
+    return section(client, "goals-by-status-heading")
+
+
+def add_session(user, minutes, tags=(), day=date(2026, 9, 1)):
+    goal = Goal.objects.filter(owner=user).first() or Goal.objects.create(
+        owner=user, title="Learn"
+    )
+    session = LearningSession.objects.create(
+        goal=goal, duration_minutes=minutes, date=day
+    )
+    session.tags.set(Tag.objects.get_or_create_by_name(n)[0] for n in tags)
+    return session
 
 
 class DashboardAccessTests(TestCase):
@@ -213,15 +238,113 @@ class DashboardEmptyStateTests(TestCase):
         self.assertNotIn("Create your first goal", page.text("main"))
 
 
+class DashboardHoursPerTagTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.client.force_login(self.alice)
+        bob = get_user_model().objects.create_user("bob")
+        add_session(bob, 500, ["python"])
+        add_session(bob, 10, ["bob-only"])
+
+    def test_lists_your_time_per_tag_then_untagged_time(self):
+        add_session(self.alice, 60, ["python"])
+        add_session(self.alice, 30, ["python", "django"])
+        add_session(self.alice, 15, ["django"])
+        add_session(self.alice, 120)
+
+        hours = section(self.client, "hours-per-tag-heading")
+
+        self.assertEqual(hours.heading(), "Hours per tag")
+        self.assertEqual(
+            hours.rows,
+            [
+                ["Tag", "Time"],
+                ["python", "1 h 30 min"],
+                ["django", "45 min"],
+                ["Untagged", "2 h"],
+            ],
+        )
+        self.assertIn(
+            "A session with several tags counts under each of them.", hours.text()
+        )
+
+    def test_without_sessions_a_message_replaces_the_table(self):
+        hours = section(self.client, "hours-per-tag-heading")
+
+        self.assertEqual(hours.rows, [])
+        self.assertEqual(hours.text(), "Hours per tag No sessions logged yet.")
+
+    def test_with_a_session_the_no_sessions_message_is_not_shown(self):
+        add_session(self.alice, 30)
+
+        hours = section(self.client, "hours-per-tag-heading")
+
+        self.assertNotIn("No sessions logged yet.", hours.text())
+
+
+NOW = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)  # a Saturday
+
+
+@patch("django.utils.timezone.now", return_value=NOW)
+class DashboardHoursPerWeekTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.client.force_login(self.alice)
+        bob = get_user_model().objects.create_user("bob")
+        add_session(bob, 500, day=date(2026, 10, 1))
+
+    def week_rows(self):
+        return section(self.client, "hours-per-week-heading").rows
+
+    def test_lists_the_last_eight_weeks_newest_first(self, _now):
+        add_session(self.alice, 45, day=date(2026, 9, 29))
+        add_session(self.alice, 30, day=date(2026, 10, 1))
+        add_session(self.alice, 120, day=date(2026, 9, 15))
+
+        hours = section(self.client, "hours-per-week-heading")
+
+        self.assertEqual(hours.heading(), "Hours per week")
+        self.assertEqual(
+            hours.rows,
+            [
+                ["Week", "Time"],
+                ["Week of Sep 28, 2026", "1 h 15 min"],
+                ["Week of Sep 21, 2026", "0 min"],
+                ["Week of Sep 14, 2026", "2 h"],
+                ["Week of Sep 7, 2026", "0 min"],
+                ["Week of Aug 31, 2026", "0 min"],
+                ["Week of Aug 24, 2026", "0 min"],
+                ["Week of Aug 17, 2026", "0 min"],
+                ["Week of Aug 10, 2026", "0 min"],
+            ],
+        )
+
+    def test_without_sessions_every_week_shows_zero(self, _now):
+        rows = self.week_rows()
+
+        self.assertEqual(len(rows), 9)
+        self.assertEqual({time for _, time in rows[1:]}, {"0 min"})
+
+
 class DashboardQueryCountTests(TestCase):
     def setUp(self):
         User = get_user_model()
         self.few = User.objects.create_user("alice", password=PASSWORD)
         Goal.objects.create(owner=self.few, title="Only one")
+        add_session(self.few, 30, ["python"])
         self.many = User.objects.create_user("carol", password=PASSWORD)
         for n in range(30):
             status = Goal.Status.values[n % len(Goal.Status.values)]
             Goal.objects.create(owner=self.many, title=f"Goal {n}", status=status)
+        # 40 sessions over 10 weeks and 6 tags: some with several, some none.
+        tags = ["a", "b", "c", "d", "e", "f"]
+        for n in range(40):
+            add_session(
+                self.many,
+                15 + n,
+                tags[n % 6 : n % 6 + n % 3],
+                day=date(2026, 9, 30) - timedelta(days=n * 2),
+            )
 
     def queries_for(self, user):
         self.client.force_login(user)
@@ -235,6 +358,7 @@ class DashboardQueryCountTests(TestCase):
 
     def test_the_dashboard_takes_a_fixed_number_of_queries(self):
         self.client.force_login(self.many)
-        # Login session, user, the grouped status count.
-        with self.assertNumQueries(3):
+        # Login session, user, the grouped status count, per-tag totals,
+        # per-week totals.
+        with self.assertNumQueries(5):
             self.client.get("/dashboard/")

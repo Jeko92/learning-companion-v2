@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.core.exceptions import ValidationError
 from django.core.validators import (
     MaxLengthValidator,
@@ -5,8 +7,8 @@ from django.core.validators import (
     MinValueValidator,
 )
 from django.db import models
-from django.db.models import Prefetch, Q
-from django.db.models.functions import Lower
+from django.db.models import Prefetch, Q, Sum
+from django.db.models.functions import Lower, TruncWeek
 from django.utils import timezone
 
 
@@ -28,6 +30,38 @@ class LearningSessionQuerySet(models.QuerySet):
 
         tags = Tag.objects.order_by(Lower("name"), "id")
         return self.prefetch_related(Prefetch("tags", queryset=tags))
+
+    def minutes_per_tag(self):
+        """(tag name, minutes) per tag, largest total first and ties by name
+        regardless of case, then (None, minutes) for untagged time if any, in
+        one query. A session with several tags counts in full under each."""
+        # The explicit order_by() replaces any incoming ordering, which would
+        # otherwise add its columns to GROUP BY and split the groups.
+        rows = (
+            self.values("tags", "tags__name")
+            .annotate(total=Sum("duration_minutes"))
+            .order_by("-total", Lower("tags__name"))
+        )
+        totals = [(row["tags__name"], row["total"]) for row in rows]
+        # Untagged sessions form the one group without a tag (the outer join).
+        return sorted(totals, key=lambda total: total[0] is None)
+
+    def minutes_per_week(self, today, weeks):
+        """(Monday, minutes) for the `weeks` weeks ending with the one that
+        contains `today`, newest first and 0 for a week without sessions, in
+        one query. Sessions dated outside those weeks don't count."""
+        newest = today - timedelta(days=today.weekday())
+        mondays = [newest - timedelta(weeks=n) for n in range(weeks)]
+        # order_by() clears any incoming ordering, which would split the groups.
+        rows = (
+            self.order_by()
+            .filter(date__gte=mondays[-1], date__lt=newest + timedelta(weeks=1))
+            .annotate(week=TruncWeek("date"))
+            .values("week")
+            .annotate(total=Sum("duration_minutes"))
+        )
+        found = {row["week"]: row["total"] for row in rows}
+        return [(monday, found.get(monday, 0)) for monday in mondays]
 
 
 class LearningSession(models.Model):

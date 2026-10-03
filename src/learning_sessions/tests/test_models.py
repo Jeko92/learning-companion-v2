@@ -291,3 +291,93 @@ class OwnedByTests(TestCase):
         tags = Tag.objects.filter(sessions__in=bobs_sessions).distinct()
 
         self.assertQuerySetEqual(tags, [self.shared])
+
+
+class AggregateTestCase(TestCase):
+    """Alice and bob, each with one goal, and a helper to log sessions."""
+
+    def setUp(self):
+        User = get_user_model()
+        self.alice, self.bob = (User.objects.create_user(n) for n in ("alice", "bob"))
+        self.goals = {
+            user: Goal.objects.create(owner=user, title="Learn")
+            for user in (self.alice, self.bob)
+        }
+
+    def add_session(self, user, minutes, tags=(), day=date(2026, 9, 1)):
+        session = LearningSession.objects.create(
+            goal=self.goals[user], duration_minutes=minutes, date=day
+        )
+        session.tags.set(Tag.objects.get_or_create_by_name(n)[0] for n in tags)
+        return session
+
+
+class MinutesPerTagTests(AggregateTestCase):
+    def test_totals_per_tag_largest_first_ties_by_name_ignoring_case(self):
+        self.add_session(self.alice, 30, ["python"])
+        self.add_session(self.alice, 45, ["python"])
+        self.add_session(self.alice, 45, ["django"])
+        # Several tags: the session counts in full under each of them.
+        self.add_session(self.alice, 60, ["django", "python"])
+        self.add_session(self.alice, 45, ["Zebra"])
+        self.add_session(self.alice, 45, ["apple"])
+        # Bob's time on a shared tag and his own tag never show up.
+        self.add_session(self.bob, 500, ["python"])
+        self.add_session(self.bob, 10, ["bob-only"])
+
+        totals = LearningSession.objects.owned_by(self.alice).minutes_per_tag()
+
+        self.assertEqual(
+            totals,
+            [("python", 135), ("django", 105), ("apple", 45), ("Zebra", 45)],
+        )
+
+    def test_untagged_time_comes_last_in_one_query_whatever_the_ordering(self):
+        self.add_session(self.alice, 90, ["big"])
+        self.add_session(self.alice, 20)
+        self.add_session(self.alice, 25, day=date(2026, 9, 2))
+        self.add_session(self.alice, 10, ["small"])
+        self.add_session(self.bob, 500)
+
+        # An explicit ordering on the incoming queryset must not split groups.
+        sessions = LearningSession.objects.owned_by(self.alice).order_by("-date")
+        with self.assertNumQueries(1):
+            totals = sessions.minutes_per_tag()
+
+        self.assertEqual(totals, [("big", 90), ("small", 10), (None, 45)])
+
+
+class MinutesPerWeekTests(AggregateTestCase):
+    TODAY = date(2026, 10, 3)  # a Saturday; its week starts Monday Sep 28
+
+    def test_totals_for_the_last_weeks_newest_first_with_empty_weeks_at_zero(self):
+        # Sunday: still the week that started on Monday Sep 21.
+        self.add_session(self.alice, 60, day=date(2026, 9, 27))
+        # Monday starts a new week; Saturday is today, the end of it.
+        self.add_session(self.alice, 30, day=date(2026, 9, 28))
+        self.add_session(self.alice, 15, day=self.TODAY)
+        # The oldest week shown starts Monday Aug 10.
+        self.add_session(self.alice, 20, day=date(2026, 8, 10))
+        # Outside the window: the Sunday before it, and a later date (only
+        # full_clean() rejects future dates, so one can be stored).
+        self.add_session(self.alice, 99, day=date(2026, 8, 9))
+        self.add_session(self.alice, 99, day=date(2026, 10, 5))
+        self.add_session(self.bob, 500, day=self.TODAY)
+
+        sessions = LearningSession.objects.owned_by(self.alice).order_by("-date")
+        with self.assertNumQueries(1):
+            totals = sessions.minutes_per_week(self.TODAY, weeks=8)
+
+        self.assertEqual(
+            totals,
+            [
+                (date(2026, 9, 28), 45),
+                (date(2026, 9, 21), 60),
+                (date(2026, 9, 14), 0),
+                (date(2026, 9, 7), 0),
+                (date(2026, 8, 31), 0),
+                (date(2026, 8, 24), 0),
+                (date(2026, 8, 17), 0),
+                (date(2026, 8, 10), 20),
+            ],
+        )
