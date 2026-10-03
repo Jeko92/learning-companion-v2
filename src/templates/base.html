@@ -31,11 +31,20 @@
     </div>
   </header>
   {% if messages %}
-    <ul class="mx-auto mt-4 w-full max-w-3xl space-y-2 px-4">
+    <div class="mx-auto mt-4 w-full max-w-3xl space-y-2 px-4">
+      {# Literal class names per level, so Tailwind finds them; errors interrupt, the rest wait. #}
       {% for message in messages %}
-        <li class="rounded border border-sky-200 bg-sky-50 px-4 py-2 text-sm">{{ message }}</li>
+        {% if message.level_tag == "error" %}
+          <div role="alert" class="alert alert-error alert-soft">{{ message }}</div>
+        {% elif message.level_tag == "warning" %}
+          <div role="status" class="alert alert-warning alert-soft">{{ message }}</div>
+        {% elif message.level_tag == "success" %}
+          <div role="status" class="alert alert-success alert-soft">{{ message }}</div>
+        {% else %}
+          <div role="status" class="alert alert-info alert-soft">{{ message }}</div>
+        {% endif %}
       {% endfor %}
-    </ul>
+    </div>
   {% endif %}
   <main id="main" tabindex="-1" class="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
     {% block content %}{% endblock %}

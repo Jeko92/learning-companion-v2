@@ -1,7 +1,12 @@
 from itertools import pairwise
 
-from django.test import TestCase
+from django.contrib import messages
+from django.contrib.messages.storage import default_storage
+from django.contrib.sessions.middleware import SessionMiddleware
+from django.test import RequestFactory, TestCase
 
+from core import views
+from core.tests.html import PageParser
 from core.tests.pages import AllPagesMixin
 
 
@@ -69,3 +74,35 @@ class PageStructureTests(AllPagesMixin, TestCase):
                 self.assertEqual(levels[0], 1)
                 for previous, level in pairwise(levels):
                     self.assertLessEqual(level, previous + 1, levels)
+
+
+class MessageTests(TestCase):
+    """Flash messages look like their level and are announced."""
+
+    def render_with_message(self, level, text):
+        request = RequestFactory().get("/")
+        SessionMiddleware(lambda request: None).process_request(request)
+        request._messages = default_storage(request)
+        messages.add_message(request, level, text)
+        response = views.home(request)
+        self.assertContains(response, text)
+        parser = PageParser()
+        parser.feed(response.content.decode())
+        return [
+            attrs
+            for _, attrs in parser.elements
+            if "alert" in attrs.get("class", "").split()
+        ]
+
+    def test_each_level_renders_as_its_daisyui_alert_with_the_right_role(self):
+        cases = (
+            (messages.SUCCESS, "alert-success", "status"),
+            (messages.INFO, "alert-info", "status"),
+            (messages.WARNING, "alert-warning", "status"),
+            (messages.ERROR, "alert-error", "alert"),
+        )
+        for level, css_class, role in cases:
+            with self.subTest(css_class=css_class):
+                (alert,) = self.render_with_message(level, "Something happened.")
+                self.assertIn(css_class, alert["class"].split())
+                self.assertEqual(alert.get("role"), role)
