@@ -23,7 +23,7 @@
 
 ## Steps
 
-- [ ] 1. **Create page, access and the scoping guard.** New `resources/urls.py` (`app_name = "resources"`, `goals/<int:goal_pk>/resources/new/` named `create`), included at `""` in `config/urls.py`. For the owner, GET shows `resources/resource_form.html`: a POST form whose action is the page itself, with `url` and `title` inputs, a `type` `<select>` with the four types and Article selected, no `goal`/timestamp field, the goal's title (escaped) and a Cancel link to the goal. Tests in the same step:
+- [x] 1. **Create page, access and the scoping guard.** New `resources/urls.py` (`app_name = "resources"`, `goals/<int:goal_pk>/resources/new/` named `create`), included at `""` in `config/urls.py`. For the owner, GET shows `resources/resource_form.html`: a POST form whose action is the page itself, with `url` and `title` inputs, a `type` `<select>` with the four types and Article selected, no `goal`/timestamp field, the goal's title (escaped) and a Cancel link to the goal. Tests in the same step:
   - `reverse("resources:create", args=[pk])` is the path
   - anonymous GET and POST redirect to login with `next`, nothing stored
   - bob's goal: get / valid post / invalid post are a 404 identical to a missing goal pk, nothing stored
