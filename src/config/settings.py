@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "goals",
     "learning_sessions",
     "resources",
+    "dashboard",
     "ai",
 ]
 
