@@ -9,6 +9,25 @@ SUMMARY_SYSTEM = (
     "what has been covered, and the next focus. Address the learner as 'you'."
 )
 
+NEXT_STEPS_SYSTEM = (
+    "You are a learning coach. From the learner's goal, sessions and resources, "
+    "suggest 2 to 3 concrete, actionable next learning steps that build on what "
+    "has been done; don't repeat the resources already attached. If there are no "
+    "sessions yet, suggest how to start. Each step is one short sentence "
+    "addressed to the learner as 'you'. Reply with a JSON object whose `steps` "
+    "list holds the steps in the order to do them."
+)
+
+# The Structured Outputs schema for the reply. No minItems/maxItems: strict
+# mode's support for them is unconfirmed, and an unsupported keyword would make
+# every request fail; parse_next_steps() enforces the count instead.
+NEXT_STEPS_SCHEMA = {
+    "type": "object",
+    "properties": {"steps": {"type": "array", "items": {"type": "string"}}},
+    "required": ["steps"],
+    "additionalProperties": False,
+}
+
 
 def one_line(text):
     """Free text on one line, so it can't break the prompt's structure."""
@@ -34,6 +53,19 @@ def summary_messages(goal, sessions, total_minutes, resources):
     """(system, user) for the progress summary of `goal`: `sessions` newest
     first (tags prefetched), the total time over all its sessions, and
     `resources`."""
+    return SUMMARY_SYSTEM, goal_message(goal, sessions, total_minutes, resources)
+
+
+def next_steps_messages(goal, sessions, total_minutes, resources):
+    """(system, user) for 2-3 next learning steps; the same goal description
+    as the summary's."""
+    return NEXT_STEPS_SYSTEM, goal_message(goal, sessions, total_minutes, resources)
+
+
+def goal_message(goal, sessions, total_minutes, resources):
+    """The user message both features send: the goal, `sessions` newest first
+    (tags prefetched), the total time over all its sessions, and
+    `resources`."""
     description = one_line(goal.description) or "No description."
     lines = [
         f"Goal: {one_line(goal.title)}",
@@ -47,4 +79,4 @@ def summary_messages(goal, sessions, total_minutes, resources):
         "Resources:",
         *([resource_line(r) for r in resources] or ["No resources."]),
     ]
-    return SUMMARY_SYSTEM, "\n".join(lines)
+    return "\n".join(lines)
