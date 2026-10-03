@@ -17,10 +17,32 @@ class HttpURLField(models.URLField):
     default_validators = (URLValidator(schemes=("http", "https")),)
 
 
+# One heading per Resource.Type value, keyed by the stored value. A type
+# without one fails loudly in grouped_by_type() (a test covers every type).
+TYPE_HEADINGS = {
+    "article": "Articles",
+    "video": "Videos",
+    "repo": "Repos",
+    "doc": "Docs",
+}
+
+
 class ResourceQuerySet(models.QuerySet):
     def owned_by(self, user):
         """The one way views look up resources: only those on the user's goals."""
         return self.filter(goal__owner=user)
+
+    def grouped_by_type(self):
+        """[(heading, [resources])] in Resource.Type order, empty types left
+        out, each group in the queryset's order. Runs the query once."""
+        by_type = {}
+        for resource in self:
+            by_type.setdefault(resource.type, []).append(resource)
+        return [
+            (TYPE_HEADINGS[value], by_type[value])
+            for value in self.model.Type.values
+            if value in by_type
+        ]
 
 
 class Resource(models.Model):

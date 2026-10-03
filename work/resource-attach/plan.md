@@ -51,7 +51,7 @@
 
   — test: `resources/tests/test_views.py` (`ResourceDeleteTests`, `ResourceDeleteAccessTests`, `ResourceDeleteCsrfTests`, `ResourceViewsScopingTests`) — impl: `resources/urls.py`, `resources/views.py` (`ResourceDeleteView`, fixed `get_success_message`), `templates/resources/resource_confirm_delete.html` (new) — covers: AC1, AC3, AC4, AC16, AC17, AC19, AC20
 
-- [ ] 7. **`ResourceQuerySet.grouped_by_type()`.** Returns `[(heading, [resources])]` in the order Articles, Videos, Repos, Docs; types without resources are omitted; resources within a group are newest first; it runs one query; every `Resource.Type` value has a heading.
+- [x] 7. **`ResourceQuerySet.grouped_by_type()`.** Returns `[(heading, [resources])]` in the order Articles, Videos, Repos, Docs; types without resources are omitted; resources within a group are newest first; it runs one query; every `Resource.Type` value has a heading.
 
   — test: `resources/tests/test_models.py` (`ResourceGroupedByTypeTests`) — impl: `resources/models.py` — covers: AC5 (groundwork), AC9 (one query)
 
