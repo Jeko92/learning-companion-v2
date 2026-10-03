@@ -81,3 +81,4 @@ As a learner using Learning Companion on a phone or a desktop, in light or dark 
 - The dashboard bars' `max` can be computed in Python from the rows already fetched (no extra query; AC22).
 - Python has no image library here, so the `.ico` and PNG are generated once (for example with the standard library or a macOS tool) and committed; nothing generates them at runtime.
 - This ticket goes before #20, #21, #36, #42 and #66, at the user's request.
+- **Approval:** the user approved the acceptance criteria (AC1–AC28) on 2026-10-04.
