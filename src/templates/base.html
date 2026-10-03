@@ -7,6 +7,7 @@
   {% tailwind_css %}
 </head>
 <body class="flex min-h-screen flex-col bg-slate-50 text-slate-800">
+  <a href="#main" class="btn btn-primary sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50">Skip to content</a>
   <header class="border-b border-slate-200 bg-white">
     <div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
       <span class="text-lg font-semibold">Learning Companion</span>
@@ -33,7 +34,7 @@
       {% endfor %}
     </ul>
   {% endif %}
-  <main class="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
+  <main id="main" tabindex="-1" class="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
     {% block content %}{% endblock %}
   </main>
   <footer class="border-t border-slate-200 py-6 text-center text-sm text-slate-500">
