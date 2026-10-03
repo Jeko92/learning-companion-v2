@@ -59,7 +59,7 @@
   - Refactor: one shared user-message builder, with `SummaryMessagesTests` unchanged.
   — test: `src/goals/tests/test_prompts.py` (`NextStepsMessagesTests`) — impl: `src/goals/prompts.py` — covers: AC5, AC6, AC7
 - [x] 6. **Parsing the reply.** `parse_next_steps()` returns the steps trimmed and in order, dropping blank ones. It raises the unexpected-reply `AIServiceError` if `steps` is missing, isn't a list, holds a non-string, or leaves fewer than 2 or more than 3 steps. — test: `src/goals/tests/test_prompts.py` (`ParseNextStepsTests`) — impl: `src/goals/prompts.py` — covers: AC9
-- [ ] 7. **Route, POST only and access.**
+- [x] 7. **Route, POST only and access.**
   - `goals:next_steps` resolves to `/goals/<pk>/next-steps/`.
   - A GET is a 405 that calls nothing.
   - An anonymous POST is redirected to log in, with nothing called or stored.

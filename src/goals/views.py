@@ -164,3 +164,15 @@ class GoalSummaryView(OwnGoalsMixin, SingleObjectMixin, View):
         goal.save(update_fields=["summary", "summary_generated_at"])
         messages.success(request, "Summary generated.")
         return redirect(goal)
+
+
+class GoalNextStepsView(OwnGoalsMixin, SingleObjectMixin, View):
+    """POST only (anything else is a 405): suggest 2-3 AI next learning steps
+    for the goal, then back to the goal page."""
+
+    http_method_names = ("post",)
+
+    def post(self, request, *args, **kwargs):
+        # Through OwnGoalsMixin: another user's goal is a 404 like a missing one.
+        goal = self.get_object()
+        return redirect(goal)

@@ -801,7 +801,10 @@ class GoalViewsScopingTests(TestCase):
         }
 
         # A new route must be added here deliberately, not slip past the check.
-        self.assertEqual(set(views), {"list", "detail", "edit", "delete", "summary"})
+        self.assertEqual(
+            set(views),
+            {"list", "detail", "edit", "delete", "summary", "next_steps"},
+        )
         for name, view in views.items():
             with self.subTest(view=name):
                 # A model on the view plus a wrong base order would serve
@@ -1482,3 +1485,63 @@ class GoalSummaryCsrfTests(SummaryTestCase):
 
         self.assertEqual(response.status_code, 302)
         self.complete.assert_called_once()
+
+
+class NextStepsTestCase(TestCase):
+    """Alice, her goal, and the AI service replaced: `self.complete_json` is a
+    mock of ai.services.complete_json, and building a real OpenAI client fails
+    the test, so no next-steps test can reach the network."""
+
+    STEPS = ("Build a form", "Read the ORM docs")
+
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.path = f"/goals/{self.goal.pk}/next-steps/"
+        self.enterContext(
+            patch(
+                "ai.services.OpenAI",
+                side_effect=AssertionError("a test tried to build a real client"),
+            )
+        )
+        self.complete_json = self.enterContext(
+            patch("ai.services.complete_json", return_value={"steps": list(self.STEPS)})
+        )
+
+    def assert_nothing_stored(self):
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.next_steps, [])
+        self.assertIsNone(self.goal.next_steps_generated_at)
+
+
+class GoalNextStepsAccessTests(NextStepsTestCase):
+    def test_the_next_steps_route_is_under_the_goal(self):
+        self.assertEqual(reverse("goals:next_steps", args=[self.goal.pk]), self.path)
+
+    def test_a_get_is_not_allowed(self):
+        self.client.force_login(self.alice)
+
+        response = self.client.get(self.path)
+
+        self.assertEqual(response.status_code, 405)
+        self.complete_json.assert_not_called()
+
+    def test_anonymous_visitors_are_sent_to_log_in(self):
+        response = self.client.post(self.path)
+
+        self.assertRedirects(
+            response, login_redirect(self.path), fetch_redirect_response=False
+        )
+        self.complete_json.assert_not_called()
+        self.assert_nothing_stored()
+
+    def test_another_users_goal_is_the_same_404_as_a_missing_one(self):
+        self.client.force_login(get_user_model().objects.create_user("bob"))
+
+        response = self.client.post(self.path)
+        missing = self.client.post("/goals/999999/next-steps/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.content, missing.content)
+        self.complete_json.assert_not_called()
+        self.assert_nothing_stored()
