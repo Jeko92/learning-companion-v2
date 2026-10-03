@@ -30,7 +30,7 @@
 
 - [x] 4. **`OPENAI_API_KEY` is required.** `resolve_settings` returns `openai_api_key`. Missing, empty and whitespace-only each raise `ImproperlyConfigured` mentioning `OPENAI_API_KEY`, and the message doesn't contain the given value (checked with a whitespace-padded value and a recognisable one). A value starting with `$` is kept literally; the environment beats `.env`; the given mapping and `os.environ` are untouched. — test: `config/tests/test_env.py` — impl: `config/env.py` — covers: AC1, AC3
 
-- [ ] 5. **Settings wiring.** After reloading with `PATCHED_ENVIRON`, `settings.OPENAI_API_KEY` equals the patched key (compared without printing it) and `settings.OPENAI_MODEL` the patched model; with `OPENAI_MODEL` removed it is `gpt-4.1-mini`. `settings.py` contains no `sk-` literal. — test: `config/tests/test_settings.py` — impl: `config/settings.py` — covers: AC3
+- [x] 5. **Settings wiring.** After reloading with `PATCHED_ENVIRON`, `settings.OPENAI_API_KEY` equals the patched key (compared without printing it) and `settings.OPENAI_MODEL` the patched model; with `OPENAI_MODEL` removed it is `gpt-4.1-mini`. `settings.py` contains no `sk-` literal. — test: `config/tests/test_settings.py` — impl: `config/settings.py` — covers: AC3
 
 - [ ] 6. **`.env.example` documents both.** `VARIABLES` adds `OPENAI_API_KEY` and `OPENAI_MODEL`; each has a comment line above; the key's value is exactly `sk-dummy` and the model's is `gpt-4.1-mini`. Then `git stash drop` the user's earlier edit (its content is now in the commit). — test: `config/tests/test_env_example.py` — impl: `.env.example` — covers: AC4
 
