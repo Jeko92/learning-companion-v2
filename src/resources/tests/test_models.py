@@ -179,3 +179,32 @@ class ResourceTitleTests(TestCase):
 
     def test_a_200_character_title_is_accepted(self):
         build_resource(self.goal, title="x" * 200).full_clean()
+
+
+class ResourceTypeTests(TestCase):
+    def setUp(self):
+        fields = {f.name for f in resource_models.Resource._meta.get_fields()}
+        self.assertIn("type", fields)
+        alice = get_user_model().objects.create_user("alice")
+        self.goal = Goal.objects.create(owner=alice, title="Learn Django")
+
+    def test_the_types_are_article_video_repo_and_doc(self):
+        Type = resource_models.Resource.Type
+
+        self.assertEqual(Type.values, ["article", "video", "repo", "doc"])
+        self.assertEqual(Type.labels, ["Article", "Video", "Repo", "Doc"])
+
+    def test_a_new_resource_is_an_article(self):
+        resource = make_resource(self.goal)
+
+        self.assertEqual(resource.type, resource_models.Resource.Type.ARTICLE)
+
+    def test_an_unknown_type_is_rejected(self):
+        resource = build_resource(self.goal, type="book")
+
+        with self.assertRaises(ValidationError) as caught:
+            resource.full_clean()
+
+        self.assertIn(
+            "Value 'book' is not a valid choice.", caught.exception.message_dict["type"]
+        )

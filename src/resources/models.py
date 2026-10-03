@@ -21,11 +21,19 @@ class Resource(models.Model):
     """Reference material (an article, video, repo or doc) for one goal.
     Ownership is the goal's owner; look resources up through owned_by."""
 
+    class Type(models.TextChoices):
+        # The value is stored, the label is shown.
+        ARTICLE = "article", "Article"
+        VIDEO = "video", "Video"
+        REPO = "repo", "Repo"
+        DOC = "doc", "Doc"
+
     goal = models.ForeignKey(
         "goals.Goal", on_delete=models.CASCADE, related_name="resources"
     )
     url = HttpURLField(max_length=2048)
     title = models.CharField(max_length=200)
+    type = models.CharField(max_length=20, choices=Type.choices, default=Type.ARTICLE)
 
     class Meta:
         constraints = (

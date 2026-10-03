@@ -69,7 +69,7 @@
   - `make_resource` gains distinct titles.
 
   — test: `ResourceTitleTests` — impl: `resources/models.py` (`title`, trimming), regenerate migration — covers: AC5
-- [ ] 6. **Type choices.**
+- [x] 6. **Type choices.**
   - `Resource.Type.values == ["article", "video", "repo", "doc"]`, and the labels are "Article", "Video", "Repo", "Doc".
   - A new resource's type is `article`.
   - `full_clean()` rejects `"book"` with `"type"` in `error_dict` ("Value 'book' is not a valid choice.").
