@@ -61,7 +61,7 @@
   - Same result with `order_by("-date")` on the input, in one query.
 
   — test: `src/learning_sessions/tests/test_models.py` (`MinutesPerWeekTests`) — impl: `src/learning_sessions/models.py` — covers: AC5, AC6, AC7, AC8, AC11
-- [ ] 4. **"Hours per tag" section on the dashboard.**
+- [x] 4. **"Hours per tag" section on the dashboard.**
   - `LabelledSection("hours-per-tag-heading")` shows the heading "Hours per tag".
   - Its rows are `[["Tag", "Time"], ["python", "1 h 30 min"], ["django", "45 min"], ["Untagged", "2 h"]]`.
   - Its text contains "A session with several tags counts under each of them.".
