@@ -35,8 +35,12 @@ class Resource(models.Model):
     url = HttpURLField(max_length=2048)
     title = models.CharField(max_length=200)
     type = models.CharField(max_length=20, choices=Type.choices, default=Type.ARTICLE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        # Newest first; the id breaks ties between equal timestamps.
+        ordering = ("-created_at", "-id")
         constraints = (
             # The validator only runs through full_clean()/forms; this stops
             # update()/bulk_create() from storing javascript: or data: links.

@@ -81,7 +81,7 @@
   - The same URL on alice's other goal and on bob's goal saves.
 
   — test: `ResourceUniquenessTests` — impl: `resources/models.py` (`UniqueConstraint`), regenerate migration — covers: AC8
-- [ ] 9. **Timestamps and ordering.**
+- [x] 9. **Timestamps and ordering.**
   - `created_at` (`auto_now_add`) and `updated_at` (`auto_now`) work with `timezone.now` patched: `(t1, t1)` on create, `(t1, t2)` after a save at `t2`.
   - `Resource.objects.all()` is newest first, with ties on `created_at` broken by `-id`.
 

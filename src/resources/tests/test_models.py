@@ -1,4 +1,6 @@
+from datetime import UTC, datetime
 from itertools import count
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
@@ -257,3 +259,38 @@ class ResourceUniquenessTests(TestCase):
                 resource = build_resource(goal, url=self.URL)
                 resource.full_clean()
                 resource.save()
+
+
+class ResourceTimestampTests(TestCase):
+    def setUp(self):
+        fields = {f.name for f in resource_models.Resource._meta.get_fields()}
+        self.assertLessEqual({"created_at", "updated_at"}, fields)
+        alice = get_user_model().objects.create_user("alice")
+        self.goal = Goal.objects.create(owner=alice, title="Learn Django")
+
+    def test_created_and_updated_times_are_recorded(self):
+        t1 = datetime(2026, 3, 10, 9, tzinfo=UTC)
+        t2 = datetime(2026, 3, 11, 9, tzinfo=UTC)
+        with patch("django.utils.timezone.now", return_value=t1):
+            resource = make_resource(self.goal)
+        self.assertEqual((resource.created_at, resource.updated_at), (t1, t1))
+
+        with patch("django.utils.timezone.now", return_value=t2):
+            resource.title = "Renamed"
+            resource.save()
+        resource.refresh_from_db()
+
+        self.assertEqual((resource.created_at, resource.updated_at), (t1, t2))
+
+    def test_resources_are_newest_first(self):
+        a, b, c = (make_resource(self.goal) for _ in range(3))
+        Resource = resource_models.Resource
+        Resource.objects.filter(pk=a.pk).update(
+            created_at=datetime(2026, 1, 1, tzinfo=UTC)
+        )
+        # Same created_at: the id breaks the tie.
+        Resource.objects.filter(pk__in=[b.pk, c.pk]).update(
+            created_at=datetime(2026, 2, 1, tzinfo=UTC)
+        )
+
+        self.assertEqual(list(Resource.objects.all()), [c, b, a])
