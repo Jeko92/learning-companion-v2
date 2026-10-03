@@ -7,22 +7,22 @@ As the developer of the learning companion, I want one small, tested service tha
 ## Acceptance criteria
 
 **Configuration (`config/env.py`, `settings.py`)**
-- [ ] AC1 `OPENAI_API_KEY` is required, like `SECRET_KEY`. If it is missing, empty or whitespace-only, settings fail to load with `ImproperlyConfigured` naming the variable. The value is read literally (a `$` is not expanded) and never appears in the error message.
-- [ ] AC2 `OPENAI_MODEL` is optional and defaults to `gpt-4.1-mini`. The value is trimmed, and an empty or whitespace-only value means the default.
-- [ ] AC3 Both are read through `resolve_settings()`: the process environment beats `.env`, and the given environment is never modified. `settings.OPENAI_API_KEY` and `settings.OPENAI_MODEL` come from the environment, and no key is hardcoded in `settings.py`.
-- [ ] AC4 `.env.example` documents `OPENAI_API_KEY` (with the placeholder `sk-dummy`, never a real key) and `OPENAI_MODEL`, each with a comment line above it, and `test_env_example.py` lists them.
-- [ ] AC5 The `openai` SDK is in `requirements.txt`, range-pinned like the other dependencies.
+- [x] AC1 `OPENAI_API_KEY` is required, like `SECRET_KEY`. If it is missing, empty or whitespace-only, settings fail to load with `ImproperlyConfigured` naming the variable. The value is read literally (a `$` is not expanded) and never appears in the error message.
+- [x] AC2 `OPENAI_MODEL` is optional and defaults to `gpt-4.1-mini`. The value is trimmed, and an empty or whitespace-only value means the default.
+- [x] AC3 Both are read through `resolve_settings()`: the process environment beats `.env`, and the given environment is never modified. `settings.OPENAI_API_KEY` and `settings.OPENAI_MODEL` come from the environment, and no key is hardcoded in `settings.py`.
+- [x] AC4 `.env.example` documents `OPENAI_API_KEY` (with the placeholder `sk-dummy`, never a real key) and `OPENAI_MODEL`, each with a comment line above it, and `test_env_example.py` lists them.
+- [x] AC5 The `openai` SDK is in `requirements.txt`, range-pinned like the other dependencies.
 
 **Service (`ai` app)**
-- [ ] AC6 A new `ai` app is installed. `ai.services` has one public function that takes a system prompt and a user message and returns the reply text, trimmed.
-- [ ] AC7 The function sends one Chat Completions request: the model from `settings.OPENAI_MODEL` and the messages `[system, user]` in that order. The client is built with `settings.OPENAI_API_KEY`, a 30-second timeout and 2 retries (the SDK retries connection errors, 429 and 5xx with backoff).
-- [ ] AC8 Any OpenAI SDK error (connection error, timeout, authentication, rate limit, server error) is raised as one project exception, `ai.services.AIServiceError`. Its message is safe to show a user and contains neither the key nor the raw API error. The original error is chained (`__cause__`).
-- [ ] AC9 Each failure is logged at error level on a module logger with the error type, never with the key.
-- [ ] AC10 A reply without content (no choices, `None` or blank text) is also an `AIServiceError`.
-- [ ] AC11 No test makes a network call. The client is created in one place that the tests replace with a fake, and the service tests fail loudly if a real `openai.OpenAI` client would be constructed.
+- [x] AC6 A new `ai` app is installed. `ai.services` has one public function that takes a system prompt and a user message and returns the reply text, trimmed.
+- [x] AC7 The function sends one Chat Completions request: the model from `settings.OPENAI_MODEL` and the messages `[system, user]` in that order. The client is built with `settings.OPENAI_API_KEY`, a 30-second timeout and 2 retries (the SDK retries connection errors, 429 and 5xx with backoff).
+- [x] AC8 Any OpenAI SDK error (connection error, timeout, authentication, rate limit, server error) is raised as one project exception, `ai.services.AIServiceError`. Its message is safe to show a user and contains neither the key nor the raw API error. The original error is chained (`__cause__`).
+- [x] AC9 Each failure is logged at error level on a module logger with the error type, never with the key.
+- [x] AC10 A reply without content (no choices, `None` or blank text) is also an `AIServiceError`.
+- [x] AC11 No test makes a network call. The client is created in one place that the tests replace with a fake, and the service tests fail loudly if a real `openai.OpenAI` client would be constructed.
 
 **Docs**
-- [ ] AC12 `CLAUDE.md` (Stack, Layout, the settings bullet) and `README.md` (setup) document the `ai` app, the service function and its error, `OPENAI_API_KEY` (required, a dummy value is enough for tests and the dev server) and `OPENAI_MODEL`.
+- [x] AC12 `CLAUDE.md` (Stack, Layout, the settings bullet) and `README.md` (setup) document the `ai` app, the service function and its error, `OPENAI_API_KEY` (required, a dummy value is enough for tests and the dev server) and `OPENAI_MODEL`.
 
 ## Out of scope
 - The summary (#16) and next-steps (#17) features: their prompts, views and templates
