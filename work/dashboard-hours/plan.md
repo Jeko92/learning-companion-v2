@@ -75,7 +75,7 @@
   - A user with one session doesn't see that sentence.
 
   — test: `src/dashboard/tests/test_views.py` (`DashboardHoursPerTagTests`) — impl: `src/templates/dashboard/dashboard.html` — covers: AC10
-- [ ] 6. **"Hours per week" section on the dashboard.**
+- [x] 6. **"Hours per week" section on the dashboard.**
   - With `django.utils.timezone.now` patched to `2026-10-03 12:00 UTC`, `LabelledSection("hours-per-week-heading")` shows the heading "Hours per week".
   - It has a Week / Time header and 8 rows from "Week of Sep 28, 2026" down to "Week of Aug 10, 2026". The fixture weeks show "1 h 15 min" and "2 h", and the others "0 min".
   - A user with no sessions sees all 8 rows at "0 min".

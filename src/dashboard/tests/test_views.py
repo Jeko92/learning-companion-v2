@@ -1,5 +1,6 @@
-from datetime import date
+from datetime import UTC, date, datetime
 from html.parser import HTMLParser
+from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -281,6 +282,50 @@ class DashboardHoursPerTagTests(TestCase):
         self.assertNotIn("No sessions logged yet.", hours.text())
 
 
+NOW = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)  # a Saturday
+
+
+@patch("django.utils.timezone.now", return_value=NOW)
+class DashboardHoursPerWeekTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.client.force_login(self.alice)
+        bob = get_user_model().objects.create_user("bob")
+        add_session(bob, 500, day=date(2026, 10, 1))
+
+    def week_rows(self):
+        return section(self.client, "hours-per-week-heading").rows
+
+    def test_lists_the_last_eight_weeks_newest_first(self, _now):
+        add_session(self.alice, 45, day=date(2026, 9, 29))
+        add_session(self.alice, 30, day=date(2026, 10, 1))
+        add_session(self.alice, 120, day=date(2026, 9, 15))
+
+        hours = section(self.client, "hours-per-week-heading")
+
+        self.assertEqual(hours.heading(), "Hours per week")
+        self.assertEqual(
+            hours.rows,
+            [
+                ["Week", "Time"],
+                ["Week of Sep 28, 2026", "1 h 15 min"],
+                ["Week of Sep 21, 2026", "0 min"],
+                ["Week of Sep 14, 2026", "2 h"],
+                ["Week of Sep 7, 2026", "0 min"],
+                ["Week of Aug 31, 2026", "0 min"],
+                ["Week of Aug 24, 2026", "0 min"],
+                ["Week of Aug 17, 2026", "0 min"],
+                ["Week of Aug 10, 2026", "0 min"],
+            ],
+        )
+
+    def test_without_sessions_every_week_shows_zero(self, _now):
+        rows = self.week_rows()
+
+        self.assertEqual(len(rows), 9)
+        self.assertEqual({time for _, time in rows[1:]}, {"0 min"})
+
+
 class DashboardQueryCountTests(TestCase):
     def setUp(self):
         User = get_user_model()
@@ -303,6 +348,7 @@ class DashboardQueryCountTests(TestCase):
 
     def test_the_dashboard_takes_a_fixed_number_of_queries(self):
         self.client.force_login(self.many)
-        # Login session, user, the grouped status count, per-tag totals.
-        with self.assertNumQueries(4):
+        # Login session, user, the grouped status count, per-tag totals,
+        # per-week totals.
+        with self.assertNumQueries(5):
             self.client.get("/dashboard/")
