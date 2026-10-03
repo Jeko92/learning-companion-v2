@@ -82,6 +82,17 @@
 
   — test: none (docs) — impl: `CLAUDE.md`, `README.md` — covers: docs obligation from ticket notes
 
+### Review findings (work/dashboard-status/review.md)
+- [ ] 13. **`status_counts()` holds on an explicitly ordered queryset.**
+  - Test: chain `.order_by("-created_at")` before `status_counts()` (goals with distinct `created_at` in the same status). It must still return one count per status. Removing the `.order_by()` call in `status_counts()` splits the groups, so this test fails without it.
+  - It is expected to be green on first run with today's code (a regression pin for the call). Verify it goes red by temporarily removing `.order_by()`, and note this in the commit.
+  - Drop the wrong "default ordering" comment from `GoalStatusCountsTests`.
+  - Correct the comment in `GoalQuerySet.status_counts`: `.order_by()` clears an explicit ordering on the incoming queryset, because `Meta.ordering` isn't used in GROUP BY.
+  - Correct the `CLAUDE.md` Goals bullet the same way.
+
+  — test: `src/goals/tests/test_models.py` (`GoalStatusCountsTests`) — impl: `src/goals/models.py` (comment only), `CLAUDE.md` — covers: AC4 (review finding 1)
+- [ ] 14. **The test helper ends heading capture only on `h1` to `h6`.** `LabelledSection.handle_endtag` stops matching any end tag that starts with `h` (`</header>`, `</head>`, `</hr>`). Pure refactor of test code, kept green. — test: `src/dashboard/tests/test_views.py` — impl: none — covers: review finding 2
+
 ## AC coverage
 | AC | Steps |
 |----|-------|
