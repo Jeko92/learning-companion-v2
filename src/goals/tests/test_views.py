@@ -1069,9 +1069,12 @@ class GoalDetailQueryCountTests(TestCase):
             add_session(self.large, tags=("a", "b", "c"))
         for value in Resource.Type.values * 2:
             add_resource(self.large, type=value)
-        # The summary comes with the goal row: no extra query.
+        # The summary and next steps come with the goal row: no extra query.
         Goal.objects.filter(pk=self.large.pk).update(
-            summary="A summary", summary_generated_at=datetime(2026, 10, 1, tzinfo=UTC)
+            summary="A summary",
+            summary_generated_at=datetime(2026, 10, 1, tzinfo=UTC),
+            next_steps=["Build a form", "Read the ORM docs"],
+            next_steps_generated_at=datetime(2026, 10, 1, tzinfo=UTC),
         )
 
     def queries_for(self, goal):
@@ -1721,3 +1724,113 @@ class GoalNextStepsErrorTests(NextStepsTestCase):
                     self.client.post(self.path),
                     "The AI service returned an unexpected reply.",
                 )
+
+
+class GoalDetailNextStepsTests(NextStepsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.alice)
+        self.detail = self.goal.get_absolute_url()
+
+    def page_html(self):
+        return self.client.get(self.detail).content.decode()
+
+    def section_text(self):
+        section = LabelledSectionText("next-steps-heading")
+        section.feed(self.page_html())
+        return section.text()
+
+    def section_items(self):
+        """The section's ordered-list items, as raw (escaped) HTML."""
+        html = self.page_html()
+        start = html.index('aria-labelledby="next-steps-heading"')
+        section = html[start : html.index("</section>", start)]
+        (ordered,) = re.findall(r"<ol\b.*?</ol>", section, re.DOTALL)
+        items = re.findall(r"<li\b[^>]*>(.*?)</li>", ordered, re.DOTALL)
+        return [item.strip() for item in items]
+
+    def next_steps_form(self):
+        page = get_page(self.client, self.detail)
+        forms = [(f, i) for f, i in page.forms("main") if f.get("action") == self.path]
+        self.assertEqual(len(forms), 1, "one form posts to the next-steps route")
+        return forms[0]
+
+    def store(self, steps):
+        Goal.objects.filter(pk=self.goal.pk).update(
+            next_steps=steps,
+            next_steps_generated_at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC),
+        )
+
+    def test_without_steps_the_section_offers_to_suggest_some(self):
+        text = self.section_text()
+
+        self.assertTrue(text.startswith("Next steps"), text)
+        self.assertIn("No next steps yet.", text)
+        self.assertIn("Suggest next steps", text)
+        self.assertNotIn("new", text)
+        form, inputs = self.next_steps_form()
+        self.assertEqual(form.get("method"), "post")
+        self.assertIn("csrfmiddlewaretoken", {a.get("name") for a in inputs})
+
+    def test_stored_steps_are_an_ordered_list_with_their_time(self):
+        self.store(["Build a form", "Read the ORM docs", "Write a test"])
+
+        text = self.section_text()
+
+        self.assertEqual(
+            self.section_items(), ["Build a form", "Read the ORM docs", "Write a test"]
+        )
+        self.assertIn("Suggested 1 Oct 2026, 09:30", text)
+        self.assertIn("Suggest new next steps", text)
+        self.assertNotIn("No next steps yet.", text)
+        self.next_steps_form()
+
+    def test_each_step_is_escaped(self):
+        payload = "<script>alert(1)</script>"
+        self.store([payload, "Read"])
+
+        self.assertNotContains(self.client.get(self.detail), payload)
+        self.assertEqual(
+            self.section_items(), ["&lt;script&gt;alert(1)&lt;/script&gt;", "Read"]
+        )
+
+    def test_the_section_comes_right_after_the_summary(self):
+        html = self.page_html()
+
+        summary = html.index('aria-labelledby="summary-heading"')
+        next_steps = html.index('aria-labelledby="next-steps-heading"')
+        sessions = html.index(">Sessions</h2>")
+        self.assertLess(summary, next_steps)
+        self.assertLess(next_steps, sessions)
+
+
+class GoalNextStepsCsrfTests(NextStepsTestCase):
+    # The default test client skips CSRF checks; this one enforces them.
+    def setUp(self):
+        super().setUp()
+        self.csrf_client = Client(enforce_csrf_checks=True)
+        self.csrf_client.force_login(self.alice)
+
+    def token(self):
+        # GET the goal page first: sets the CSRF cookie and yields the token
+        # of the form that posts to the next-steps route.
+        page = get_page(self.csrf_client, self.goal.get_absolute_url())
+        (inputs,) = [i for f, i in page.forms("main") if f.get("action") == self.path]
+        return [a["value"] for a in inputs if a.get("name") == "csrfmiddlewaretoken"]
+
+    def test_a_post_without_a_token_is_rejected(self):
+        self.token()
+
+        response = self.csrf_client.post(self.path)
+
+        self.assertEqual(response.status_code, 403)
+        self.complete_json.assert_not_called()
+        self.assert_nothing_stored()
+
+    def test_a_post_with_the_forms_token_suggests(self):
+        (token,) = self.token()
+
+        response = self.csrf_client.post(self.path, {"csrfmiddlewaretoken": token})
+
+        self.assertEqual(response.status_code, 302)
+        self.complete_json.assert_called_once()
