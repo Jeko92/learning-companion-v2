@@ -1,5 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from django.views.generic import CreateView
 
@@ -55,3 +57,18 @@ class ResourceCreateView(GoalResourcesMixin, SuccessMessageMixin, CreateView):
         # The goal is the one from the URL (already owner-checked), set before
         # validation, so nothing posted can choose it.
         return {**super().get_form_kwargs(), "instance": Resource(goal=self.goal)}
+
+    def form_valid(self, form):
+        try:
+            with transaction.atomic():
+                return super().form_valid(form)
+        except IntegrityError:
+            # Another request attached the same URL after the form validated.
+            # Ask the model which constraint now fails, so the error is its own
+            # message; anything other than a duplicate is re-raised.
+            try:
+                form.instance.validate_constraints()
+            except ValidationError as error:
+                form.add_error(None, error)
+                return self.form_invalid(form)
+            raise

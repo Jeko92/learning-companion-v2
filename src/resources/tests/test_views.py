@@ -1,5 +1,8 @@
+from unittest.mock import patch
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from django.http import Http404
 from django.shortcuts import resolve_url
 from django.test import Client, RequestFactory, TestCase
@@ -9,6 +12,7 @@ from django.views.generic.list import MultipleObjectMixin
 
 from core.tests.html import PageParser
 from goals.models import Goal
+from resources.forms import ResourceForm
 from resources.models import Resource
 
 PASSWORD = "Tr4ck-Learning!"
@@ -334,6 +338,40 @@ class ResourceCreateDuplicateTests(TestCase):
         )
         self.assertContains(response, "This goal already has this resource.")
         self.assertEqual(Resource.objects.count(), 1)
+
+
+class ResourceCreateRaceTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.client.force_login(self.alice)
+        self.path = f"/goals/{self.goal.pk}/resources/new/"
+
+    def test_a_duplicate_only_the_database_catches_is_a_form_error(self):
+        Resource.objects.create(goal=self.goal, url=valid_data()["url"], title="Docs")
+
+        # As if another request attached the URL between validation and insert.
+        with patch.object(ResourceForm, "validate_constraints", lambda form: None):
+            response = self.client.post(self.path, valid_data(title="Again"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "resources/resource_form.html")
+        self.assertFormError(
+            response.context["form"], None, "This goal already has this resource."
+        )
+        self.assertEqual(Resource.objects.count(), 1)
+
+    def test_another_integrity_error_is_not_reported_as_a_duplicate(self):
+        def failing_save(resource, *args, **kwargs):
+            raise IntegrityError("some other constraint")
+
+        with (
+            patch.object(Resource, "save", failing_save),
+            self.assertRaises(IntegrityError),
+        ):
+            self.client.post(self.path, valid_data())
+
+        self.assertFalse(Resource.objects.exists())
 
 
 class ResourceViewsScopingTests(TestCase):

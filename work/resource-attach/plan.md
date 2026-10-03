@@ -43,7 +43,7 @@
 
   — test: `resources/tests/test_forms.py` (new, `ResourceFormDuplicateTests`), `resources/tests/test_views.py` (`ResourceCreateDuplicateTests`) — impl: `resources/forms.py` (`validate_constraints` covering the `(goal, url)` constraint) — covers: AC15
 
-- [ ] 5. **Duplicate that only the database catches.** With `ResourceForm.validate_constraints` patched to a no-op (so a duplicate reaches the insert, as in a race), posting an existing URL returns the create page (200) with "This goal already has this resource.", no 500, and the goal still has one such resource. A different `IntegrityError` (the URL is not a duplicate; `Resource.save` patched to raise) is re-raised, not reported as a duplicate.
+- [x] 5. **Duplicate that only the database catches.** With `ResourceForm.validate_constraints` patched to a no-op (so a duplicate reaches the insert, as in a race), posting an existing URL returns the create page (200) with "This goal already has this resource.", no 500, and the goal still has one such resource. A different `IntegrityError` (the URL is not a duplicate; `Resource.save` patched to raise) is re-raised, not reported as a duplicate.
 
   — test: `resources/tests/test_views.py` (`ResourceCreateRaceTests`) — impl: `resources/views.py` (`form_valid`: `transaction.atomic()`, catch `IntegrityError`, re-check, `form.add_error(None, …)`) — covers: AC15
 
