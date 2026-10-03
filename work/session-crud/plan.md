@@ -111,7 +111,7 @@
   - `SessionViewsScopingTests` walks `learning_sessions.urls` with the expected set `{"create"}`. For each view: `model is None`; `OwnSessionsMixin` comes before Single/MultipleObjectMixin in the MRO; `get_queryset` is the mixin's (or a `GoalSessionsMixin` override); and after `setup()` with alice's ids, the queryset or goal lookup excludes bob's and a lookup of bob's goal raises `Http404`.
 
   — test: `learning_sessions/tests/test_views.py` (`SessionCreatePageTests`, `SessionCreateAccessTests`, `SessionViewsScopingTests`) — impl: `learning_sessions/urls.py`, `learning_sessions/views.py` (both mixins, `SessionCreateView`), `learning_sessions/forms.py` (`LearningSessionForm`, no tag saving yet), `config/urls.py`, `templates/learning_sessions/session_form.html` — covers: AC1, AC2, AC4, AC11, AC12, AC27
-- [ ] 3. **Create POST: valid, invalid and boundary values.**
+- [x] 3. **Create POST: valid, invalid and boundary values.**
   - A valid POST creates the session on the URL's goal, redirects to the goal detail page, and the followed page shows "Session added.". Posted `goal` (another goal of alice's, and one of bob's), `created_at` and `updated_at` are ignored.
   - A table of invalid input each gives 200, an `assertFormError`, and nothing created: future date, `0`, `1441`, `1.5`, `abc`, empty duration, notes of 2,001 characters.
   - Boundary values save: today, `1`, `1440`, and date plus duration only.

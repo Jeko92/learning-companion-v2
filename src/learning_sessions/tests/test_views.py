@@ -1,12 +1,13 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.http import Http404
 from django.shortcuts import resolve_url
-from django.test import RequestFactory, TestCase, override_settings
+from django.test import Client, RequestFactory, TestCase, override_settings
 from django.urls import get_resolver, reverse
+from django.utils import timezone
 from django.views.generic.detail import SingleObjectMixin
 from django.views.generic.list import MultipleObjectMixin
 
@@ -151,6 +152,129 @@ class SessionCreateAccessTests(TestCase):
                 self.assertEqual(response.status_code, 404)
                 self.assertEqual(response.content, missing.content)
                 self.assertFalse(LearningSession.objects.exists())
+
+
+class SessionCreateTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.alice = User.objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.client.force_login(self.alice)
+        self.path = f"/goals/{self.goal.pk}/sessions/new/"
+
+    def test_a_valid_post_adds_the_session_to_the_goal(self):
+        response = self.client.post(self.path, valid_data(notes="Read the forms docs."))
+
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        (session,) = LearningSession.objects.all()
+        self.assertEqual(session.goal, self.goal)
+        self.assertEqual(str(session.date), "2026-03-01")
+        self.assertEqual(session.duration_minutes, 45)
+        self.assertEqual(session.notes, "Read the forms docs.")
+        self.assertContains(self.client.get(response.url), "Session added.")
+
+    def test_a_posted_goal_or_timestamps_are_ignored(self):
+        other = Goal.objects.create(owner=self.alice, title="Other")
+        bobs = Goal.objects.create(
+            owner=get_user_model().objects.create_user("bob"), title="B"
+        )
+        for goal in (other, bobs):
+            with self.subTest(goal=goal.title):
+                self.client.post(
+                    self.path,
+                    valid_data(
+                        goal=goal.pk,
+                        created_at="2000-01-01 00:00",
+                        updated_at="2000-01-01 00:00",
+                    ),
+                )
+
+                session = LearningSession.objects.latest("id")
+                self.assertEqual(session.goal, self.goal)
+                self.assertGreater(session.created_at.year, 2000)
+                self.assertGreater(session.updated_at.year, 2000)
+        self.assertFalse(LearningSession.objects.exclude(goal=self.goal).exists())
+
+    def test_invalid_input_is_rejected_and_nothing_is_saved(self):
+        tomorrow = str(timezone.localdate() + timedelta(days=1))
+        cases = [
+            ("future date", {"date": tomorrow}, "date",
+             "A session can't be in the future."),
+            ("zero minutes", {"duration_minutes": "0"}, "duration_minutes",
+             "Ensure this value is greater than or equal to 1."),
+            ("over a day", {"duration_minutes": "1441"}, "duration_minutes",
+             "Ensure this value is less than or equal to 1440."),
+            ("fraction", {"duration_minutes": "1.5"}, "duration_minutes",
+             "Enter a whole number."),
+            ("not a number", {"duration_minutes": "abc"}, "duration_minutes",
+             "Enter a whole number."),
+            ("no duration", {"duration_minutes": ""}, "duration_minutes",
+             "This field is required."),
+            ("long notes", {"notes": "x" * 2001}, "notes",
+             "Ensure this value has at most 2000 characters (it has 2001)."),
+        ]  # fmt: skip
+        for case, changes, field, message in cases:
+            with self.subTest(case=case):
+                response = self.client.post(self.path, valid_data(**changes))
+
+                self.assertEqual(response.status_code, 200)
+                self.assertTemplateUsed(response, "learning_sessions/session_form.html")
+                self.assertFormError(response.context["form"], field, message)
+                self.assertFalse(LearningSession.objects.exists())
+
+    def test_boundary_values_are_accepted(self):
+        today = str(timezone.localdate())
+        cases = {
+            "today": valid_data(date=today),
+            "one minute": valid_data(duration_minutes="1"),
+            "a whole day": valid_data(duration_minutes="1440"),
+            "date and duration only": {"date": today, "duration_minutes": "30"},
+        }
+        for case, data in cases.items():
+            with self.subTest(case=case):
+                before = LearningSession.objects.count()
+
+                response = self.client.post(self.path, data)
+
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(LearningSession.objects.count(), before + 1)
+
+
+class SessionCreateCsrfTests(TestCase):
+    # The default test client skips CSRF checks; this one enforces them.
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=alice, title="Learn Django")
+        self.csrf_client = Client(enforce_csrf_checks=True)
+        self.csrf_client.force_login(alice)
+        self.path = f"/goals/{self.goal.pk}/sessions/new/"
+
+    def token(self):
+        # GET first: sets the CSRF cookie and yields the form's token.
+        page = get_page(self.csrf_client, self.path)
+        ((_, inputs),) = page.forms("main")
+        return [a["value"] for a in inputs if a.get("name") == "csrfmiddlewaretoken"]
+
+    def test_a_post_without_a_token_is_rejected(self):
+        self.token()
+
+        response = self.csrf_client.post(self.path, valid_data())
+
+        self.assertEqual(response.status_code, 403)
+        self.assertFalse(LearningSession.objects.exists())
+
+    def test_a_post_with_the_forms_token_succeeds(self):
+        tokens = self.token()
+        self.assertEqual(len(tokens), 1)
+
+        response = self.csrf_client.post(
+            self.path, valid_data(csrfmiddlewaretoken=tokens[0])
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(LearningSession.objects.exists())
 
 
 class SessionViewsScopingTests(TestCase):

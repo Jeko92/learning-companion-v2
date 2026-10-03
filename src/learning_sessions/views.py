@@ -45,3 +45,15 @@ class GoalSessionsMixin(OwnSessionsMixin):
 class SessionCreateView(GoalSessionsMixin, SuccessMessageMixin, CreateView):
     form_class = LearningSessionForm
     template_name = "learning_sessions/session_form.html"
+    success_message = "Session added."
+
+    def get_form_kwargs(self):
+        # The goal is the one from the URL (already owner-checked), set before
+        # validation, so nothing posted can choose it.
+        return {
+            **super().get_form_kwargs(),
+            "instance": LearningSession(goal=self.goal),
+        }
+
+    def get_success_url(self):
+        return self.object.goal.get_absolute_url()
