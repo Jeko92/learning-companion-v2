@@ -1003,9 +1003,12 @@ class GoalDetailResourcesTests(TestCase):
 
         page = get_page(self.client, self.path)
 
-        ((form, inputs),) = page.forms("main")
+        # Found by its action: the goal page has other forms too.
+        action = f"/goals/{self.goal.pk}/resources/new/"
+        ((form, inputs),) = [
+            (f, i) for f, i in page.forms("main") if f.get("action") == action
+        ]
         self.assertEqual(form.get("method"), "post")
-        self.assertEqual(form.get("action"), f"/goals/{self.goal.pk}/resources/new/")
         names = {a.get("name") for a in inputs}
         self.assertEqual(names, {"csrfmiddlewaretoken", "url", "title"})
         (select,) = [a for t, a in page.elements if t == "select"]
