@@ -3,6 +3,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from core.tests.html import PageParser
+from core.tests.pages import AllPagesMixin
 
 USERNAME = "alice"
 PASSWORD = "Tr4ck-Learning!"
@@ -67,3 +68,27 @@ class NavTests(TestCase):
         page = self.get_page()
 
         self.assertIn(USERNAME, page.text("nav"))
+
+
+class NavCurrentPageTests(AllPagesMixin, TestCase):
+    """The nav marks the section the page belongs to, for screen readers."""
+
+    def expected_current(self, page):
+        if not page.logged_in:
+            return []
+        if page.name == "dashboard":
+            return [reverse("dashboard:index")]
+        if page.name.startswith("profile"):
+            return [reverse("profiles:mine")]
+        # Goals, and the sessions and resources that belong to a goal.
+        return [reverse("goals:list")]
+
+    def test_only_the_current_sections_nav_link_has_aria_current(self):
+        for page, parser in self.walk():
+            with self.subTest(page=page.name):
+                current = [
+                    attrs["href"]
+                    for tag, attrs in parser.elements
+                    if tag == "a" and attrs.get("aria-current") == "page"
+                ]
+                self.assertEqual(current, self.expected_current(page))
