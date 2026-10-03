@@ -1,5 +1,6 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
+from django.db.models import Sum
 from django.urls import reverse_lazy
 from django.views.generic import (
     CreateView,
@@ -11,6 +12,7 @@ from django.views.generic import (
 
 from goals.forms import GoalForm
 from goals.models import Goal
+from learning_sessions.models import LearningSession
 
 
 class OwnGoalsMixin(LoginRequiredMixin):
@@ -50,7 +52,21 @@ class GoalListView(OwnGoalsMixin, ListView):
 
 
 class GoalDetailView(OwnGoalsMixin, DetailView):
-    pass
+    RECENT_SESSIONS = 5
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Sessions only through owned_by, even for a goal that is already the
+        # user's own (see CLAUDE.md, Learning sessions).
+        sessions = LearningSession.objects.owned_by(self.request.user).filter(
+            goal=self.object
+        )
+        context["recent_sessions"] = sessions.with_tags()[: self.RECENT_SESSIONS]
+        # Over all sessions, not just those shown; an empty Sum() is None.
+        context["total_minutes"] = (
+            sessions.aggregate(total=Sum("duration_minutes"))["total"] or 0
+        )
+        return context
 
 
 class GoalCreateView(LoginRequiredMixin, SuccessMessageMixin, CreateView):

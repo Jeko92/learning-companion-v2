@@ -163,7 +163,7 @@
   - No N+1: the query count with 1 session and 1 tag equals the count with 20 sessions of 3 tags each (`CaptureQueriesContext`). The number is then pinned with `assertNumQueries`. The case-insensitive tag order already requires the `with_tags()` prefetch, so this test belongs here, not in a separate step that would pass on arrival.
 
   — test: `learning_sessions/tests/test_views.py` (`SessionListTests`, `SessionListPaginationTests`, `SessionListAccessTests`, `SessionListQueryCountTests`, scoping set) — impl: `learning_sessions/views.py` (`SessionListView`, `get_queryset` with `with_tags()`), `learning_sessions/urls.py`, `learning_sessions/models.py` (`with_tags()`), `templates/learning_sessions/session_list.html`, `templates/learning_sessions/_session_item.html` — covers: AC1, AC2, AC4, AC5 (item details), AC8, AC9, AC10, AC27
-- [ ] 10. **Goal detail "Sessions" section.**
+- [x] 10. **Goal detail "Sessions" section.**
   - The goal page shows that goal's 5 most recent sessions (from 6 or more; the oldest is absent, other goals' sessions are absent) with the `_session_item.html` details.
   - It shows the total of *all* the goal's sessions, e.g. 6 sessions of 15 min gives "1 h 30 min".
   - "Add session" links to `learning_sessions:create`, and "All sessions" links to `learning_sessions:list`.
