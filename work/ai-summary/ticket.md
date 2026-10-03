@@ -45,3 +45,4 @@ As a logged-in learner, I want to generate an AI progress summary of one of my g
 - **Empty goal:** the user chose not to call the AI when there is nothing to summarise.
 - **Display:** after any POST the user lands back on the goal page (post/redirect/get), as with the other goal actions; the result is shown through the stored summary and a message.
 - The issue's open questions ("recent" and storage) were answered in the interview on 2026-10-03.
+- **Approval:** the user approved the acceptance criteria (AC1–AC14) on 2026-10-03, including the 20-resource cap.
