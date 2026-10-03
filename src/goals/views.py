@@ -139,6 +139,10 @@ class GoalSummaryView(OwnGoalsMixin, SingleObjectMixin, View):
         goal = self.get_object()
         sessions = LearningSession.objects.owned_by(request.user).filter(goal=goal)
         resources = Resource.objects.owned_by(request.user).filter(goal=goal)
+        if not sessions.exists() and not resources.exists():
+            # Nothing to summarise: don't spend an API call on it.
+            messages.info(request, "Log a session or attach a resource first.")
+            return redirect(goal)
         system, user = summary_messages(
             goal,
             list(sessions.with_tags()[: self.SUMMARY_SESSIONS]),

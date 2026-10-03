@@ -1290,3 +1290,36 @@ class GoalSummaryGenerateTests(SummaryTestCase):
         self.assertEqual(
             self.goal.summary_generated_at, datetime(2026, 10, 2, 8, 0, tzinfo=UTC)
         )
+
+
+class GoalSummaryEmptyGoalTests(SummaryTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.alice)
+        # Another goal's data doesn't make this one summarisable.
+        other = Goal.objects.create(owner=self.alice, title="Other")
+        add_session(other)
+        add_resource(other)
+
+    def test_a_goal_without_sessions_or_resources_is_not_sent_to_the_ai(self):
+        response = self.client.post(self.path)
+
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        self.complete.assert_not_called()
+        self.assert_nothing_stored()
+        self.assertContains(
+            self.client.get(response.url), "Log a session or attach a resource first."
+        )
+
+    def test_one_session_or_one_resource_is_enough(self):
+        for add in (add_session, add_resource):
+            with self.subTest(add=add.__name__):
+                goal = Goal.objects.create(owner=self.alice, title=add.__name__)
+                add(goal)
+                self.complete.reset_mock()
+
+                self.client.post(f"/goals/{goal.pk}/summary/")
+
+                self.complete.assert_called_once()
