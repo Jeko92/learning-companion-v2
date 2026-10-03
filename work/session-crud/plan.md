@@ -118,7 +118,7 @@
   - CSRF: 403 without a token, 302 with the form's token.
 
   — test: `learning_sessions/tests/test_views.py` (`SessionCreateTests`, `SessionCreateCsrfTests`) — impl: `learning_sessions/views.py` (`get_form_kwargs` instance with goal, `get_success_url`, `success_message`) — covers: AC13, AC14, AC15, AC26
-- [ ] 4. **Tags on create.** Tests through the view:
+- [x] 4. **Tags on create.** Tests through the view:
   - `" python , Machine Learning,, MACHINE learning , "` saves the tags `["Machine Learning", "Python"]`, reusing an existing `Python` tag with its own spelling, and creates one "machine learning" tag.
   - An invalid entry (51 characters, or a zero-width space) gives 200 with `“entry”: message` naming it, and no session or tag is created.
   - 21 entries gives "You can have at most 20 tags."; `"x" * 1001` gives the max-length error; exactly 20 entries saves.

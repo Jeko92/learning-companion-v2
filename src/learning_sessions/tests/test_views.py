@@ -14,6 +14,7 @@ from django.views.generic.list import MultipleObjectMixin
 from core.tests.html import PageParser
 from goals.models import Goal
 from learning_sessions.models import LearningSession
+from tags.models import Tag, TagManager
 
 PASSWORD = "Tr4ck-Learning!"
 PAYLOAD = "<script>alert(1)</script>"
@@ -240,6 +241,94 @@ class SessionCreateTests(TestCase):
 
                 self.assertEqual(response.status_code, 302)
                 self.assertEqual(LearningSession.objects.count(), before + 1)
+
+
+class SessionTagsTests(TestCase):
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=alice, title="Learn Django")
+        self.python = Tag.objects.create(name="Python")
+        self.client.force_login(alice)
+        self.path = f"/goals/{self.goal.pk}/sessions/new/"
+
+    def post(self, tags):
+        return self.client.post(self.path, valid_data(tags=tags))
+
+    def test_typed_tags_are_trimmed_deduplicated_and_reused(self):
+        response = self.post(" python , Machine Learning,, MACHINE learning , ")
+
+        self.assertEqual(response.status_code, 302)
+        (session,) = LearningSession.objects.all()
+        self.assertEqual(
+            sorted(tag.name for tag in session.tags.all()),
+            ["Machine Learning", "Python"],
+        )
+        self.assertIn(self.python, session.tags.all())
+        self.assertEqual(Tag.objects.filter(name__iexact="machine learning").count(), 1)
+
+    def test_invalid_entries_are_named_and_nothing_is_saved(self):
+        long_name = "x" * 51
+        cases = {
+            long_name: "Ensure this value has at most 50 characters (it has 51).",
+            "Python\u200b": "Tag names can't contain control or invisible characters.",
+        }
+        for entry, message in cases.items():
+            with self.subTest(entry=entry):
+                response = self.post(f"Rust, {entry}")
+
+                self.assertEqual(response.status_code, 200)
+                self.assertFormError(
+                    response.context["form"], "tags", f"“{entry}”: {message}"
+                )
+                self.assertFalse(LearningSession.objects.exists())
+                self.assertEqual(list(Tag.objects.all()), [self.python])
+
+    def test_too_many_tags_or_too_much_text_is_rejected(self):
+        cases = {
+            "21 tags": (
+                ", ".join(f"t{n}" for n in range(21)),
+                "You can have at most 20 tags.",
+            ),
+            "1001 characters": (
+                "x" * 1001,
+                "Ensure this value has at most 1000 characters (it has 1001).",
+            ),
+        }
+        for case, (tags, message) in cases.items():
+            with self.subTest(case=case):
+                response = self.post(tags)
+
+                self.assertEqual(response.status_code, 200)
+                self.assertFormError(response.context["form"], "tags", message)
+                self.assertFalse(LearningSession.objects.exists())
+                self.assertEqual(list(Tag.objects.all()), [self.python])
+
+    def test_twenty_tags_are_allowed(self):
+        response = self.post(", ".join(f"t{n}" for n in range(20)))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(LearningSession.objects.get().tags.count(), 20)
+
+    def test_tags_are_created_through_get_or_create_by_name_on_save(self):
+        real = TagManager.get_or_create_by_name
+        calls = []
+
+        def spy(manager, name):
+            calls.append(name)
+            return real(manager, name)
+
+        with patch.object(TagManager, "get_or_create_by_name", spy):
+            self.post("Rust, Go, 0" + "x" * 50)  # invalid: nothing is looked up
+            self.assertEqual(calls, [])
+            self.assertFalse(Tag.objects.exclude(pk=self.python.pk).exists())
+
+            self.post("Rust, Go")
+
+        self.assertEqual(calls, ["Rust", "Go"])
+        self.assertEqual(
+            sorted(t.name for t in LearningSession.objects.get().tags.all()),
+            ["Go", "Rust"],
+        )
 
 
 class SessionCreateCsrfTests(TestCase):
