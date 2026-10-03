@@ -345,3 +345,39 @@ class MinutesPerTagTests(AggregateTestCase):
             totals = sessions.minutes_per_tag()
 
         self.assertEqual(totals, [("big", 90), ("small", 10), (None, 45)])
+
+
+class MinutesPerWeekTests(AggregateTestCase):
+    TODAY = date(2026, 10, 3)  # a Saturday; its week starts Monday Sep 28
+
+    def test_totals_for_the_last_weeks_newest_first_with_empty_weeks_at_zero(self):
+        # Sunday: still the week that started on Monday Sep 21.
+        self.add_session(self.alice, 60, day=date(2026, 9, 27))
+        # Monday starts a new week; Saturday is today, the end of it.
+        self.add_session(self.alice, 30, day=date(2026, 9, 28))
+        self.add_session(self.alice, 15, day=self.TODAY)
+        # The oldest week shown starts Monday Aug 10.
+        self.add_session(self.alice, 20, day=date(2026, 8, 10))
+        # Outside the window: the Sunday before it, and a later date (only
+        # full_clean() rejects future dates, so one can be stored).
+        self.add_session(self.alice, 99, day=date(2026, 8, 9))
+        self.add_session(self.alice, 99, day=date(2026, 10, 5))
+        self.add_session(self.bob, 500, day=self.TODAY)
+
+        sessions = LearningSession.objects.owned_by(self.alice).order_by("-date")
+        with self.assertNumQueries(1):
+            totals = sessions.minutes_per_week(self.TODAY, weeks=8)
+
+        self.assertEqual(
+            totals,
+            [
+                (date(2026, 9, 28), 45),
+                (date(2026, 9, 21), 60),
+                (date(2026, 9, 14), 0),
+                (date(2026, 9, 7), 0),
+                (date(2026, 8, 31), 0),
+                (date(2026, 8, 24), 0),
+                (date(2026, 8, 17), 0),
+                (date(2026, 8, 10), 20),
+            ],
+        )

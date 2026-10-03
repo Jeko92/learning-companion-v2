@@ -49,7 +49,7 @@
   - `owned_by(alice).order_by("-date").minutes_per_tag()` gives the same list, in one query (`assertNumQueries(1)`).
 
   — test: `src/learning_sessions/tests/test_models.py` (`MinutesPerTagTests`) — impl: `src/learning_sessions/models.py` — covers: AC4, AC11
-- [ ] 3. **`minutes_per_week(today, weeks)`.** `today = date(2026, 10, 3)` (a Saturday) and `weeks=8`. The result is exactly 8 `(Monday, minutes)` pairs from `date(2026, 9, 28)` back to `date(2026, 8, 10)`, newest first.
+- [x] 3. **`minutes_per_week(today, weeks)`.** `today = date(2026, 10, 3)` (a Saturday) and `weeks=8`. The result is exactly 8 `(Monday, minutes)` pairs from `date(2026, 9, 28)` back to `date(2026, 8, 10)`, newest first.
   - Fixture:
     - Sunday 2026-09-27 (60 min) counts in the week of Sep 21.
     - Monday 2026-09-28 (30 min) and Saturday 2026-10-03 (15 min) count in the week of Sep 28, giving 45.
