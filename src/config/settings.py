@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "profiles",
     "goals",
     "learning_sessions",
+    "resources",
 ]
 
 MIDDLEWARE = [
