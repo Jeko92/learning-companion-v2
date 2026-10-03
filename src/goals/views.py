@@ -149,8 +149,16 @@ class GoalSummaryView(OwnGoalsMixin, SingleObjectMixin, View):
             sessions.aggregate(total=Sum("duration_minutes"))["total"] or 0,
             list(resources[: self.SUMMARY_RESOURCES]),
         )
-        # No retries: the user is waiting on this page (see ai.services.complete).
-        goal.summary = services.complete(system, user, max_retries=0).strip()
+        try:
+            # No retries: the user is waiting on this page (see
+            # ai.services.complete).
+            reply = services.complete(system, user, max_retries=0)
+        except services.AIServiceError as error:
+            # Always caught: a 500 would print the chained SDK error, whose
+            # text can echo part of the key. The message itself is user-safe.
+            messages.error(request, str(error))
+            return redirect(goal)
+        goal.summary = reply.strip()
         goal.summary_generated_at = timezone.now()
         # update_fields leaves updated_at alone: the goal itself didn't change.
         goal.save(update_fields=["summary", "summary_generated_at"])

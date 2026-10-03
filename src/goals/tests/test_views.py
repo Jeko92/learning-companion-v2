@@ -1323,3 +1323,45 @@ class GoalSummaryEmptyGoalTests(SummaryTestCase):
                 self.client.post(f"/goals/{goal.pk}/summary/")
 
                 self.complete.assert_called_once()
+
+
+class GoalSummaryErrorTests(SummaryTestCase):
+    MESSAGES = (
+        "The AI service is unavailable right now. Please try again later.",
+        "The AI service returned an empty reply.",
+    )
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.alice)
+        add_session(self.goal)
+        self.earlier = datetime(2026, 9, 1, 8, 0, tzinfo=UTC)
+        Goal.objects.filter(pk=self.goal.pk).update(
+            summary="Earlier summary", summary_generated_at=self.earlier
+        )
+
+    def test_an_ai_failure_goes_back_to_the_goal_with_its_message(self):
+        from ai.services import AIServiceError
+
+        for message in self.MESSAGES:
+            with self.subTest(message=message):
+                # Chained like the service's own errors, which must not reach
+                # a 500 page (the SDK's text can echo part of the key).
+                cause = RuntimeError("sk-secret-tail")
+                error = AIServiceError(message)
+                error.__cause__ = cause
+                self.complete.side_effect = error
+
+                response = self.client.post(self.path)
+
+                self.assertRedirects(
+                    response,
+                    self.goal.get_absolute_url(),
+                    fetch_redirect_response=False,
+                )
+                page = self.client.get(response.url)
+                self.assertContains(page, message)
+                self.assertNotContains(page, "sk-secret-tail")
+                self.goal.refresh_from_db()
+                self.assertEqual(self.goal.summary, "Earlier summary")
+                self.assertEqual(self.goal.summary_generated_at, self.earlier)
