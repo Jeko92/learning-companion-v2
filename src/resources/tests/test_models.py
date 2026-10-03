@@ -305,3 +305,30 @@ class ResourceStrTests(TestCase):
         )
 
         self.assertEqual(str(resource), "Read the docs")
+
+
+class ResourceOwnedByTests(TestCase):
+    def setUp(self):
+        self.assertTrue(hasattr(resource_models.Resource.objects, "owned_by"))
+        User = get_user_model()
+        self.alice, self.bob = (User.objects.create_user(n) for n in ("alice", "bob"))
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.other_goal = Goal.objects.create(owner=self.alice, title="Learn Go")
+        self.mine = make_resource(self.goal)
+        self.other = make_resource(self.other_goal)
+        self.newest = make_resource(self.goal)
+        bobs_goal = Goal.objects.create(owner=self.bob, title="B")
+        self.theirs = make_resource(bobs_goal)
+
+    def test_only_the_users_own_resources_newest_first(self):
+        owned = resource_models.Resource.objects.owned_by(self.alice)
+
+        self.assertEqual(list(owned), [self.newest, self.other, self.mine])
+        self.assertEqual(
+            list(resource_models.Resource.objects.owned_by(self.bob)), [self.theirs]
+        )
+
+    def test_it_chains_with_other_filters(self):
+        owned = resource_models.Resource.objects.owned_by(self.alice)
+
+        self.assertEqual(list(owned.filter(goal=self.goal)), [self.newest, self.mine])

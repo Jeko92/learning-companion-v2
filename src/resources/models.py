@@ -17,6 +17,12 @@ class HttpURLField(models.URLField):
     default_validators = (URLValidator(schemes=("http", "https")),)
 
 
+class ResourceQuerySet(models.QuerySet):
+    def owned_by(self, user):
+        """The one way views look up resources: only those on the user's goals."""
+        return self.filter(goal__owner=user)
+
+
 class Resource(models.Model):
     """Reference material (an article, video, repo or doc) for one goal.
     Ownership is the goal's owner; look resources up through owned_by."""
@@ -37,6 +43,8 @@ class Resource(models.Model):
     type = models.CharField(max_length=20, choices=Type.choices, default=Type.ARTICLE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = ResourceQuerySet.as_manager()
 
     class Meta:
         # Newest first; the id breaks ties between equal timestamps.
