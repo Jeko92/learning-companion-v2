@@ -59,7 +59,7 @@
 
   — test: `goals/tests/test_views.py` (`GoalDetailResourcesTests`, `GoalDetailQueryCountTests`) — impl: `goals/views.py`, `templates/goals/goal_detail.html` — covers: AC5, AC6, AC7, AC8, AC9, AC20
 
-- [ ] 9. **Resource count on the goal delete confirmation.** `GoalDeleteView` adds `resource_count` (through `Resource.objects.owned_by`). The page says "Its 1 resource will be deleted too." / "Its 2 resources will be deleted too." next to the sessions warning; no resource warning for a goal without resources; resources of the user's other goal and of bob's goal are not counted.
+- [x] 9. **Resource count on the goal delete confirmation.** `GoalDeleteView` adds `resource_count` (through `Resource.objects.owned_by`). The page says "Its 1 resource will be deleted too." / "Its 2 resources will be deleted too." next to the sessions warning; no resource warning for a goal without resources; resources of the user's other goal and of bob's goal are not counted.
 
   — test: `goals/tests/test_views.py` (`GoalDeleteResourceWarningTests`) — impl: `goals/views.py`, `templates/goals/goal_confirm_delete.html` — covers: AC18
 

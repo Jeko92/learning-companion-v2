@@ -105,9 +105,14 @@ class GoalDeleteView(OwnGoalsMixin, SuccessMessageMixin, DeleteView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # The sessions that cascade with the goal, for the warning.
+        # The sessions and resources that cascade with the goal, for the warnings.
         context["session_count"] = (
             LearningSession.objects.owned_by(self.request.user)
+            .filter(goal=self.object)
+            .count()
+        )
+        context["resource_count"] = (
+            Resource.objects.owned_by(self.request.user)
             .filter(goal=self.object)
             .count()
         )

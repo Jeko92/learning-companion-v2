@@ -1019,3 +1019,48 @@ class GoalDeleteSessionWarningTests(TestCase):
         text = get_page(self.client, self.path).text("main")
 
         self.assertNotIn("will be deleted too", text)
+
+
+class GoalDeleteResourceWarningTests(TestCase):
+    def setUp(self):
+        User = get_user_model()
+        self.alice = User.objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        # Resources elsewhere must not be counted.
+        add_resource(Goal.objects.create(owner=self.alice, title="Other"))
+        add_resource(
+            Goal.objects.create(owner=User.objects.create_user("bob"), title="B")
+        )
+        self.client.force_login(self.alice)
+        self.path = reverse("goals:delete", args=[self.goal.pk])
+
+    def test_the_confirmation_says_how_many_resources_go_with_the_goal(self):
+        for count, warning in (
+            (1, "Its 1 resource will be deleted too."),
+            (2, "Its 2 resources will be deleted too."),
+        ):
+            with self.subTest(count=count):
+                while self.goal.resources.count() < count:
+                    add_resource(self.goal)
+
+                text = get_page(self.client, self.path).text("main")
+
+                self.assertIn(warning, text)
+
+    def test_it_sits_next_to_the_sessions_warning(self):
+        add_session(self.goal)
+        add_resource(self.goal)
+
+        text = get_page(self.client, self.path).text("main")
+
+        self.assertIn(
+            "Its 1 session will be deleted too. Its 1 resource will be deleted too.",
+            text,
+        )
+
+    def test_a_goal_without_resources_has_no_resource_warning(self):
+        add_session(self.goal)
+
+        text = get_page(self.client, self.path).text("main")
+
+        self.assertNotIn("resource", text)
