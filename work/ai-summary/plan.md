@@ -22,7 +22,7 @@
 
 ## Steps
 
-- [ ] 1. **Per-call retries in the AI service.** `get_client(max_retries=0)` builds the client with `max_retries=0`; `get_client()` still uses 2. `complete(system, user, max_retries=0)` builds its client with 0, and `complete(system, user)` with 2 (checked through a patched `get_client`). — test: `ai/tests/test_services.py` (`GetClientTests`, `CompleteTests`) — impl: `ai/services.py` — covers: AC13 (service)
+- [x] 1. **Per-call retries in the AI service.** `get_client(max_retries=0)` builds the client with `max_retries=0`; `get_client()` still uses 2. `complete(system, user, max_retries=0)` builds its client with 0, and `complete(system, user)` with 2 (checked through a patched `get_client`). — test: `ai/tests/test_services.py` (`GetClientTests`, `CompleteTests`) — impl: `ai/services.py` — covers: AC13 (service)
 
 - [ ] 2. **Summary fields on `Goal`.** A new goal has `summary == ""` and `summary_generated_at is None`; both are stored and read back; `GoalForm` still offers only title, description and status, and posting the edit form leaves a stored summary and its time unchanged. Migration `0003` added (`makemigrations --check` clean). — test: `goals/tests/test_models.py` (`GoalSummaryFieldTests`), `goals/tests/test_views.py` (`GoalEditKeepsSummaryTests`) — impl: `goals/models.py`, `goals/migrations/0003_goal_summary.py` — covers: AC8 (storage), AC10 (form)
 
