@@ -35,20 +35,26 @@ class NavTests(TestCase):
         # visitors" holds by construction: AnonymousUser.get_username() is "".
         self.assertEqual(page.text("nav"), "Log in Sign up")
 
-    def test_logged_in_nav_links_goals_and_the_profile_and_has_logout(self):
+    def test_logged_in_nav_links_dashboard_goals_the_profile_and_has_logout(self):
         # profile-page made the username a link to /profile/ (#4 AC10 had no
-        # links); goal-list-create made "Goals" a link to /goals/.
+        # links); goal-list-create made "Goals" a link to /goals/;
+        # dashboard-status put "Dashboard" first.
         self.log_in()
 
         page = self.get_page()
 
         self.assertEqual(
             page.links("nav"),
-            [(reverse("goals:list"), "Goals"), (reverse("profiles:mine"), USERNAME)],
+            [
+                (reverse("dashboard:index"), "Dashboard"),
+                (reverse("goals:list"), "Goals"),
+                (reverse("profiles:mine"), USERNAME),
+            ],
         )
-        # Exact text: Goals, the username and the Log out button, nothing else.
-        # (#3 pinned "Goals <username>"; auth-login-logout adds Log out.)
-        self.assertEqual(page.text("nav"), f"Goals {USERNAME} Log out")
+        # Exact text: Dashboard, Goals, the username and the Log out button,
+        # nothing else. (#3 pinned "Goals <username>"; auth-login-logout adds
+        # Log out.)
+        self.assertEqual(page.text("nav"), f"Dashboard Goals {USERNAME} Log out")
         ((attrs, inputs),) = page.forms("nav")
         # Only method and action, so styling attributes can't break the test.
         self.assertEqual(attrs.get("method"), "post")

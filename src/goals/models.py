@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.core.validators import MaxLengthValidator
 from django.db import models
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.urls import reverse
 
 
@@ -14,6 +14,14 @@ class GoalQuerySet(models.QuerySet):
     def owned_by(self, user):
         """The one way views look up goals: only the given user's own."""
         return self.filter(owner=user)
+
+    def status_counts(self):
+        """Goals per status, every status in choice order (0 if none), one query."""
+        # Meta.ordering stays out of GROUP BY, but an explicit order_by() on the
+        # incoming queryset would add its columns and split the groups.
+        counted = self.order_by().values_list("status").annotate(count=Count("id"))
+        found = dict(counted)
+        return {status: found.get(status, 0) for status in Goal.Status.values}
 
 
 class Goal(models.Model):
