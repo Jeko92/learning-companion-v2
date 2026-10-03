@@ -1045,7 +1045,8 @@ class GoalDeleteResourceWarningTests(TestCase):
 
                 text = get_page(self.client, self.path).text("main")
 
-                self.assertIn(warning, text)
+                # Exactly once: a substring check can't see a repeated warning.
+                self.assertEqual(text.count(warning), 1)
 
     def test_it_sits_next_to_the_sessions_warning(self):
         add_session(self.goal)
@@ -1057,6 +1058,7 @@ class GoalDeleteResourceWarningTests(TestCase):
             "Its 1 session will be deleted too. Its 1 resource will be deleted too.",
             text,
         )
+        self.assertEqual(text.count("will be deleted too."), 2)
 
     def test_a_goal_without_resources_has_no_resource_warning(self):
         add_session(self.goal)
