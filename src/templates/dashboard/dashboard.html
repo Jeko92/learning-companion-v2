@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load session_format %}
 
 {% block title %}Dashboard · Learning Companion{% endblock %}
 
@@ -38,5 +39,50 @@
         No goals yet. <a href="{% url 'goals:create' %}" class="font-medium text-slate-800 hover:underline">Create your first goal</a>
       </p>
     {% endif %}
+  </section>
+
+  <section class="mt-10" aria-labelledby="hours-per-tag-heading">
+    <h2 id="hours-per-tag-heading" class="text-lg font-semibold">Hours per tag</h2>
+    {% if tag_rows %}
+      <table class="mt-3 w-full max-w-sm overflow-hidden rounded border border-slate-200 bg-white text-sm">
+        <thead class="bg-slate-100 text-left text-slate-500">
+          <tr>
+            <th scope="col" class="px-4 py-2 font-medium">Tag</th>
+            <th scope="col" class="px-4 py-2 text-right font-medium">Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for name, minutes in tag_rows %}
+            <tr class="border-t border-slate-200">
+              <th scope="row" class="px-4 py-2 text-left font-normal{% if name is None %} italic text-slate-500{% endif %}">{{ name|default_if_none:"Untagged" }}</th>
+              <td class="px-4 py-2 text-right tabular-nums">{{ minutes|duration }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="mt-3 text-sm text-slate-500">A session with several tags counts under each of them.</p>
+    {% else %}
+      <p class="mt-3 text-sm text-slate-500">No sessions logged yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="mt-10" aria-labelledby="hours-per-week-heading">
+    <h2 id="hours-per-week-heading" class="text-lg font-semibold">Hours per week</h2>
+    <table class="mt-3 w-full max-w-sm overflow-hidden rounded border border-slate-200 bg-white text-sm">
+      <thead class="bg-slate-100 text-left text-slate-500">
+        <tr>
+          <th scope="col" class="px-4 py-2 font-medium">Week</th>
+          <th scope="col" class="px-4 py-2 text-right font-medium">Time</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for monday, minutes in week_rows %}
+          <tr class="border-t border-slate-200">
+            <th scope="row" class="px-4 py-2 text-left font-normal">Week of {{ monday|date:"M j, Y" }}</th>
+            <td class="px-4 py-2 text-right tabular-nums">{{ minutes|duration }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </section>
 {% endblock %}
