@@ -2,7 +2,7 @@ from itertools import count
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.db import models
+from django.db import IntegrityError, models, transaction
 from django.test import TestCase
 
 from goals.models import Goal
@@ -125,3 +125,20 @@ class ResourceUrlTests(TestCase):
         saved = make_resource(self.goal, url=" https://example.com/b ")
         saved.refresh_from_db()
         self.assertEqual(saved.url, "https://example.com/b")
+
+    def test_the_database_only_takes_http_and_https_urls(self):
+        resources = resource_models.Resource.objects.filter(
+            pk=make_resource(self.goal).pk
+        )
+        # update() skips validators: the database must refuse other schemes.
+        for url in ("javascript:alert(1)", "data:text/html,x", "ftp://example.com"):
+            with (
+                self.subTest(url=url),
+                self.assertRaises(IntegrityError),
+                transaction.atomic(),
+            ):
+                resources.update(url=url)
+        for url in ("http://example.com/a", "https://example.com/b", "HTTP://X.COM/c"):
+            with self.subTest(url=url):
+                resources.update(url=url)
+                self.assertEqual(resources.get().url, url)

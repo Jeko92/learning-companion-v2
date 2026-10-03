@@ -61,7 +61,7 @@
   - `make_resource` gains distinct URLs.
 
   — test: `resources/tests/test_models.py` (`ResourceUrlTests`) — impl: `resources/models.py` (`HttpURLField`, `url`, `strip`, `clean_fields`, `save`), regenerate migration — covers: AC3
-- [ ] 4. **URL scheme in the database.** `update(url=...)` with `javascript:alert(1)`, `data:text/html,x` and `ftp://example.com` raises `IntegrityError`. `http://…`, `https://…` and `HTTP://…` pass `update()`. — test: `ResourceUrlTests` (constraint test) — impl: `resources/models.py` (`Meta.constraints` url check), regenerate migration — covers: AC4
+- [x] 4. **URL scheme in the database.** `update(url=...)` with `javascript:alert(1)`, `data:text/html,x` and `ftp://example.com` raises `IntegrityError`. `http://…`, `https://…` and `HTTP://…` pass `update()`. — test: `ResourceUrlTests` (constraint test) — impl: `resources/models.py` (`Meta.constraints` url check), regenerate migration — covers: AC4
 - [ ] 5. **Title.**
   - `title` is a `CharField` with `max_length == 200`, not blank.
   - `"  Read the docs "` is stored as `"Read the docs"` on `save()`, and trimmed by `full_clean()`.

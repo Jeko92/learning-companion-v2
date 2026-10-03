@@ -1,5 +1,6 @@
 from django.core.validators import URLValidator
 from django.db import models
+from django.db.models import Q
 
 
 def strip(value):
@@ -25,8 +26,19 @@ class Resource(models.Model):
     )
     url = HttpURLField(max_length=2048)
 
+    class Meta:
+        constraints = (
+            # The validator only runs through full_clean()/forms; this stops
+            # update()/bulk_create() from storing javascript: or data: links.
+            models.CheckConstraint(
+                condition=Q(url__istartswith="http://")
+                | Q(url__istartswith="https://"),
+                name="resources_resource_url_http",
+            ),
+        )
+
     def clean_fields(self, exclude=None):
-        # Model fields don't strip: trim first so "  " fails as blank.
+        # Model fields don't strip: trim first, so "  " fails as blank.
         self.url = strip(self.url)
         super().clean_fields(exclude=exclude)
 
