@@ -1043,6 +1043,10 @@ class GoalDetailQueryCountTests(TestCase):
             add_session(self.large, tags=("a", "b", "c"))
         for value in Resource.Type.values * 2:
             add_resource(self.large, type=value)
+        # The summary comes with the goal row: no extra query.
+        Goal.objects.filter(pk=self.large.pk).update(
+            summary="A summary", summary_generated_at=datetime(2026, 10, 1, tzinfo=UTC)
+        )
 
     def queries_for(self, goal):
         with CaptureQueriesContext(connection) as queries:
@@ -1368,3 +1372,90 @@ class GoalSummaryErrorTests(SummaryTestCase):
                 self.goal.refresh_from_db()
                 self.assertEqual(self.goal.summary, "Earlier summary")
                 self.assertEqual(self.goal.summary_generated_at, self.earlier)
+
+
+class GoalDetailSummaryTests(SummaryTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.alice)
+        self.detail = self.goal.get_absolute_url()
+
+    def summary_text(self):
+        section = LabelledSectionText("summary-heading")
+        section.feed(self.client.get(self.detail).content.decode())
+        return section.text()
+
+    def summary_form(self):
+        page = get_page(self.client, self.detail)
+        forms = [(f, i) for f, i in page.forms("main") if f.get("action") == self.path]
+        self.assertEqual(len(forms), 1, "one form posts to the summary route")
+        return forms[0]
+
+    def test_without_a_summary_the_section_offers_to_generate_one(self):
+        text = self.summary_text()
+
+        self.assertTrue(text.startswith("Summary"), text)
+        self.assertIn("No summary yet.", text)
+        self.assertIn("Generate summary", text)
+        self.assertNotIn("Regenerate", text)
+        form, inputs = self.summary_form()
+        self.assertEqual(form.get("method"), "post")
+        self.assertIn("csrfmiddlewaretoken", {a.get("name") for a in inputs})
+
+    def test_a_stored_summary_is_shown_with_its_time_and_can_be_regenerated(self):
+        Goal.objects.filter(pk=self.goal.pk).update(
+            summary="Two hours so far.\nNext: forms.",
+            summary_generated_at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC),
+        )
+
+        text = self.summary_text()
+
+        self.assertIn("Two hours so far. Next: forms.", text)
+        self.assertIn("Generated 1 Oct 2026, 09:30", text)
+        self.assertIn("Regenerate summary", text)
+        self.assertNotIn("No summary yet.", text)
+        self.assertContains(self.client.get(self.detail), "Two hours so far.<br>")
+        self.summary_form()
+
+    def test_the_summary_is_escaped(self):
+        payload = "<script>alert(1)</script>"
+        Goal.objects.filter(pk=self.goal.pk).update(
+            summary=payload, summary_generated_at=datetime(2026, 10, 1, tzinfo=UTC)
+        )
+
+        response = self.client.get(self.detail)
+
+        self.assertNotContains(response, payload)
+        self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
+
+
+class GoalSummaryCsrfTests(SummaryTestCase):
+    # The default test client skips CSRF checks; this one enforces them.
+    def setUp(self):
+        super().setUp()
+        add_session(self.goal)
+        self.csrf_client = Client(enforce_csrf_checks=True)
+        self.csrf_client.force_login(self.alice)
+
+    def token(self):
+        # GET the goal page first: sets the CSRF cookie and yields the token
+        # of the form that posts to the summary route.
+        page = get_page(self.csrf_client, self.goal.get_absolute_url())
+        (inputs,) = [i for f, i in page.forms("main") if f.get("action") == self.path]
+        return [a["value"] for a in inputs if a.get("name") == "csrfmiddlewaretoken"]
+
+    def test_a_post_without_a_token_is_rejected(self):
+        self.token()
+
+        response = self.csrf_client.post(self.path)
+
+        self.assertEqual(response.status_code, 403)
+        self.complete.assert_not_called()
+
+    def test_a_post_with_the_forms_token_generates(self):
+        (token,) = self.token()
+
+        response = self.csrf_client.post(self.path, {"csrfmiddlewaretoken": token})
+
+        self.assertEqual(response.status_code, 302)
+        self.complete.assert_called_once()
