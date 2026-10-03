@@ -24,7 +24,7 @@
 
 - [x] 1. **`ai` app and the `openai` dependency.** `ai` is installed (`apps.is_installed("ai")`), and `requirements.txt` has a range-pinned `openai` line (`openai>=` with an upper bound `<`). — test: `ai/tests/test_apps.py` (new: `AiAppTests`) — impl: `src/ai/__init__.py`, `src/ai/apps.py` (`AiConfig`), `src/ai/tests/__init__.py`, `config/settings.py` (`INSTALLED_APPS`), `requirements.txt` — covers: AC5, AC6 (app)
 
-- [ ] 2. **`OPENAI_MODEL` is optional with a default.** `resolve_settings` returns `openai_model`: `gpt-4.1-mini` when unset, empty or whitespace-only; a given value trimmed; the environment beats `.env`. — test: `config/tests/test_env.py` — impl: `config/env.py` (`EnvSettings.openai_model`, `DEFAULT_OPENAI_MODEL`) — covers: AC2, AC3
+- [x] 2. **`OPENAI_MODEL` is optional with a default.** `resolve_settings` returns `openai_model`: `gpt-4.1-mini` when unset, empty or whitespace-only; a given value trimmed; the environment beats `.env`. — test: `config/tests/test_env.py` — impl: `config/env.py` (`EnvSettings.openai_model`, `DEFAULT_OPENAI_MODEL`) — covers: AC2, AC3
 
 - [ ] 3. **Test-only: the env and settings tests supply a key.** Before the key becomes required, every `resolve_settings` call in `test_env.py` passes an `OPENAI_API_KEY` (through a small `environ(**values)` helper with a dummy key), and `PATCHED_ENVIRON` in `test_settings.py` gets one, unlike `.env.example`'s value. No behaviour change, suite stays green; committed as `test(ai-client): …`. (Precondition, already met: the local `.env` has `OPENAI_API_KEY`.) — test: `config/tests/test_env.py`, `config/tests/test_settings.py` — impl: none — covers: groundwork for AC1
 

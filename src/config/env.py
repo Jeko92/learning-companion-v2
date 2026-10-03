@@ -9,6 +9,7 @@ import environ as django_environ
 from django.core.exceptions import ImproperlyConfigured
 
 DEFAULT_ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+DEFAULT_OPENAI_MODEL = "gpt-4.1-mini"
 
 
 @dataclass(frozen=True)
@@ -16,6 +17,7 @@ class EnvSettings:
     secret_key: str
     debug: bool
     allowed_hosts: list[str]
+    openai_model: str
 
 
 def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
@@ -41,4 +43,7 @@ def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
             for host in env.list("ALLOWED_HOSTS", default=DEFAULT_ALLOWED_HOSTS)
             if host.strip()
         ],
+        # Set but blank means the default, like unset.
+        openai_model=Env.ENVIRON.get("OPENAI_MODEL", "").strip()
+        or DEFAULT_OPENAI_MODEL,
     )

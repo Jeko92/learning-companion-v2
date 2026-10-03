@@ -85,6 +85,33 @@ class ResolveSettingsTests(SimpleTestCase):
 
         self.assertEqual(settings.allowed_hosts, ["localhost", "127.0.0.1"])
 
+    def test_openai_model_defaults_to_gpt_4_1_mini(self):
+        for environ in (
+            {"SECRET_KEY": "x"},
+            {"SECRET_KEY": "x", "OPENAI_MODEL": ""},
+            {"SECRET_KEY": "x", "OPENAI_MODEL": "  \t "},
+        ):
+            with self.subTest(environ=environ):
+                settings = self.resolve(environ)
+
+                self.assertEqual(settings.openai_model, "gpt-4.1-mini")
+
+    def test_openai_model_is_trimmed(self):
+        settings = self.resolve({"SECRET_KEY": "x", "OPENAI_MODEL": " gpt-test \n"})
+
+        self.assertEqual(settings.openai_model, "gpt-test")
+
+    def test_openai_model_from_environment_wins_over_env_file(self):
+        env_file = self.write_env_file("OPENAI_MODEL=from-file\n")
+
+        from_file = self.resolve({"SECRET_KEY": "x"}, env_file)
+        from_env = self.resolve(
+            {"SECRET_KEY": "x", "OPENAI_MODEL": "from-env"}, env_file
+        )
+
+        self.assertEqual(from_file.openai_model, "from-file")
+        self.assertEqual(from_env.openai_model, "from-env")
+
     def test_values_come_from_env_file(self):
         env_file = self.write_env_file(
             "SECRET_KEY=from-file\nDEBUG=True\nALLOWED_HOSTS=example.com\n"
