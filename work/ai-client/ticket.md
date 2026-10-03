@@ -38,3 +38,4 @@ As the developer of the learning companion, I want one small, tested service tha
 - **Location:** a new `ai` app (`src/ai/`), per the one-app-per-domain layout; #16 and #17 build on its service.
 - **Error path:** callers catch only `AIServiceError`; it hides the SDK's exception types from the views.
 - The issue's open questions (default model and env configuration, timeout and retries) were answered in the interview on 2026-10-03.
+- **Approval:** the user approved the acceptance criteria (AC1–AC12) on 2026-10-03, keeping the key required at startup.
