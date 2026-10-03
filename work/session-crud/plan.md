@@ -179,7 +179,7 @@
   - The goal title is still escaped.
 
   — test: `goals/tests/test_views.py` (`GoalDeleteSessionWarningTests`) — impl: `goals/views.py` (`GoalDeleteView.get_context_data`), `templates/goals/goal_confirm_delete.html` — covers: AC25, AC27
-- [ ] 12. **Docs.** Update `CLAUDE.md`:
+- [x] 12. **Docs.** Update `CLAUDE.md`:
   - the learning-sessions stack line: routes, mixins, form, `TagListField`, `with_tags()`, the `duration` filter
   - the goal detail section and delete warning
   - the tags line: `TagListField` as the shared typed-tags path
