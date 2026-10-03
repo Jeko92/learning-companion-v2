@@ -30,6 +30,11 @@ DEBUG = _env.debug
 
 ALLOWED_HOSTS = _env.allowed_hosts
 
+# OpenAI Chat Completions, used by the ai app (ai.services).
+OPENAI_API_KEY = _env.openai_api_key
+
+OPENAI_MODEL = _env.openai_model
+
 
 # Application definition
 
@@ -48,6 +53,7 @@ INSTALLED_APPS = [
     "goals",
     "learning_sessions",
     "resources",
+    "ai",
 ]
 
 MIDDLEWARE = [

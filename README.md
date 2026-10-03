@@ -10,6 +10,7 @@ python3 -m venv .venv
 cp .env.example .env
 ./.venv/bin/python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 # paste the printed key into .env as SECRET_KEY=...
+# for the AI features, replace OPENAI_API_KEY=sk-dummy in .env with your OpenAI key
 ./.venv/bin/python src/manage.py migrate
 ./.venv/bin/python src/manage.py tailwind build
 ./.venv/bin/python src/manage.py runserver
@@ -28,8 +29,10 @@ Settings come from the environment via `django-environ`, read in `src/config/env
 | `SECRET_KEY` | none, so startup fails | Required and must not be empty |
 | `DEBUG` | `False` | `.env.example` sets `True` for local development |
 | `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Comma-separated. If it's set but empty, every host is rejected when `DEBUG` is off |
+| `OPENAI_API_KEY` | none, so startup fails | Required and must not be empty. `sk-dummy` (the `.env.example` value) is enough to run the tests and the dev server; the AI features need a real key |
+| `OPENAI_MODEL` | `gpt-4.1-mini` | The Chat Completions model for the AI features; empty also means the default |
 
-Values are read from the process environment first. `.env` at the repo root only fills in variables that aren't already set. `.env` is git-ignored, and `.env.example` documents every variable. Write one `NAME=value` per line with no spaces around `=`. `DEBUG=True` is for local development only. The test suite needs `SECRET_KEY` too, so set up `.env` before running the tests.
+Values are read from the process environment first. `.env` at the repo root only fills in variables that aren't already set. `.env` is git-ignored, and `.env.example` documents every variable. Write one `NAME=value` per line with no spaces around `=`. `DEBUG=True` is for local development only. The test suite needs `SECRET_KEY` and `OPENAI_API_KEY` too, so set up `.env` before running the tests. The tests never call the OpenAI API.
 
 ## Tests and lint
 
@@ -50,6 +53,7 @@ Values are read from the process environment first. `.env` at the repo root only
 - `src/goals/`: learning goals (title, description, status planned / in-progress / done), each owned by one user; listed at `/goals/`, created at `/goals/new/`, and viewed, edited or deleted at `/goals/<id>/`
 - `src/learning_sessions/`: learning sessions, each logged against one goal: a date (today or earlier), a duration in minutes (1 to 1,440), notes and tags; listed and created under `/goals/<id>/sessions/`, edited or deleted at `/sessions/<id>/`
 - `src/resources/`: reference material for a goal (an article, video, repo or doc): an http(s) URL, a title and a type, each URL at most once per goal
+- `src/ai/`: the OpenAI Chat Completions service the AI features use (key and model from the environment, a 30-second timeout and 2 retries, one user-safe error for any failure)
 - `src/templates/`: project-wide templates (`base.html` layout, pages that extend it, `accounts/`, `profiles/`, `goals/` and `learning_sessions/` pages)
 - `src/assets/`: static source files; the built `css/tailwind.css` is git-ignored
 - `work/`: workflow artifacts per ticket (`ticket.md`, `plan.md`, `review.md`)
