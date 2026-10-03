@@ -18,8 +18,9 @@ def login_redirect(path):
 
 class LabelledSection(HTMLParser):
     """The element labelled by `heading_id` (its aria-labelledby): its
-    heading's text and its table rows as lists of cell texts, so a check
-    can't pick up the same words elsewhere on the page."""
+    heading's text, its table rows as lists of cell texts and its links as
+    (href, text), so a check can't pick up the same words elsewhere on the
+    page."""
 
     def __init__(self, heading_id):
         super().__init__()
@@ -29,6 +30,8 @@ class LabelledSection(HTMLParser):
         self.in_heading = False
         self.rows = []
         self.cell = None
+        self.link_pieces = []
+        self.link = None
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
@@ -41,6 +44,9 @@ class LabelledSection(HTMLParser):
                 self.rows.append([])
             elif tag in ("th", "td"):
                 self.cell = []
+            elif tag == "a":
+                self.link = []
+                self.link_pieces.append((attrs.get("href"), self.link))
         elif attrs.get("aria-labelledby") == self.heading_id:
             self.depth = 1
 
@@ -52,15 +58,22 @@ class LabelledSection(HTMLParser):
             if tag in ("th", "td") and self.cell is not None:
                 self.rows[-1].append(collapse(self.cell))
                 self.cell = None
+            elif tag == "a":
+                self.link = None
 
     def handle_data(self, data):
         if self.in_heading:
             self.heading_pieces.append(data)
         if self.depth and self.cell is not None:
             self.cell.append(data)
+        if self.depth and self.link is not None:
+            self.link.append(data)
 
     def heading(self):
         return collapse(self.heading_pieces or [])
+
+    def links(self):
+        return [(href, collapse(pieces)) for href, pieces in self.link_pieces]
 
 
 def status_section(client):
@@ -142,4 +155,20 @@ class DashboardStatusCountsTests(TestCase):
         self.assertEqual(
             section.rows[1:],
             [["Planned", "0"], ["In progress", "1"], ["Done", "0"], ["Total", "1"]],
+        )
+
+    def test_each_row_links_to_the_goal_list_filtered_by_its_status(self):
+        self.add_goals(Goal.Status.PLANNED)
+
+        section = status_section(self.client)
+
+        goals = reverse("goals:list")
+        self.assertEqual(
+            section.links(),
+            [
+                (f"{goals}?status=planned", "Planned"),
+                (f"{goals}?status=in-progress", "In progress"),
+                (f"{goals}?status=done", "Done"),
+                (goals, "Total"),
+            ],
         )

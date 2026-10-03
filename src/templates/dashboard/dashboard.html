@@ -17,14 +17,18 @@
       <tbody>
         {% for value, label, count in status_rows %}
           <tr class="border-t border-slate-200">
-            <th scope="row" class="px-4 py-2 text-left font-normal">{{ label }}</th>
+            <th scope="row" class="px-4 py-2 text-left font-normal">
+              <a href="{% url 'goals:list' %}?status={{ value }}" class="font-medium hover:underline">{{ label }}</a>
+            </th>
             <td class="px-4 py-2 text-right tabular-nums">{{ count }}</td>
           </tr>
         {% endfor %}
       </tbody>
       <tfoot class="border-t border-slate-300 font-semibold">
         <tr>
-          <th scope="row" class="px-4 py-2 text-left">Total</th>
+          <th scope="row" class="px-4 py-2 text-left">
+            <a href="{% url 'goals:list' %}" class="hover:underline">Total</a>
+          </th>
           <td class="px-4 py-2 text-right tabular-nums">{{ total_goals }}</td>
         </tr>
       </tfoot>

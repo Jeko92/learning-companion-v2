@@ -39,7 +39,7 @@
   - Bob's goals never count. A sibling test gives alice only in-progress goals and checks Planned 0 and Done 0.
 
   — test: `src/dashboard/tests/test_views.py` (`DashboardStatusCountsTests`) — impl: `src/dashboard/views.py` (`get_context_data`: `status_rows`, `total_goals`), `src/templates/dashboard/dashboard.html` — covers: AC2, AC3, AC5
-- [ ] 6. **Rows link to the filtered goal list.** The section's links are, in order, `/goals/?status=planned` "Planned", `/goals/?status=in-progress` "In progress", `/goals/?status=done` "Done" and `/goals/` "Total". — test: `src/dashboard/tests/test_views.py` (`DashboardStatusCountsTests`) — impl: `src/templates/dashboard/dashboard.html` — covers: AC6
+- [x] 6. **Rows link to the filtered goal list.** The section's links are, in order, `/goals/?status=planned` "Planned", `/goals/?status=in-progress` "In progress", `/goals/?status=done` "Done" and `/goals/` "Total". — test: `src/dashboard/tests/test_views.py` (`DashboardStatusCountsTests`) — impl: `src/templates/dashboard/dashboard.html` — covers: AC6
 - [ ] 7. **Empty state.**
   - A user with no goals sees all three statuses at 0, a Total of 0, and a "Create your first goal" link to `reverse("goals:create")` in `main`.
   - A user with one goal doesn't see that link.
