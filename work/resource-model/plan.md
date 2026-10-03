@@ -93,7 +93,7 @@
   - The order stays newest first.
 
   — test: `ResourceOwnedByTests` — impl: `resources/models.py` (`ResourceQuerySet`, `objects`) — covers: AC2
-- [ ] 12. **Admin.**
+- [x] 12. **Admin.**
   - `Resource` is in `admin.site._registry`.
   - `list_display` includes title, type and goal; `list_filter` includes type; `search_fields` includes title and url.
   - As a superuser, the changelist (`admin:resources_resource_changelist`) lists a resource's title, and the add page returns 200 with the goal `<select>` carrying `admin-autocomplete`.
