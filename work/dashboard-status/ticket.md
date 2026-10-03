@@ -32,3 +32,4 @@ As a logged-in learner, I want a dashboard that shows how many of my goals are p
 - `Goal` has a default ordering (`-created_at`, `-id`). A `values().annotate()` grouping must clear it with `.order_by()`, otherwise the ordering columns split the groups.
 - Updating `CLAUDE.md` (the dashboard page and its place in the layout, plus the new `LOGIN_REDIRECT_URL`) and, where it applies, `README.md` is part of this ticket.
 - Handout: `instructions/challenge.md` → "Learning Companion - Dashboard and reporting". Depends on #8, which is done.
+- **Approval:** the user approved the acceptance criteria (AC1–AC12) on 2026-10-03.
