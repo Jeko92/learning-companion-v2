@@ -70,7 +70,7 @@
   - The pin `assertNumQueries(3)` becomes 4 (comment: + per-tag totals).
 
   — test: `src/dashboard/tests/test_views.py` (`DashboardHoursPerTagTests`, `DashboardQueryCountTests`) — impl: `src/dashboard/views.py` (`tag_rows`), `src/templates/dashboard/dashboard.html` — covers: AC1, AC3, AC4, AC8, AC9
-- [ ] 5. **Per-tag empty state.**
+- [x] 5. **Per-tag empty state.**
   - A user with no sessions (others have some) sees "No sessions logged yet." in the Hours per tag section, with no table rows and no multi-tag note.
   - A user with one session doesn't see that sentence.
 

@@ -267,6 +267,19 @@ class DashboardHoursPerTagTests(TestCase):
             "A session with several tags counts under each of them.", hours.text()
         )
 
+    def test_without_sessions_a_message_replaces_the_table(self):
+        hours = section(self.client, "hours-per-tag-heading")
+
+        self.assertEqual(hours.rows, [])
+        self.assertEqual(hours.text(), "Hours per tag No sessions logged yet.")
+
+    def test_with_a_session_the_no_sessions_message_is_not_shown(self):
+        add_session(self.alice, 30)
+
+        hours = section(self.client, "hours-per-tag-heading")
+
+        self.assertNotIn("No sessions logged yet.", hours.text())
+
 
 class DashboardQueryCountTests(TestCase):
     def setUp(self):
