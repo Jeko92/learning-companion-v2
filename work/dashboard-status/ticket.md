@@ -5,18 +5,18 @@ Issue: #18 · Branch: feature/dashboard-status
 As a logged-in learner, I want a dashboard that shows how many of my goals are planned, in progress and done, and that I land on after logging in, so that I see where I stand at a glance and can jump straight to the goals in each status.
 
 ## Acceptance criteria
-- [ ] AC1 An anonymous `GET /dashboard/` redirects to the login page with `next=/dashboard/`.
-- [ ] AC2 A logged-in `GET /dashboard/` returns 200 with the page title and `<h1>` "Dashboard" and a "Goals by status" section (`aria-labelledby` its heading) containing a table with one row per `Goal.Status`, in choice order (Planned, In progress, Done), each with the user's goal count, followed by a Total row with the sum.
-- [ ] AC3 A status with no goals is listed with 0. For example, a user whose goals are all planned sees In progress 0 and Done 0.
-- [ ] AC4 The counts come from one grouped ORM aggregation (`values("status")` + `annotate(Count(...))`, with the model's default ordering cleared). The page's query count is fixed and doesn't grow with the number of goals (pinned with `assertNumQueries`).
-- [ ] AC5 Only the current user's goals are counted (through `Goal.objects.owned_by`). Another user's goals in any status never change the numbers.
-- [ ] AC6 Each status row links to the goal list filtered by that status (`/goals/?status=<value>`). The Total row links to the unfiltered `/goals/`.
-- [ ] AC7 A user with no goals sees all three statuses at 0, a Total of 0 and a "Create your first goal" link to `goals:create`. A user with at least one goal doesn't see that link.
-- [ ] AC8 The logged-in nav has a "Dashboard" link to `/dashboard/`. The anonymous nav doesn't.
-- [ ] AC9 Logging in without a `next` parameter redirects to `/dashboard/`. A same-site `next` is still followed, and an off-site `next` falls back to `/dashboard/`.
-- [ ] AC10 A successful sign-up redirects to `/dashboard/`, and a logged-in user who opens the sign-up or log-in page is redirected to `/dashboard/`.
-- [ ] AC11 Logging out still redirects to `/`, and `/` stays the public home page, unchanged for both anonymous and logged-in visitors.
-- [ ] AC12 `/dashboard/` responds only to GET (and HEAD). A POST returns 405.
+- [x] AC1 An anonymous `GET /dashboard/` redirects to the login page with `next=/dashboard/`.
+- [x] AC2 A logged-in `GET /dashboard/` returns 200 with the page title and `<h1>` "Dashboard" and a "Goals by status" section (`aria-labelledby` its heading) containing a table with one row per `Goal.Status`, in choice order (Planned, In progress, Done), each with the user's goal count, followed by a Total row with the sum.
+- [x] AC3 A status with no goals is listed with 0. For example, a user whose goals are all planned sees In progress 0 and Done 0.
+- [x] AC4 The counts come from one grouped ORM aggregation (`values("status")` + `annotate(Count(...))`, with the model's default ordering cleared). The page's query count is fixed and doesn't grow with the number of goals (pinned with `assertNumQueries`).
+- [x] AC5 Only the current user's goals are counted (through `Goal.objects.owned_by`). Another user's goals in any status never change the numbers.
+- [x] AC6 Each status row links to the goal list filtered by that status (`/goals/?status=<value>`). The Total row links to the unfiltered `/goals/`.
+- [x] AC7 A user with no goals sees all three statuses at 0, a Total of 0 and a "Create your first goal" link to `goals:create`. A user with at least one goal doesn't see that link.
+- [x] AC8 The logged-in nav has a "Dashboard" link to `/dashboard/`. The anonymous nav doesn't.
+- [x] AC9 Logging in without a `next` parameter redirects to `/dashboard/`. A same-site `next` is still followed, and an off-site `next` falls back to `/dashboard/`.
+- [x] AC10 A successful sign-up redirects to `/dashboard/`, and a logged-in user who opens the sign-up or log-in page is redirected to `/dashboard/`.
+- [x] AC11 Logging out still redirects to `/`, and `/` stays the public home page, unchanged for both anonymous and logged-in visitors.
+- [x] AC12 `/dashboard/` responds only to GET (and HEAD). A POST returns 405.
 
 ## Out of scope
 - Session hours per tag and per week (#19 dashboard-hours). That ticket adds its sections to this page.
