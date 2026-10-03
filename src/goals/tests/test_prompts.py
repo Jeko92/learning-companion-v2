@@ -2,15 +2,16 @@ import importlib
 import importlib.util
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 
+from ai.services import AIServiceError
 from goals.models import Goal
 from learning_sessions.models import LearningSession
 from resources.models import Resource
 from tags.models import Tag
 
 
-class SummaryMessagesTests(TestCase):
+class PromptTestCase(TestCase):
     def setUp(self):
         # Asserted first, so a missing module fails cleanly, not with an error.
         self.assertIsNotNone(
@@ -30,13 +31,16 @@ class SummaryMessagesTests(TestCase):
         session.tags.set(Tag.objects.get_or_create_by_name(n)[0] for n in tags)
         return session
 
-    def messages(self, sessions=(), total_minutes=0, resources=()):
+    def messages_from(self, build, sessions=(), total_minutes=0, resources=()):
         sessions = LearningSession.objects.filter(
             pk__in=[s.pk for s in sessions]
         ).with_tags()
-        return self.prompts.summary_messages(
-            self.goal, list(sessions), total_minutes, list(resources)
-        )
+        return build(self.goal, list(sessions), total_minutes, list(resources))
+
+
+class SummaryMessagesTests(PromptTestCase):
+    def messages(self, *args, **kwargs):
+        return self.messages_from(self.prompts.summary_messages, *args, **kwargs)
 
     def test_the_system_prompt_asks_for_a_short_progress_summary(self):
         system, _ = self.messages()
@@ -94,3 +98,102 @@ class SummaryMessagesTests(TestCase):
         self.assertIn("No sessions.", user)
         self.assertIn("No resources.", user)
         self.assertIn("Total time: 0 min", user)
+
+
+class NextStepsMessagesTests(PromptTestCase):
+    def next_steps(self, *args, **kwargs):
+        return self.messages_from(
+            getattr(self.prompts, "next_steps_messages", None), *args, **kwargs
+        )
+
+    def summary(self, *args, **kwargs):
+        return self.messages_from(self.prompts.summary_messages, *args, **kwargs)
+
+    def test_the_system_prompt_asks_for_2_to_3_concrete_steps_as_json(self):
+        self.assertTrue(hasattr(self.prompts, "next_steps_messages"))
+        system, _ = self.next_steps()
+
+        for asked in (
+            "2 to 3",
+            "concrete, actionable next learning steps",
+            "build on what has been done",
+            "resources already attached",
+            "how to start",
+            "JSON object",
+            "`steps` list",
+        ):
+            self.assertIn(asked, system)
+
+    def test_the_user_message_describes_the_goal_as_the_summary_does(self):
+        self.assertTrue(hasattr(self.prompts, "next_steps_messages"))
+        session = self.add_session(tags=("forms",), notes="Read the forms docs.")
+        resource = Resource.objects.create(
+            goal=self.goal, url="https://docs.djangoproject.com/", title="Docs"
+        )
+        cases = {
+            "with sessions and resources": {
+                "sessions": [session],
+                "total_minutes": 60,
+                "resources": [resource],
+            },
+            "an empty goal": {},
+        }
+        for case, data in cases.items():
+            with self.subTest(case=case):
+                _, user = self.next_steps(**data)
+
+                self.assertEqual(user, self.summary(**data)[1])
+
+        _, empty = self.next_steps()
+        self.assertIn("No sessions.", empty.splitlines())
+        self.assertIn("No resources.", empty.splitlines())
+
+    def test_the_schema_asks_for_a_steps_list_of_strings_and_nothing_else(self):
+        self.assertEqual(
+            getattr(self.prompts, "NEXT_STEPS_SCHEMA", None),
+            {
+                "type": "object",
+                "properties": {"steps": {"type": "array", "items": {"type": "string"}}},
+                "required": ["steps"],
+                "additionalProperties": False,
+            },
+        )
+
+
+class ParseNextStepsTests(SimpleTestCase):
+    UNEXPECTED = "The AI service returned an unexpected reply."
+
+    def parse(self, reply):
+        prompts = importlib.import_module("goals.prompts")
+        self.assertTrue(hasattr(prompts, "parse_next_steps"))
+        return prompts.parse_next_steps(reply)
+
+    def test_the_steps_come_back_trimmed_in_order_without_blank_ones(self):
+        cases = {
+            "two": (["Read", "Build"], ["Read", "Build"]),
+            "three, trimmed": (
+                [" Read \n", "\tBuild", "Test "],
+                ["Read", "Build", "Test"],
+            ),
+            "blank ones dropped": (["Read", " ", "", "Build"], ["Read", "Build"]),
+        }
+        for case, (steps, expected) in cases.items():
+            with self.subTest(case=case):
+                self.assertEqual(self.parse({"steps": steps}), expected)
+
+    def test_a_reply_that_does_not_fit_is_an_unexpected_reply(self):
+        cases = {
+            "no steps": {},
+            "steps not a list": {"steps": "Read, Build"},
+            "a step not a string": {"steps": ["Read", 2]},
+            "one step": {"steps": ["Read"]},
+            "one step after blanks": {"steps": ["Read", "  "]},
+            "no steps at all": {"steps": []},
+            "four steps": {"steps": ["Read", "Build", "Test", "Ship"]},
+        }
+        for case, reply in cases.items():
+            with self.subTest(case=case):
+                with self.assertRaises(AIServiceError) as raised:
+                    self.parse(reply)
+
+                self.assertEqual(str(raised.exception), self.UNEXPECTED)

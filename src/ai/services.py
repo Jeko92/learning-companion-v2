@@ -1,5 +1,6 @@
 """The one way the app talks to the OpenAI Chat Completions API."""
 
+import json
 import logging
 
 from django.conf import settings
@@ -33,6 +34,35 @@ def complete(system, user, *, max_retries=MAX_RETRIES):
 
     Calls made while a user waits on a page pass max_retries=0: each retry
     can add a wait of up to two minutes (the SDK honours Retry-After)."""
+    return _reply_text(system, user, max_retries=max_retries)
+
+
+def complete_json(system, user, *, name, schema, max_retries=MAX_RETRIES):
+    """Like complete(), but asks for a reply matching the JSON schema (strict
+    Structured Outputs) and returns it parsed."""
+    text = _reply_text(
+        system,
+        user,
+        max_retries=max_retries,
+        response_format={
+            "type": "json_schema",
+            "json_schema": {"name": name, "schema": schema, "strict": True},
+        },
+    )
+    try:
+        parsed = json.loads(text)
+    except ValueError:
+        parsed = None
+    if not isinstance(parsed, dict):
+        # Not the reply text: it is the model's output, not ours to log.
+        logger.error("OpenAI returned an unexpected reply (not a JSON object)")
+        raise AIServiceError("The AI service returned an unexpected reply.")
+    return parsed
+
+
+def _reply_text(system, user, *, max_retries, **options):
+    """The one request both calls share: the reply text, trimmed, or an
+    AIServiceError. A refusal has no content, so it is an empty reply."""
     try:
         reply = get_client(max_retries=max_retries).chat.completions.create(
             model=settings.OPENAI_MODEL,
@@ -40,6 +70,7 @@ def complete(system, user, *, max_retries=MAX_RETRIES):
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
+            **options,
         )
     except OpenAIError as error:
         # The type only: the SDK's text (and so a traceback) can echo part of
