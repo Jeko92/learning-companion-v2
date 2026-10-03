@@ -24,6 +24,9 @@ def login_redirect(path):
     return f"{resolve_url(settings.LOGIN_URL)}?next={path}"
 
 
+HEADINGS = ("h1", "h2", "h3", "h4", "h5", "h6")
+
+
 class LabelledSection(HTMLParser):
     """The element labelled by `heading_id` (its aria-labelledby): its
     heading's text, its table rows as lists of cell texts and its links as
@@ -59,7 +62,7 @@ class LabelledSection(HTMLParser):
             self.depth = 1
 
     def handle_endtag(self, tag):
-        if self.in_heading and tag.startswith("h"):
+        if self.in_heading and tag in HEADINGS:
             self.in_heading = False
         if self.depth:
             self.depth -= 1

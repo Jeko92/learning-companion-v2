@@ -91,7 +91,7 @@
   - Correct the `CLAUDE.md` Goals bullet the same way.
 
   — test: `src/goals/tests/test_models.py` (`GoalStatusCountsTests`) — impl: `src/goals/models.py` (comment only), `CLAUDE.md` — covers: AC4 (review finding 1)
-- [ ] 14. **The test helper ends heading capture only on `h1` to `h6`.** `LabelledSection.handle_endtag` stops matching any end tag that starts with `h` (`</header>`, `</head>`, `</hr>`). Pure refactor of test code, kept green. — test: `src/dashboard/tests/test_views.py` — impl: none — covers: review finding 2
+- [x] 14. **The test helper ends heading capture only on `h1` to `h6`.** `LabelledSection.handle_endtag` stops matching any end tag that starts with `h` (`</header>`, `</head>`, `</hr>`). Pure refactor of test code, kept green. — test: `src/dashboard/tests/test_views.py` — impl: none — covers: review finding 2
 
 ## AC coverage
 | AC | Steps |
