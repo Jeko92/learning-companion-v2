@@ -12,6 +12,7 @@
       <span class="text-lg font-semibold">Learning Companion</span>
       <nav class="flex gap-6 text-sm text-slate-500">
         {% if user.is_authenticated %}
+          <a href="{% url 'dashboard:index' %}" class="hover:underline">Dashboard</a>
           <a href="{% url 'goals:list' %}" class="hover:underline">Goals</a>
           <a href="{% url 'profiles:mine' %}" class="font-medium text-slate-800 hover:underline">{{ user.get_username }}</a>
           <form method="post" action="{% url 'accounts:logout' %}">

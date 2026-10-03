@@ -51,7 +51,7 @@
   - This test is expected to be green on first run with step 5's code. It stays as a regression pin, and the commit notes this.
 
   — test: `src/dashboard/tests/test_views.py` (`DashboardQueryCountTests`) — impl: none expected — covers: AC4
-- [ ] 9. **Nav link.**
+- [x] 9. **Nav link.**
   - The logged-in nav's links are exactly `[("/dashboard/", "Dashboard"), ("/goals/", "Goals"), (profile, username)]`, and its text is `"Dashboard Goals alice Log out"`. The existing expectations in `test_nav.py` are updated to the new nav as part of this step.
   - The anonymous nav still has only Log in and Sign up.
 
