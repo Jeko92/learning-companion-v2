@@ -99,7 +99,7 @@
   - As a superuser, the changelist (`admin:resources_resource_changelist`) lists a resource's title, and the add page returns 200 with the goal `<select>` carrying `admin-autocomplete`.
 
   — test: `resources/tests/test_admin.py` (`ResourceAdminTests`) — impl: `resources/admin.py` (`ResourceAdmin`) — covers: AC11
-- [ ] 13. **Docs.** Docs only; the suite and `makemigrations --check` stay green (`docs(resource-model): ...`).
+- [x] 13. **Docs.** Docs only; the suite and `makemigrations --check` stay green (`docs(resource-model): ...`).
   - `CLAUDE.md`: a Resources stack bullet with the model contract (fields, `HttpURLField`, the trimming, the three constraints and why, `owned_by`, and the #14 note that a form without `goal` skips the unique check), plus a Layout entry for `src/resources/`.
   - `README.md`: an app list entry.
 

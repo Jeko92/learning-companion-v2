@@ -49,6 +49,7 @@ Values are read from the process environment first. `.env` at the repo root only
 - `src/profiles/`: each user's profile (name, cohort, focus areas), created automatically for new users, and the profile pages under `/profile/`
 - `src/goals/`: learning goals (title, description, status planned / in-progress / done), each owned by one user; listed at `/goals/`, created at `/goals/new/`, and viewed, edited or deleted at `/goals/<id>/`
 - `src/learning_sessions/`: learning sessions, each logged against one goal: a date (today or earlier), a duration in minutes (1 to 1,440), notes and tags; listed and created under `/goals/<id>/sessions/`, edited or deleted at `/sessions/<id>/`
+- `src/resources/`: reference material for a goal (an article, video, repo or doc): an http(s) URL, a title and a type, each URL at most once per goal
 - `src/templates/`: project-wide templates (`base.html` layout, pages that extend it, `accounts/`, `profiles/`, `goals/` and `learning_sessions/` pages)
 - `src/assets/`: static source files; the built `css/tailwind.css` is git-ignored
 - `work/`: workflow artifacts per ticket (`ticket.md`, `plan.md`, `review.md`)
