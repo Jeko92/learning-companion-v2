@@ -31,6 +31,8 @@ class LogoutTests(TestCase):
     def test_landing_page_says_the_user_logged_out(self):
         response = self.client.post(LOGOUT_PATH, follow=True)
 
+        # Log-out lands on the public home page, not the login-only dashboard.
+        self.assertEqual(response.request["PATH_INFO"], "/")
         self.assertContains(response, "You have been logged out.")
 
     def test_anonymous_logout_redirects_without_the_message(self):

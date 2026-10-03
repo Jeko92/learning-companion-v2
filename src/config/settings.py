@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     "goals",
     "learning_sessions",
     "resources",
+    "dashboard",
     "ai",
 ]
 
@@ -101,8 +102,8 @@ DATABASES = {
 # https://docs.djangoproject.com/en/6.1/ref/settings/#auth
 
 AUTH_USER_MODEL = "accounts.User"
-# Where sign-up and log-in send the user.
-LOGIN_REDIRECT_URL = "/"
+# Where sign-up and log-in send the user (a URL name, resolved): the dashboard.
+LOGIN_REDIRECT_URL = "dashboard:index"
 # Where login-required pages send anonymous visitors (a URL name, resolved).
 LOGIN_URL = "accounts:login"
 # Where log-out sends the user.
