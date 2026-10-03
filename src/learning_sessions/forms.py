@@ -1,4 +1,5 @@
 from django import forms
+from django.db import transaction
 
 from learning_sessions.models import LearningSession
 from tags.forms import TagListField
@@ -20,6 +21,11 @@ class LearningSessionForm(forms.ModelForm):
         self.fields["date"].widget = forms.DateInput(
             attrs={"type": "date"}, format="%Y-%m-%d"
         )
+
+    @transaction.atomic
+    def save(self, commit=True):
+        # The session and its tags together, or neither.
+        return super().save(commit=commit)
 
     def _save_m2m(self):
         # Django calls this from save(commit=True), or later from save_m2m()
