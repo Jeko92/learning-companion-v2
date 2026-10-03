@@ -54,7 +54,7 @@
   - Deleting a goal deletes only its resources; deleting a user deletes only their goals' resources.
 
   — test: `resources/tests/test_models.py` (`ResourceGoalTests`) — impl: `resources/models.py` (`Resource` with `goal`), `resources/migrations/0001_initial.py` — covers: AC1
-- [ ] 3. **URL field.**
+- [x] 3. **URL field.**
   - `url` is an `HttpURLField` with `max_length == 2048`, stored trimmed by `save()` and `full_clean()`.
   - `full_clean()` accepts `https://docs.djangoproject.com/en/6.1/`, `http://example.com` and `HTTPS://EXAMPLE.COM/x`, plus a URL of exactly 2,048 characters.
   - It rejects `javascript:alert(1)`, `data:text/html,x`, `ftp://example.com/f`, `mailto:a@example.com`, `/relative/path`, `""` and a 2,049-character URL, each with `"url"` in `error_dict` and exactly one message.

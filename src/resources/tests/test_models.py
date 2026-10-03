@@ -1,13 +1,27 @@
+from itertools import count
+
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.test import TestCase
 
 from goals.models import Goal
 from resources import models as resource_models
 
+_numbers = count(1)
+
+
+def build_resource(goal, **fields):
+    """An unsaved resource with a distinct URL, unless given."""
+    n = next(_numbers)
+    defaults = {"url": f"https://example.com/{n}"}
+    return resource_models.Resource(goal=goal, **{**defaults, **fields})
+
 
 def make_resource(goal, **fields):
-    return resource_models.Resource.objects.create(goal=goal, **fields)
+    resource = build_resource(goal, **fields)
+    resource.save()
+    return resource
 
 
 class ResourceGoalTests(TestCase):
@@ -46,3 +60,68 @@ class ResourceGoalTests(TestCase):
         self.alice.delete()
 
         self.assertCountEqual(resource_models.Resource.objects.all(), [self.theirs])
+
+
+class ResourceUrlTests(TestCase):
+    def setUp(self):
+        fields = {f.name for f in resource_models.Resource._meta.get_fields()}
+        self.assertIn("url", fields)
+        alice = get_user_model().objects.create_user("alice")
+        self.goal = Goal.objects.create(owner=alice, title="Learn Django")
+
+    def test_the_url_field_holds_long_urls(self):
+        url = resource_models.Resource._meta.get_field("url")
+
+        self.assertIsInstance(url, models.URLField)
+        self.assertEqual(url.max_length, 2048)
+
+    def test_http_and_https_urls_are_accepted(self):
+        long_url = "https://example.com/" + "x" * (2048 - len("https://example.com/"))
+        for value in (
+            "https://docs.djangoproject.com/en/6.1/",
+            "http://example.com",
+            "HTTPS://EXAMPLE.COM/x",
+            long_url,
+        ):
+            with self.subTest(url=value[:40]):
+                build_resource(self.goal, url=value).full_clean()
+
+    def test_a_url_over_2048_characters_is_rejected(self):
+        too_long = "https://example.com/" + "x" * (2049 - len("https://example.com/"))
+        resource = build_resource(self.goal, url=too_long)
+
+        with self.assertRaises(ValidationError) as caught:
+            resource.full_clean()
+
+        self.assertIn(
+            "Ensure this value has at most 2048 characters (it has 2049).",
+            caught.exception.message_dict["url"],
+        )
+
+    def test_other_schemes_and_non_urls_are_rejected_once(self):
+        for value in (
+            "javascript:alert(1)",
+            "data:text/html,x",
+            "ftp://example.com/f",
+            "mailto:a@example.com",
+            "/relative/path",
+            "",
+        ):
+            with self.subTest(url=value[:40]):
+                resource = build_resource(self.goal, url=value)
+
+                with self.assertRaises(ValidationError) as caught:
+                    resource.full_clean()
+
+                self.assertIn("url", caught.exception.error_dict)
+                # One validator, not Django's default one plus ours.
+                self.assertEqual(len(caught.exception.error_dict["url"]), 1)
+
+    def test_the_url_is_stored_trimmed(self):
+        resource = build_resource(self.goal, url="  https://example.com/a  ")
+        resource.full_clean()
+        self.assertEqual(resource.url, "https://example.com/a")
+
+        saved = make_resource(self.goal, url=" https://example.com/b ")
+        saved.refresh_from_db()
+        self.assertEqual(saved.url, "https://example.com/b")
