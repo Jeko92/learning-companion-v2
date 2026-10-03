@@ -12,4 +12,5 @@ urlpatterns = [
         views.SessionCreateView.as_view(),
         name="create",
     ),
+    path("sessions/<int:pk>/edit/", views.SessionUpdateView.as_view(), name="edit"),
 ]

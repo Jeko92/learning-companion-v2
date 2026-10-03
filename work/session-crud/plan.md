@@ -126,7 +126,7 @@
 
   — test: `learning_sessions/tests/test_views.py` (`SessionTagsTests`) — impl: `learning_sessions/forms.py` (`_save_m2m`) — covers: AC16, AC17, AC18
 - [x] 5. **Atomic create.** With `TagManager.get_or_create_by_name` patched to raise on the second name, a create POST raises, no session exists, and the first name's new tag is rolled back. — test: `learning_sessions/tests/test_forms.py` (`LearningSessionFormAtomicTests`, form-level like `ProfileFormTests`) — impl: `learning_sessions/forms.py` (`@transaction.atomic save`) — covers: AC19
-- [ ] 6. **Edit page and access.**
+- [x] 6. **Edit page and access.**
   - For the owner, GET `/sessions/<pk>/edit/` is pre-filled. The date value is in `YYYY-MM-DD` form, notes are in the textarea, and the tags field reads `"apple, Django, zebra"` (alphabetical ignoring case). The page shows the goal title and a Cancel link to the goal.
   - Anonymous GET and POST redirect to login and change nothing.
   - Another user's session and a missing pk give identical 404s for GET, a valid POST and an invalid POST, and the session is untouched.

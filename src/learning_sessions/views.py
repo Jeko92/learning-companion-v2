@@ -1,7 +1,7 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
 from django.shortcuts import get_object_or_404
-from django.views.generic import CreateView
+from django.views.generic import CreateView, UpdateView
 
 from goals.models import Goal
 from learning_sessions.forms import LearningSessionForm
@@ -17,7 +17,9 @@ class OwnSessionsMixin(LoginRequiredMixin):
     get_queryset() wins and could serve every user's sessions."""
 
     def get_queryset(self):
-        return LearningSession.objects.owned_by(self.request.user)
+        return LearningSession.objects.owned_by(self.request.user).select_related(
+            "goal"
+        )
 
 
 class GoalSessionsMixin(OwnSessionsMixin):
@@ -57,3 +59,11 @@ class SessionCreateView(GoalSessionsMixin, SuccessMessageMixin, CreateView):
 
     def get_success_url(self):
         return self.object.goal.get_absolute_url()
+
+
+class SessionUpdateView(OwnSessionsMixin, SuccessMessageMixin, UpdateView):
+    form_class = LearningSessionForm
+    template_name = "learning_sessions/session_form.html"
+
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(goal=self.object.goal, **kwargs)

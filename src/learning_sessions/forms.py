@@ -1,8 +1,9 @@
 from django import forms
 from django.db import transaction
+from django.db.models.functions import Lower
 
 from learning_sessions.models import LearningSession
-from tags.forms import TagListField
+from tags.forms import TagListField, tags_as_text
 from tags.models import Tag
 
 
@@ -21,6 +22,12 @@ class LearningSessionForm(forms.ModelForm):
         self.fields["date"].widget = forms.DateInput(
             attrs={"type": "date"}, format="%Y-%m-%d"
         )
+        # Alphabetical regardless of case (Tag's own ordering is
+        # case-sensitive). An unsaved session has no tags to query.
+        if self.instance.pk:
+            self.fields["tags"].initial = tags_as_text(
+                self.instance.tags.order_by(Lower("name"), "id")
+            )
 
     @transaction.atomic
     def save(self, commit=True):

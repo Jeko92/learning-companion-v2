@@ -366,12 +366,114 @@ class SessionCreateCsrfTests(TestCase):
         self.assertTrue(LearningSession.objects.exists())
 
 
+def create_session(goal, tags=(), **fields):
+    fields = {"date": "2026-03-01", "duration_minutes": 45, **fields}
+    session = LearningSession.objects.create(goal=goal, **fields)
+    session.tags.set(Tag.objects.get_or_create_by_name(n)[0] for n in tags)
+    return session
+
+
+class SessionEditPageTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.session = create_session(
+            self.goal, tags=("zebra", "Django", "apple"), notes="Read the docs."
+        )
+        self.client.force_login(self.alice)
+        self.path = f"/sessions/{self.session.pk}/edit/"
+
+    def value_of(self, page, name):
+        (attrs,) = [a for t, a in page.elements if a.get("name") == name]
+        return attrs.get("value")
+
+    def test_the_edit_page_has_a_route_of_its_own(self):
+        self.assertEqual(
+            reverse("learning_sessions:edit", args=[self.session.pk]), self.path
+        )
+
+    def test_the_form_is_prefilled_and_posts_to_itself(self):
+        response = self.client.get(self.path)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "learning_sessions/session_form.html")
+        page = get_page(self.client, self.path)
+
+        ((form, _),) = page.forms("main")
+        self.assertEqual(form.get("action"), self.path)
+        # ISO, or a type="date" input would show an empty date.
+        self.assertEqual(self.value_of(page, "date"), "2026-03-01")
+        self.assertEqual(self.value_of(page, "duration_minutes"), "45")
+        self.assertIn("Read the docs.", page.text("main"))
+        # Alphabetical regardless of case.
+        self.assertEqual(self.value_of(page, "tags"), "apple, Django, zebra")
+
+    def test_the_page_names_the_goal_and_cancels_back_to_it(self):
+        page = get_page(self.client, self.path)
+
+        self.assertIn("Learn Django", page.text("main"))
+        self.assertIn((self.goal.get_absolute_url(), "Cancel"), page.links("main"))
+
+    def test_user_text_is_escaped(self):
+        self.goal.title = PAYLOAD
+        self.goal.save()
+        self.session.notes = PAYLOAD
+        self.session.save()
+        self.session.tags.add(Tag.objects.get_or_create_by_name(PAYLOAD)[0])
+
+        response = self.client.get(self.path)
+
+        self.assertNotContains(response, PAYLOAD)
+        self.assertContains(response, ESCAPED)
+
+
+class SessionEditAccessTests(TestCase):
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.session = create_session(self.goal, tags=("Python",))
+        self.path = f"/sessions/{self.session.pk}/edit/"
+
+    def assert_untouched(self):
+        self.session.refresh_from_db()
+        self.assertEqual(self.session.duration_minutes, 45)
+        self.assertEqual([t.name for t in self.session.tags.all()], ["Python"])
+
+    def test_anonymous_visitors_are_sent_to_log_in(self):
+        for method in ("get", "post"):
+            with self.subTest(method=method):
+                data = valid_data(tags="Rust") if method == "post" else None
+                response = getattr(self.client, method)(self.path, data)
+
+                self.assertRedirects(
+                    response, login_redirect(self.path), fetch_redirect_response=False
+                )
+                self.assert_untouched()
+
+    def test_another_users_session_is_the_same_404_as_a_missing_one(self):
+        self.client.force_login(get_user_model().objects.create_user("bob"))
+        cases = {
+            "get": None,
+            "valid post": valid_data(duration_minutes="90", tags="Rust"),
+            "invalid post": valid_data(duration_minutes="0", date="2999-01-01"),
+        }
+        for case, data in cases.items():
+            with self.subTest(case=case):
+                method = self.client.get if data is None else self.client.post
+
+                response = method(self.path, data)
+                missing = method("/sessions/999999/edit/", data)
+
+                self.assertEqual(response.status_code, 404)
+                self.assertEqual(response.content, missing.content)
+                self.assert_untouched()
+
+
 class SessionViewsScopingTests(TestCase):
     def test_every_session_view_scopes_through_the_own_sessions_mixins(self):
         routes = {p.name: p for p in session_routes()}
 
         # A new route must be added here deliberately, not slip past the check.
-        self.assertEqual(set(routes), {"create"})
+        self.assertEqual(set(routes), {"create", "edit"})
 
         from learning_sessions.views import GoalSessionsMixin, OwnSessionsMixin
 
