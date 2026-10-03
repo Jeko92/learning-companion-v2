@@ -5,7 +5,7 @@ from django.core.validators import (
     MinValueValidator,
 )
 from django.db import models
-from django.db.models import Prefetch, Q
+from django.db.models import Prefetch, Q, Sum
 from django.db.models.functions import Lower
 from django.utils import timezone
 
@@ -28,6 +28,19 @@ class LearningSessionQuerySet(models.QuerySet):
 
         tags = Tag.objects.order_by(Lower("name"), "id")
         return self.prefetch_related(Prefetch("tags", queryset=tags))
+
+    def minutes_per_tag(self):
+        """(tag name, minutes) per tag, largest total first and ties by name
+        regardless of case, in one query. A session with several tags counts
+        in full under each."""
+        # The explicit order_by() replaces any incoming ordering, which would
+        # otherwise add its columns to GROUP BY and split the groups.
+        rows = (
+            self.values("tags", "tags__name")
+            .annotate(total=Sum("duration_minutes"))
+            .order_by("-total", Lower("tags__name"))
+        )
+        return [(row["tags__name"], row["total"]) for row in rows]
 
 
 class LearningSession(models.Model):

@@ -291,3 +291,43 @@ class OwnedByTests(TestCase):
         tags = Tag.objects.filter(sessions__in=bobs_sessions).distinct()
 
         self.assertQuerySetEqual(tags, [self.shared])
+
+
+class AggregateTestCase(TestCase):
+    """Alice and bob, each with one goal, and a helper to log sessions."""
+
+    def setUp(self):
+        User = get_user_model()
+        self.alice, self.bob = (User.objects.create_user(n) for n in ("alice", "bob"))
+        self.goals = {
+            user: Goal.objects.create(owner=user, title="Learn")
+            for user in (self.alice, self.bob)
+        }
+
+    def add_session(self, user, minutes, tags=(), day=date(2026, 9, 1)):
+        session = LearningSession.objects.create(
+            goal=self.goals[user], duration_minutes=minutes, date=day
+        )
+        session.tags.set(Tag.objects.get_or_create_by_name(n)[0] for n in tags)
+        return session
+
+
+class MinutesPerTagTests(AggregateTestCase):
+    def test_totals_per_tag_largest_first_ties_by_name_ignoring_case(self):
+        self.add_session(self.alice, 30, ["python"])
+        self.add_session(self.alice, 45, ["python"])
+        self.add_session(self.alice, 45, ["django"])
+        # Several tags: the session counts in full under each of them.
+        self.add_session(self.alice, 60, ["django", "python"])
+        self.add_session(self.alice, 45, ["Zebra"])
+        self.add_session(self.alice, 45, ["apple"])
+        # Bob's time on a shared tag and his own tag never show up.
+        self.add_session(self.bob, 500, ["python"])
+        self.add_session(self.bob, 10, ["bob-only"])
+
+        totals = LearningSession.objects.owned_by(self.alice).minutes_per_tag()
+
+        self.assertEqual(
+            totals,
+            [("python", 135), ("django", 105), ("apple", 45), ("Zebra", 45)],
+        )

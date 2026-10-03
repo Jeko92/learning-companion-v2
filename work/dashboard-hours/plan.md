@@ -37,7 +37,7 @@
 - **Query count.** The pin moves with the step that adds each query: to 4 in step 4 and to 5 in step 6. The suite stays green after every step.
 
 ## Steps
-- [ ] 1. **`minutes_per_tag()` totals per tag.** Fixture:
+- [x] 1. **`minutes_per_tag()` totals per tag.** Fixture:
   - alice: `python` 30 + 45 min; `django` 45 min plus a session tagged both `django` and `python` (60 min); `Zebra` 45 min; `apple` 45 min.
   - bob: `python` 500 min and `bob-only` 10 min.
 
