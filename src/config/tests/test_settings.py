@@ -16,6 +16,7 @@ PATCHED_ENVIRON = {
     "SECRET_KEY": "wiring-test-secret-key",
     "DEBUG": "True",
     "ALLOWED_HOSTS": "wiring.example, other.example",
+    "OPENAI_API_KEY": "sk-wiring-test-key",
 }
 
 
