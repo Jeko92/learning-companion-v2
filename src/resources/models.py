@@ -51,6 +51,15 @@ class Resource(models.Model):
                 condition=Q(type__in=("article", "video", "repo", "doc")),
                 name="resources_resource_type_valid",
             ),
+            # Compared exactly as stored (after trimming). full_clean()
+            # reports it as a non-field error, but skips it when `goal` is
+            # excluded, e.g. by a ModelForm without a goal field, whose view
+            # must then check for duplicates itself.
+            models.UniqueConstraint(
+                fields=("goal", "url"),
+                name="resources_resource_goal_url_unique",
+                violation_error_message="This goal already has this resource.",
+            ),
         )
 
     def trim(self):

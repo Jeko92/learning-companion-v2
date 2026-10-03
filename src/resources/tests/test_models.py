@@ -1,7 +1,7 @@
 from itertools import count
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
+from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 from django.db import IntegrityError, models, transaction
 from django.test import TestCase
 
@@ -221,3 +221,39 @@ class ResourceTypeTests(TestCase):
             with self.subTest(type=value):
                 resources.update(type=value)
                 self.assertEqual(resources.get().type, value)
+
+
+class ResourceUniquenessTests(TestCase):
+    URL = "https://docs.djangoproject.com/en/6.1/"
+
+    def setUp(self):
+        User = get_user_model()
+        alice = User.objects.create_user("alice")
+        self.goal = Goal.objects.create(owner=alice, title="Learn Django")
+        self.other_goal = Goal.objects.create(owner=alice, title="Learn Go")
+        self.bobs_goal = Goal.objects.create(
+            owner=User.objects.create_user("bob"), title="B"
+        )
+        make_resource(self.goal, url=self.URL)
+
+    def test_the_same_url_twice_on_one_goal_is_rejected(self):
+        duplicate = build_resource(self.goal, url=self.URL)
+
+        with self.assertRaises(ValidationError) as caught:
+            duplicate.full_clean()
+
+        self.assertEqual(
+            caught.exception.message_dict.get(NON_FIELD_ERRORS),
+            ["This goal already has this resource."],
+        )
+
+    def test_the_database_refuses_the_same_url_twice_on_one_goal(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            make_resource(self.goal, url=self.URL)
+
+    def test_the_same_url_on_another_goal_is_allowed(self):
+        for goal in (self.other_goal, self.bobs_goal):
+            with self.subTest(goal=goal.title):
+                resource = build_resource(goal, url=self.URL)
+                resource.full_clean()
+                resource.save()

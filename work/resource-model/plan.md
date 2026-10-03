@@ -76,7 +76,7 @@
 
   — test: `ResourceTypeTests` — impl: `resources/models.py` (`Type`, `type`), regenerate migration — covers: AC6
 - [x] 7. **Type in the database.** `update(type="book")` raises `IntegrityError`, and every `Resource.Type.values` entry passes `update()`. — test: `ResourceTypeTests` (constraint test) — impl: `resources/models.py` (type `CheckConstraint`), regenerate migration — covers: AC7
-- [ ] 8. **One URL per goal.**
+- [x] 8. **One URL per goal.**
   - A second resource with the same URL on the same goal fails `full_clean()` with "This goal already has this resource." in `error_dict[NON_FIELD_ERRORS]`, and `objects.create()` raises `IntegrityError`.
   - The same URL on alice's other goal and on bob's goal saves.
 
