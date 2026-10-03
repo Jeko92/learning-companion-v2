@@ -9,38 +9,38 @@ As a learner, I want reference material (articles, videos, repos, docs) stored a
 The model is `resources.Resource`, in a new app `resources`.
 
 **Relation and ownership**
-- [ ] AC1 A resource belongs to exactly one goal: a required foreign key with `on_delete=CASCADE` and `related_name="resources"`. Deleting a goal, or its owner, deletes that goal's resources and no others.
-- [ ] AC2 `Resource.objects.owned_by(user)` returns only resources on that user's goals and can be chained (e.g. `.filter(goal=...)`). Another user's resources never appear.
+- [x] AC1 A resource belongs to exactly one goal: a required foreign key with `on_delete=CASCADE` and `related_name="resources"`. Deleting a goal, or its owner, deletes that goal's resources and no others.
+- [x] AC2 `Resource.objects.owned_by(user)` returns only resources on that user's goals and can be chained (e.g. `.filter(goal=...)`). Another user's resources never appear.
 
 **URL**
-- [ ] AC3 `url` holds up to 2,048 characters and is stored trimmed. Through `full_clean()`:
+- [x] AC3 `url` holds up to 2,048 characters and is stored trimmed. Through `full_clean()`:
   - `http://` and `https://` URLs are accepted, including an upper-case scheme.
   - `javascript:`, `data:`, `ftp:`, `mailto:`, relative and blank values are rejected.
   - A 2,048-character URL is accepted and a 2,049-character one is rejected.
-- [ ] AC4 A database `CheckConstraint` rejects a URL that doesn't start with `http://` or `https://` (case-insensitive) when it is written through `update()`, so validator bypasses can't store e.g. `javascript:` URLs.
+- [x] AC4 A database `CheckConstraint` rejects a URL that doesn't start with `http://` or `https://` (case-insensitive) when it is written through `update()`, so validator bypasses can't store e.g. `javascript:` URLs.
 
 **Title**
-- [ ] AC5 `title` is required, up to 200 characters, and stored trimmed by both `save()` and `full_clean()`. Through `full_clean()`, a blank or whitespace-only title is rejected, and so is a 201-character one.
+- [x] AC5 `title` is required, up to 200 characters, and stored trimmed by both `save()` and `full_clean()`. Through `full_clean()`, a blank or whitespace-only title is rejected, and so is a 201-character one.
 
 **Type**
-- [ ] AC6 `type` uses `Resource.Type`, a `TextChoices` with `article`, `video`, `repo` and `doc`, and defaults to `article`. `full_clean()` rejects any other value.
-- [ ] AC7 A database `CheckConstraint` rejects any other type value written through `update()`.
+- [x] AC6 `type` uses `Resource.Type`, a `TextChoices` with `article`, `video`, `repo` and `doc`, and defaults to `article`. `full_clean()` rejects any other value.
+- [x] AC7 A database `CheckConstraint` rejects any other type value written through `update()`.
 
 **Uniqueness**
-- [ ] AC8 The same URL can't be attached twice to one goal. `full_clean()` raises a `ValidationError` reading "This goal already has this resource.", and a direct database write raises `IntegrityError` (a `UniqueConstraint` on `goal` and `url`). The same URL on a different goal (the same user's or another user's) is allowed.
+- [x] AC8 The same URL can't be attached twice to one goal. `full_clean()` raises a `ValidationError` reading "This goal already has this resource.", and a direct database write raises `IntegrityError` (a `UniqueConstraint` on `goal` and `url`). The same URL on a different goal (the same user's or another user's) is allowed.
 
 **Timestamps, ordering, display**
-- [ ] AC9 `created_at` is set on creation and `updated_at` on every save. Resources are ordered newest first (`-created_at`, then `-id`).
-- [ ] AC10 `str(resource)` is its title.
+- [x] AC9 `created_at` is set on creation and `updated_at` on every save. Resources are ordered newest first (`-created_at`, then `-id`).
+- [x] AC10 `str(resource)` is its title.
 
 **Admin and migration**
-- [ ] AC11 `Resource` is registered in the admin:
+- [x] AC11 `Resource` is registered in the admin:
   - the changelist shows title, type and goal
   - it filters by type and searches title and URL
   - the goal is picked with autocomplete
   - the changelist and add pages load for a superuser
-- [ ] AC12 The app is in `INSTALLED_APPS`, its initial migration is generated with `makemigrations`, and `makemigrations --check` reports no changes.
-- [ ] AC13 `CLAUDE.md` documents the `resources` app and the `Resource` model contract (fields, validation, constraints, `owned_by`). `README.md` is updated too, where it lists apps.
+- [x] AC12 The app is in `INSTALLED_APPS`, its initial migration is generated with `makemigrations`, and `makemigrations --check` reports no changes.
+- [x] AC13 `CLAUDE.md` documents the `resources` app and the `Resource` model contract (fields, validation, constraints, `owned_by`). `README.md` is updated too, where it lists apps.
 
 ## Out of scope
 - Forms, views and display on the goal page (#14 `resource-attach`)
