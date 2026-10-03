@@ -33,6 +33,23 @@
       <button type="submit" class="font-medium hover:underline">{% if goal.summary %}Regenerate summary{% else %}Generate summary{% endif %}</button>
     </form>
   </section>
+  <section class="mt-10" aria-labelledby="next-steps-heading">
+    <h2 id="next-steps-heading" class="text-lg font-semibold">Next steps</h2>
+    {% if goal.next_steps %}
+      <ol class="mt-2 list-decimal space-y-1 pl-6">
+        {% for step in goal.next_steps %}
+          <li>{{ step }}</li>
+        {% endfor %}
+      </ol>
+      <p class="mt-1 text-sm text-slate-500">Suggested {{ goal.next_steps_generated_at|date:"j M Y, H:i" }}</p>
+    {% else %}
+      <p class="mt-2 text-slate-500">No next steps yet.</p>
+    {% endif %}
+    <form method="post" action="{% url 'goals:next_steps' goal.pk %}" class="mt-4">
+      {% csrf_token %}
+      <button type="submit" class="font-medium hover:underline">{% if goal.next_steps %}Suggest new next steps{% else %}Suggest next steps{% endif %}</button>
+    </form>
+  </section>
   <section class="mt-10">
     <h2 class="text-lg font-semibold">Sessions</h2>
     <p class="mt-1 text-sm text-slate-500">Total: {{ total_minutes|duration }}</p>

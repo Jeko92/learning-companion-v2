@@ -405,6 +405,29 @@ class GoalEditTests(TestCase):
         self.assertEqual(self.goal.summary, "Earlier summary")
         self.assertEqual(self.goal.summary_generated_at, generated)
 
+    def test_editing_keeps_the_next_steps_and_the_form_cannot_set_them(self):
+        generated = datetime(2026, 3, 1, 9, 30, tzinfo=UTC)
+        Goal.objects.filter(pk=self.goal.pk).update(
+            next_steps=["Earlier step", "Another step"],
+            next_steps_generated_at=generated,
+        )
+
+        self.client.post(
+            self.path,
+            {
+                "title": "Learn Django well",
+                "description": "",
+                "status": "done",
+                "next_steps": '["Posted step"]',
+                "next_steps_generated_at": "2000-01-01 00:00",
+            },
+        )
+
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.title, "Learn Django well")
+        self.assertEqual(self.goal.next_steps, ["Earlier step", "Another step"])
+        self.assertEqual(self.goal.next_steps_generated_at, generated)
+
     def test_the_detail_page_links_to_the_edit_page(self):
         links = get_page(self.client, self.goal.get_absolute_url()).links("main")
 
@@ -778,7 +801,10 @@ class GoalViewsScopingTests(TestCase):
         }
 
         # A new route must be added here deliberately, not slip past the check.
-        self.assertEqual(set(views), {"list", "detail", "edit", "delete", "summary"})
+        self.assertEqual(
+            set(views),
+            {"list", "detail", "edit", "delete", "summary", "next_steps"},
+        )
         for name, view in views.items():
             with self.subTest(view=name):
                 # A model on the view plus a wrong base order would serve
@@ -1043,9 +1069,12 @@ class GoalDetailQueryCountTests(TestCase):
             add_session(self.large, tags=("a", "b", "c"))
         for value in Resource.Type.values * 2:
             add_resource(self.large, type=value)
-        # The summary comes with the goal row: no extra query.
+        # The summary and next steps come with the goal row: no extra query.
         Goal.objects.filter(pk=self.large.pk).update(
-            summary="A summary", summary_generated_at=datetime(2026, 10, 1, tzinfo=UTC)
+            summary="A summary",
+            summary_generated_at=datetime(2026, 10, 1, tzinfo=UTC),
+            next_steps=["Build a form", "Read the ORM docs"],
+            next_steps_generated_at=datetime(2026, 10, 1, tzinfo=UTC),
         )
 
     def queries_for(self, goal):
@@ -1459,3 +1488,349 @@ class GoalSummaryCsrfTests(SummaryTestCase):
 
         self.assertEqual(response.status_code, 302)
         self.complete.assert_called_once()
+
+
+class NextStepsTestCase(TestCase):
+    """Alice, her goal, and the AI service replaced: `self.complete_json` is a
+    mock of ai.services.complete_json, and building a real OpenAI client fails
+    the test, so no next-steps test can reach the network."""
+
+    STEPS = ("Build a form", "Read the ORM docs")
+
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+        self.path = f"/goals/{self.goal.pk}/next-steps/"
+        self.enterContext(
+            patch(
+                "ai.services.OpenAI",
+                side_effect=AssertionError("a test tried to build a real client"),
+            )
+        )
+        self.complete_json = self.enterContext(
+            patch("ai.services.complete_json", return_value={"steps": list(self.STEPS)})
+        )
+
+    def assert_nothing_stored(self):
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.next_steps, [])
+        self.assertIsNone(self.goal.next_steps_generated_at)
+
+
+class GoalNextStepsAccessTests(NextStepsTestCase):
+    def test_the_next_steps_route_is_under_the_goal(self):
+        self.assertEqual(reverse("goals:next_steps", args=[self.goal.pk]), self.path)
+
+    def test_a_get_is_not_allowed(self):
+        self.client.force_login(self.alice)
+
+        response = self.client.get(self.path)
+
+        self.assertEqual(response.status_code, 405)
+        self.complete_json.assert_not_called()
+
+    def test_anonymous_visitors_are_sent_to_log_in(self):
+        response = self.client.post(self.path)
+
+        self.assertRedirects(
+            response, login_redirect(self.path), fetch_redirect_response=False
+        )
+        self.complete_json.assert_not_called()
+        self.assert_nothing_stored()
+
+    def test_another_users_goal_is_the_same_404_as_a_missing_one(self):
+        self.client.force_login(get_user_model().objects.create_user("bob"))
+
+        response = self.client.post(self.path)
+        missing = self.client.post("/goals/999999/next-steps/")
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.content, missing.content)
+        self.complete_json.assert_not_called()
+        self.assert_nothing_stored()
+
+
+class GoalNextStepsSuggestTests(NextStepsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.alice)
+        # 12 sessions of 10 minutes on 1-12 March, then 22 resources.
+        self.sessions = [
+            add_session(
+                self.goal,
+                tags=("django",) if n == 12 else (),
+                date=f"2026-03-{n:02d}",
+                duration_minutes=10,
+                notes=f"session {n:02d}",
+            )
+            for n in range(1, 13)
+        ]
+        self.resources = [
+            add_resource(self.goal, title=f"Resource {n:02d}") for n in range(1, 23)
+        ]
+        other = Goal.objects.create(owner=self.alice, title="Other")
+        add_session(other, notes="elsewhere")
+        add_resource(other, title="Elsewhere")
+        bobs = Goal.objects.create(
+            owner=get_user_model().objects.create_user("bob"), title="B"
+        )
+        add_session(bobs, notes="bobs session")
+        add_resource(bobs, title="Bobs")
+
+    def suggest(self, at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC)):
+        with patch("django.utils.timezone.now", return_value=at):
+            return self.client.post(self.path)
+
+    def test_one_call_without_retries_with_the_recent_sessions_and_resources(self):
+        from goals.prompts import NEXT_STEPS_SCHEMA, next_steps_messages
+
+        self.suggest()
+
+        newest_ten = LearningSession.objects.filter(
+            pk__in=[s.pk for s in self.sessions[2:]]
+        ).with_tags()
+        expected = next_steps_messages(
+            self.goal, list(newest_ten), 120, self.resources[2:][::-1]
+        )
+        self.complete_json.assert_called_once_with(
+            *expected, name="next_steps", schema=NEXT_STEPS_SCHEMA, max_retries=0
+        )
+        (_, user), _ = self.complete_json.call_args
+        self.assertIn("session 12", user)
+        self.assertIn("tags: django", user)
+        self.assertIn("Total time: 2 h", user)
+        for absent in (
+            "session 01",
+            "session 02",
+            "Resource 01",
+            "Resource 02",
+            "elsewhere",
+            "Elsewhere",
+            "bobs session",
+            "Bobs",
+        ):
+            self.assertNotIn(absent, user)
+
+    def test_the_steps_are_stored_trimmed_in_order_with_their_time(self):
+        self.complete_json.return_value = {
+            "steps": [" Build a form \n", "Read the ORM docs", "Write a test"]
+        }
+
+        response = self.suggest(at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC))
+
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        self.goal.refresh_from_db()
+        self.assertEqual(
+            self.goal.next_steps, ["Build a form", "Read the ORM docs", "Write a test"]
+        )
+        self.assertEqual(
+            self.goal.next_steps_generated_at, datetime(2026, 10, 1, 9, 30, tzinfo=UTC)
+        )
+        self.assertContains(self.client.get(response.url), "Next steps suggested.")
+
+    def test_suggesting_does_not_change_the_goals_updated_time(self):
+        updated = Goal.objects.get(pk=self.goal.pk).updated_at
+
+        self.suggest(at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC))
+
+        self.assertEqual(Goal.objects.get(pk=self.goal.pk).updated_at, updated)
+
+    def test_new_steps_replace_the_last_ones(self):
+        self.suggest(at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC))
+        self.complete_json.return_value = {"steps": ["Second", "Third"]}
+
+        self.suggest(at=datetime(2026, 10, 2, 8, 0, tzinfo=UTC))
+
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.next_steps, ["Second", "Third"])
+        self.assertEqual(
+            self.goal.next_steps_generated_at, datetime(2026, 10, 2, 8, 0, tzinfo=UTC)
+        )
+
+
+class GoalNextStepsEmptyGoalTests(NextStepsTestCase):
+    def test_a_goal_without_sessions_or_resources_still_gets_steps(self):
+        # Another goal's session and resource don't count.
+        other = Goal.objects.create(owner=self.alice, title="Other")
+        add_session(other)
+        add_resource(other)
+        self.client.force_login(self.alice)
+
+        response = self.client.post(self.path)
+
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        self.complete_json.assert_called_once()
+        (_, user), _ = self.complete_json.call_args
+        self.assertIn("No sessions.", user.splitlines())
+        self.assertIn("No resources.", user.splitlines())
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.next_steps, list(self.STEPS))
+
+
+class GoalNextStepsErrorTests(NextStepsTestCase):
+    MESSAGES = (
+        "The AI service is unavailable right now. Please try again later.",
+        "The AI service returned an empty reply.",
+        "The AI service returned an unexpected reply.",
+    )
+
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.alice)
+        self.earlier = datetime(2026, 9, 1, 8, 0, tzinfo=UTC)
+        Goal.objects.filter(pk=self.goal.pk).update(
+            next_steps=["Earlier step", "Another step"],
+            next_steps_generated_at=self.earlier,
+        )
+
+    def assert_back_on_the_goal_with(self, response, message):
+        self.assertRedirects(
+            response, self.goal.get_absolute_url(), fetch_redirect_response=False
+        )
+        page = self.client.get(response.url)
+        self.assertContains(page, message)
+        self.goal.refresh_from_db()
+        self.assertEqual(self.goal.next_steps, ["Earlier step", "Another step"])
+        self.assertEqual(self.goal.next_steps_generated_at, self.earlier)
+        return page
+
+    def test_an_ai_failure_goes_back_to_the_goal_with_its_message(self):
+        from ai.services import AIServiceError
+
+        for message in self.MESSAGES:
+            with self.subTest(message=message):
+                # Chained like the service's own errors, which must not reach
+                # a 500 page (the SDK's text can echo part of the key).
+                error = AIServiceError(message)
+                error.__cause__ = RuntimeError("sk-secret-tail")
+                self.complete_json.side_effect = error
+
+                page = self.assert_back_on_the_goal_with(
+                    self.client.post(self.path), message
+                )
+
+                self.assertNotContains(page, "sk-secret-tail")
+
+    def test_a_reply_with_the_wrong_number_of_steps_keeps_the_last_ones(self):
+        for steps in (["Only one"], ["One", "Two", "Three", "Four"]):
+            with self.subTest(steps=steps):
+                self.complete_json.return_value = {"steps": steps}
+
+                self.assert_back_on_the_goal_with(
+                    self.client.post(self.path),
+                    "The AI service returned an unexpected reply.",
+                )
+
+
+class GoalDetailNextStepsTests(NextStepsTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.alice)
+        self.detail = self.goal.get_absolute_url()
+
+    def page_html(self):
+        return self.client.get(self.detail).content.decode()
+
+    def section_text(self):
+        section = LabelledSectionText("next-steps-heading")
+        section.feed(self.page_html())
+        return section.text()
+
+    def section_items(self):
+        """The section's ordered-list items, as raw (escaped) HTML."""
+        html = self.page_html()
+        start = html.index('aria-labelledby="next-steps-heading"')
+        section = html[start : html.index("</section>", start)]
+        (ordered,) = re.findall(r"<ol\b.*?</ol>", section, re.DOTALL)
+        items = re.findall(r"<li\b[^>]*>(.*?)</li>", ordered, re.DOTALL)
+        return [item.strip() for item in items]
+
+    def next_steps_form(self):
+        page = get_page(self.client, self.detail)
+        forms = [(f, i) for f, i in page.forms("main") if f.get("action") == self.path]
+        self.assertEqual(len(forms), 1, "one form posts to the next-steps route")
+        return forms[0]
+
+    def store(self, steps):
+        Goal.objects.filter(pk=self.goal.pk).update(
+            next_steps=steps,
+            next_steps_generated_at=datetime(2026, 10, 1, 9, 30, tzinfo=UTC),
+        )
+
+    def test_without_steps_the_section_offers_to_suggest_some(self):
+        text = self.section_text()
+
+        self.assertTrue(text.startswith("Next steps"), text)
+        self.assertIn("No next steps yet.", text)
+        self.assertIn("Suggest next steps", text)
+        self.assertNotIn("new", text)
+        form, inputs = self.next_steps_form()
+        self.assertEqual(form.get("method"), "post")
+        self.assertIn("csrfmiddlewaretoken", {a.get("name") for a in inputs})
+
+    def test_stored_steps_are_an_ordered_list_with_their_time(self):
+        self.store(["Build a form", "Read the ORM docs", "Write a test"])
+
+        text = self.section_text()
+
+        self.assertEqual(
+            self.section_items(), ["Build a form", "Read the ORM docs", "Write a test"]
+        )
+        self.assertIn("Suggested 1 Oct 2026, 09:30", text)
+        self.assertIn("Suggest new next steps", text)
+        self.assertNotIn("No next steps yet.", text)
+        self.next_steps_form()
+
+    def test_each_step_is_escaped(self):
+        payload = "<script>alert(1)</script>"
+        self.store([payload, "Read"])
+
+        self.assertNotContains(self.client.get(self.detail), payload)
+        self.assertEqual(
+            self.section_items(), ["&lt;script&gt;alert(1)&lt;/script&gt;", "Read"]
+        )
+
+    def test_the_section_comes_right_after_the_summary(self):
+        html = self.page_html()
+
+        summary = html.index('aria-labelledby="summary-heading"')
+        next_steps = html.index('aria-labelledby="next-steps-heading"')
+        sessions = html.index(">Sessions</h2>")
+        self.assertLess(summary, next_steps)
+        self.assertLess(next_steps, sessions)
+
+
+class GoalNextStepsCsrfTests(NextStepsTestCase):
+    # The default test client skips CSRF checks; this one enforces them.
+    def setUp(self):
+        super().setUp()
+        self.csrf_client = Client(enforce_csrf_checks=True)
+        self.csrf_client.force_login(self.alice)
+
+    def token(self):
+        # GET the goal page first: sets the CSRF cookie and yields the token
+        # of the form that posts to the next-steps route.
+        page = get_page(self.csrf_client, self.goal.get_absolute_url())
+        (inputs,) = [i for f, i in page.forms("main") if f.get("action") == self.path]
+        return [a["value"] for a in inputs if a.get("name") == "csrfmiddlewaretoken"]
+
+    def test_a_post_without_a_token_is_rejected(self):
+        self.token()
+
+        response = self.csrf_client.post(self.path)
+
+        self.assertEqual(response.status_code, 403)
+        self.complete_json.assert_not_called()
+        self.assert_nothing_stored()
+
+    def test_a_post_with_the_forms_token_suggests(self):
+        (token,) = self.token()
+
+        response = self.csrf_client.post(self.path, {"csrfmiddlewaretoken": token})
+
+        self.assertEqual(response.status_code, 302)
+        self.complete_json.assert_called_once()

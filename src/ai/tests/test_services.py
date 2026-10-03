@@ -122,6 +122,67 @@ class CompleteTests(NoNetworkTestCase):
         self.assertEqual(self.complete_with(client), "Hi there")
 
 
+STEPS_SCHEMA = {
+    "type": "object",
+    "properties": {"steps": {"type": "array", "items": {"type": "string"}}},
+    "required": ["steps"],
+    "additionalProperties": False,
+}
+
+
+class CompleteJsonTests(NoNetworkTestCase):
+    def complete_json_with(self, client, **kwargs):
+        with patch("ai.services.get_client", return_value=client):
+            return self.services.complete_json(
+                "Be brief.", "Suggest.", name="steps", schema=STEPS_SCHEMA, **kwargs
+            )
+
+    @override_settings(OPENAI_MODEL="test-model")
+    def test_one_request_asking_for_a_reply_that_matches_the_schema(self):
+        client = FakeClient(reply=response('{"steps": ["a", "b"]}'))
+
+        self.complete_json_with(client)
+
+        self.assertEqual(
+            client.calls,
+            [
+                {
+                    "model": "test-model",
+                    "messages": [
+                        {"role": "system", "content": "Be brief."},
+                        {"role": "user", "content": "Suggest."},
+                    ],
+                    "response_format": {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "steps",
+                            "schema": STEPS_SCHEMA,
+                            "strict": True,
+                        },
+                    },
+                }
+            ],
+        )
+
+    def test_the_reply_comes_back_parsed(self):
+        client = FakeClient(reply=response(' \n{"steps": ["Read", "Build"]} \n'))
+
+        self.assertEqual(self.complete_json_with(client), {"steps": ["Read", "Build"]})
+
+    def test_retries_are_set_per_call_and_default_to_2(self):
+        for kwargs, expected in (({}, 2), ({"max_retries": 0}, 0)):
+            with self.subTest(kwargs=kwargs):
+                with patch(
+                    "ai.services.get_client",
+                    return_value=FakeClient(reply=response('{"steps": []}')),
+                ) as get_client:
+                    self.services.complete_json(
+                        "Be brief.", "Hi", name="steps", schema=STEPS_SCHEMA, **kwargs
+                    )
+
+                get_client.assert_called_once_with(max_retries=expected)
+
+
 def sdk_errors():
     """One of each kind of error the SDK raises, built as it builds them. The
     authentication error's text echoes a key, as the real API's does."""
@@ -206,3 +267,83 @@ class CompleteEmptyReplyTests(NoNetworkTestCase):
                 )
                 (record,) = logs.records
                 self.assertIn("empty reply", record.getMessage())
+
+
+@override_settings(OPENAI_API_KEY=KEY_LIKE)
+class CompleteJsonErrorTests(NoNetworkTestCase):
+    def complete_json_with(self, client):
+        with patch("ai.services.get_client", return_value=client):
+            return self.services.complete_json(
+                "Be brief.", "Hi", name="steps", schema=STEPS_SCHEMA
+            )
+
+    def test_every_sdk_error_is_the_same_safe_error_logged_once_by_type(self):
+        for error in sdk_errors():
+            with self.subTest(error=type(error).__name__):
+                with (
+                    self.assertLogs("ai.services", "ERROR") as logs,
+                    self.assertRaises(self.services.AIServiceError) as raised,
+                ):
+                    self.complete_json_with(FakeClient(error=error))
+
+                self.assertEqual(str(raised.exception), CompleteErrorTests.SAFE_MESSAGE)
+                self.assertIs(raised.exception.__cause__, error)
+                (record,) = logs.records
+                text = record.getMessage()
+                self.assertIn(type(error).__name__, text)
+                self.assertNotIn(KEY_LIKE, text)
+                self.assertNotIn(str(error), text)
+                self.assertIsNone(record.exc_info)
+
+    def test_a_reply_without_content_is_the_empty_reply_error(self):
+        refusal = SimpleNamespace(
+            choices=[
+                SimpleNamespace(
+                    message=SimpleNamespace(content=None, refusal="I can't help.")
+                )
+            ]
+        )
+        cases = {
+            "no choices": response(),
+            "no content": response(None),
+            "blank content": response(" \n\t "),
+            "a refusal": refusal,
+        }
+        for case, reply in cases.items():
+            with self.subTest(case=case):
+                with (
+                    self.assertLogs("ai.services", "ERROR") as logs,
+                    self.assertRaises(self.services.AIServiceError) as raised,
+                ):
+                    self.complete_json_with(FakeClient(reply=reply))
+
+                self.assertEqual(
+                    str(raised.exception), "The AI service returned an empty reply."
+                )
+                (record,) = logs.records
+                self.assertIn("empty reply", record.getMessage())
+
+    def test_a_reply_that_is_not_a_json_object_is_an_unexpected_reply(self):
+        cases = {
+            "not JSON": "Read the docs SECRET-REPLY",
+            "truncated JSON": '{"steps": ["Read the docs SECRET-REPLY',
+            "a list": '["SECRET-REPLY"]',
+            "a string": '"SECRET-REPLY"',
+            "a number": "42",
+        }
+        for case, content in cases.items():
+            with self.subTest(case=case):
+                with (
+                    self.assertLogs("ai.services", "ERROR") as logs,
+                    self.assertRaises(self.services.AIServiceError) as raised,
+                ):
+                    self.complete_json_with(FakeClient(reply=response(content)))
+
+                self.assertEqual(
+                    str(raised.exception),
+                    "The AI service returned an unexpected reply.",
+                )
+                (record,) = logs.records
+                self.assertIn("unexpected reply", record.getMessage())
+                self.assertNotIn("SECRET-REPLY", record.getMessage())
+                self.assertIsNone(record.exc_info)
