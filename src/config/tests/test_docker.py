@@ -1,7 +1,9 @@
 """The files that build and run the container image, at the repo root."""
 
 import importlib
+import os
 import re
+import subprocess
 
 from django.conf import settings
 from django.test import SimpleTestCase
@@ -54,3 +56,26 @@ class DockerignoreTests(SimpleTestCase):
         for entry in self.EXCLUDED:
             with self.subTest(entry=entry):
                 self.assertIn(entry, entries)
+
+
+class SmokeScriptTests(SimpleTestCase):
+    """scripts/docker-smoke.sh builds and runs the image and checks it serves
+    the app. It needs Docker and takes minutes, so the suite only checks the
+    script is there and parses; final-review (and later CI) runs it."""
+
+    SCRIPT = ROOT / "scripts" / "docker-smoke.sh"
+
+    def test_the_smoke_script_is_an_executable_bash_script(self):
+        self.assertTrue(self.SCRIPT.is_file(), "scripts/docker-smoke.sh is missing")
+        self.assertTrue(os.access(self.SCRIPT, os.X_OK), "it is not executable")
+        self.assertTrue(self.SCRIPT.read_text().startswith("#!/usr/bin/env bash\n"))
+
+    def test_the_smoke_script_parses(self):
+        result = subprocess.run(
+            ["bash", "-n", str(self.SCRIPT)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
