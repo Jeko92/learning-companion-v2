@@ -51,7 +51,7 @@ class WorkflowTestCase(SimpleTestCase):
         self.jobs = blocks(self.top.get("jobs", ["jobs:"])[1:], 2)
 
     def job(self, name):
-        self.assertIn(name, self.jobs, f"there is no {name} job")
+        self.assertIn(name, list(self.jobs), f"there is no {name} job")
         return self.jobs[name]
 
     def settings_of(self, name):
@@ -136,3 +136,27 @@ class QualityJobTests(WorkflowTestCase):
                 "  OPENAI_API_KEY: sk-dummy",
             ],
         )
+
+
+class DockerSmokeJobTests(WorkflowTestCase):
+    """The docker-smoke job builds and checks the image, alongside quality."""
+
+    def setUp(self):
+        super().setUp()
+        self.settings = self.settings_of("docker-smoke")
+
+    def test_it_runs_on_ubuntu_with_a_timeout(self):
+        self.assertEqual(self.settings["runs-on"], ["runs-on: ubuntu-latest"])
+        self.assertRegex(self.settings["timeout-minutes"][0], r"^timeout-minutes: \d+$")
+
+    def test_it_checks_out_and_runs_the_smoke_script(self):
+        self.assertEqual(
+            steps(self.job("docker-smoke")),
+            [
+                {"uses": "actions/checkout@v7"},
+                {"name": "Build and check the image", "run": "scripts/docker-smoke.sh"},
+            ],
+        )
+
+    def test_it_runs_in_parallel_with_the_quality_job(self):
+        self.assertNotIn("needs", self.settings)

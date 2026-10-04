@@ -42,3 +42,13 @@ jobs:
         run: python src/manage.py makemigrations --check --dry-run
       - name: Tests
         run: python src/manage.py test src
+
+  # Builds the production image, runs it and checks it end to end. Runs
+  # alongside quality (no needs), so a slow build doesn't hold up the tests.
+  docker-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build and check the image
+        run: scripts/docker-smoke.sh
