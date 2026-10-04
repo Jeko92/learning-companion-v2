@@ -14,41 +14,9 @@
   <a href="#main" class="btn btn-primary sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50">Skip to content</a>
   {# The nav is rendered once: a slide-in drawer below md, a sidebar from md up. #}
   {# The checkbox is the focusable toggle (Space opens and closes it); the labels are pointer targets. #}
+  {# .drawer-side comes before .drawer-content, so an opened drawer's links are next in the Tab order; the grid places both. #}
   <div class="drawer md:drawer-open">
     <input id="nav-drawer" type="checkbox" class="drawer-toggle md:hidden" aria-label="Menu">
-    <div class="drawer-content flex min-h-screen flex-col">
-      <header class="navbar sticky top-0 z-10 gap-2 border-b border-base-300 bg-base-100 px-4">
-        <label for="nav-drawer" class="btn btn-square btn-ghost drawer-button md:hidden" aria-hidden="true">
-          {% include "components/_icon.html" with icon="menu" icon_class="size-6" %}
-        </label>
-        <a href="{% url 'home' %}" class="flex items-center gap-2 rounded-field px-2 py-1 text-lg font-semibold">
-          <span class="text-primary">{% include "components/_icon.html" with icon="book" icon_class="size-7" %}</span>
-          Learning Companion
-        </a>
-      </header>
-      {% if messages %}
-        <div class="mx-auto mt-6 w-full max-w-4xl space-y-2 px-4">
-          {# Literal class names per level, so Tailwind finds them; errors interrupt, the rest wait. #}
-          {% for message in messages %}
-            {% if message.level_tag == "error" %}
-              <div role="alert" class="alert alert-error alert-soft">{{ message }}</div>
-            {% elif message.level_tag == "warning" %}
-              <div role="status" class="alert alert-warning alert-soft">{{ message }}</div>
-            {% elif message.level_tag == "success" %}
-              <div role="status" class="alert alert-success alert-soft">{{ message }}</div>
-            {% else %}
-              <div role="status" class="alert alert-info alert-soft">{{ message }}</div>
-            {% endif %}
-          {% endfor %}
-        </div>
-      {% endif %}
-      <main id="main" tabindex="-1" class="mx-auto w-full max-w-4xl flex-1 px-4 py-8 focus:outline-none sm:py-10">
-        {% block content %}{% endblock %}
-      </main>
-      <footer class="border-t border-base-300 bg-base-100 px-4 py-6 text-center text-sm">
-        <p>Learning Companion</p>
-      </footer>
-    </div>
     <div class="drawer-side z-20">
       <label for="nav-drawer" aria-label="Close menu" class="drawer-overlay"></label>
       <nav aria-label="Main" class="min-h-full w-64 border-r border-base-300 bg-base-100 p-4">
@@ -90,6 +58,39 @@
           {% endif %}
         </ul>
       </nav>
+    </div>
+    <div class="drawer-content flex min-h-screen flex-col">
+      <header class="navbar sticky top-0 z-10 gap-2 border-b border-base-300 bg-base-100 px-4">
+        <label for="nav-drawer" class="btn btn-square btn-ghost drawer-button md:hidden" aria-hidden="true">
+          {% include "components/_icon.html" with icon="menu" icon_class="size-6" %}
+        </label>
+        <a href="{% url 'home' %}" class="flex items-center gap-2 rounded-field px-2 py-1 text-lg font-semibold">
+          <span class="text-primary">{% include "components/_icon.html" with icon="book" icon_class="size-7" %}</span>
+          Learning Companion
+        </a>
+      </header>
+      {% if messages %}
+        <div class="mx-auto mt-6 w-full max-w-4xl space-y-2 px-4">
+          {# Literal class names per level, so Tailwind finds them; errors interrupt, the rest wait. #}
+          {% for message in messages %}
+            {% if message.level_tag == "error" %}
+              <div role="alert" class="alert alert-error alert-soft">{{ message }}</div>
+            {% elif message.level_tag == "warning" %}
+              <div role="status" class="alert alert-warning alert-soft">{{ message }}</div>
+            {% elif message.level_tag == "success" %}
+              <div role="status" class="alert alert-success alert-soft">{{ message }}</div>
+            {% else %}
+              <div role="status" class="alert alert-info alert-soft">{{ message }}</div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
+      <main id="main" tabindex="-1" class="mx-auto w-full max-w-4xl flex-1 px-4 py-8 focus:outline-none sm:py-10">
+        {% block content %}{% endblock %}
+      </main>
+      <footer class="border-t border-base-300 bg-base-100 px-4 py-6 text-center text-sm">
+        <p>Learning Companion</p>
+      </footer>
     </div>
   </div>
 </body>

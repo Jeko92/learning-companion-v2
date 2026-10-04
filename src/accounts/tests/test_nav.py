@@ -121,6 +121,21 @@ class NavDrawerTests(AllPagesMixin, TestCase):
                 self.assertEqual(len(drawers), 1)
                 self.assertTrue(has_class(drawers[0], "md:drawer-open"))
 
+    def test_the_drawer_side_comes_between_the_toggle_and_the_page_content(self):
+        # Opening the drawer with Space puts its links next in the Tab order,
+        # not after everything on the page it covers.
+        for page, parser in self.walk():
+            with self.subTest(page=page.name):
+                order = [
+                    name
+                    for _, attrs in parser.elements
+                    for name in ("drawer-toggle", "drawer-side", "drawer-content")
+                    if has_class(attrs, name)
+                ]
+                self.assertEqual(
+                    order, ["drawer-toggle", "drawer-side", "drawer-content"]
+                )
+
     def test_the_header_has_a_menu_button_for_the_toggle(self):
         for page, parser in self.walk():
             with self.subTest(page=page.name):
