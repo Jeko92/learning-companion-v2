@@ -160,3 +160,25 @@ class DockerSmokeJobTests(WorkflowTestCase):
 
     def test_it_runs_in_parallel_with_the_quality_job(self):
         self.assertNotIn("needs", self.settings)
+
+
+class WorkflowHygieneTests(WorkflowTestCase):
+    """Pinned actions, no secrets, and job ids that branch protection can rely
+    on as check names."""
+
+    def test_every_action_is_pinned_to_a_major_version(self):
+        uses = re.findall(r"^\s*(?:- )?uses: (.+)$", self.text, re.MULTILINE)
+        self.assertTrue(uses)
+        for action in uses:
+            with self.subTest(action=action):
+                self.assertRegex(action, r"^[\w-]+/[\w-]+@v\d+$")
+
+    def test_no_repository_secret_is_used(self):
+        self.assertNotIn("secrets.", self.text)
+
+    def test_the_job_ids_are_the_check_names(self):
+        # Without a name: key, a job's id is its status check's name.
+        self.assertEqual(list(self.jobs), ["quality", "docker-smoke"])
+        for job in self.jobs:
+            with self.subTest(job=job):
+                self.assertNotIn("name", self.settings_of(job))
