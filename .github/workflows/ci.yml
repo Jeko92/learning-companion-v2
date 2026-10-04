@@ -13,3 +13,32 @@ permissions:
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Settings need both keys to load; the tests never call the API, so
+    # dummies are enough and no repository secret is used.
+    env:
+      SECRET_KEY: ci-dummy-secret-key
+      OPENAI_API_KEY: sk-dummy
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Lint
+        run: ruff check .
+      - name: Formatting
+        run: ruff format --check .
+      - name: Django system checks
+        run: python src/manage.py check
+      - name: Migrations match the models
+        run: python src/manage.py makemigrations --check --dry-run
+      - name: Tests
+        run: python src/manage.py test src

@@ -29,11 +29,34 @@ def blocks(lines, indent):
     return found
 
 
+def steps(job):
+    """Each step of a job as {key: value}, with the keys of nested mappings
+    (`with:`) flattened in."""
+    found = []
+    for line in blocks(job[1:], 2).get("steps", ["steps:"])[1:]:
+        line = line.strip()
+        if line.startswith("- "):
+            found.append({})
+            line = line[2:]
+        key, _, value = line.partition(":")
+        found[-1][key] = value.strip()
+    return found
+
+
 class WorkflowTestCase(SimpleTestCase):
     def setUp(self):
         self.assertTrue(WORKFLOW.is_file(), ".github/workflows/ci.yml is missing")
         self.text = WORKFLOW.read_text()
         self.top = blocks(self.text.splitlines(), 0)
+        self.jobs = blocks(self.top.get("jobs", ["jobs:"])[1:], 2)
+
+    def job(self, name):
+        self.assertIn(name, self.jobs, f"there is no {name} job")
+        return self.jobs[name]
+
+    def settings_of(self, name):
+        """The job's own keys, each as its block of lines."""
+        return blocks(self.job(name)[1:], 2)
 
 
 class WorkflowTriggerTests(WorkflowTestCase):
@@ -56,5 +79,60 @@ class WorkflowTriggerTests(WorkflowTestCase):
                 "concurrency:",
                 "  group: ${{ github.workflow }}-${{ github.ref }}",
                 "  cancel-in-progress: true",
+            ],
+        )
+
+
+class QualityJobTests(WorkflowTestCase):
+    """The quality job runs the hooks' and reviews' gate on Python 3.14."""
+
+    COMMANDS = (
+        "ruff check .",
+        "ruff format --check .",
+        "python src/manage.py check",
+        "python src/manage.py makemigrations --check --dry-run",
+        "python src/manage.py test src",
+    )
+
+    def setUp(self):
+        super().setUp()
+        self.settings = self.settings_of("quality")
+        self.steps = steps(self.job("quality"))
+
+    def test_it_runs_on_ubuntu_with_a_timeout(self):
+        self.assertEqual(self.settings["runs-on"], ["runs-on: ubuntu-latest"])
+        self.assertRegex(self.settings["timeout-minutes"][0], r"^timeout-minutes: \d+$")
+
+    def test_it_checks_out_and_sets_up_python_3_14_with_a_pip_cache(self):
+        self.assertEqual(self.steps[0], {"uses": "actions/checkout@v7"})
+        self.assertEqual(
+            self.steps[1],
+            {
+                "uses": "actions/setup-python@v7",
+                "with": "",
+                "python-version": '"3.14"',
+                "cache": "pip",
+                "cache-dependency-path": "requirements*.txt",
+            },
+        )
+
+    def test_it_installs_the_dev_requirements_before_the_checks(self):
+        self.assertEqual(self.steps[2]["run"], "pip install -r requirements-dev.txt")
+
+    def test_each_gate_command_is_its_own_named_step_in_order(self):
+        gate = self.steps[3:]
+        self.assertEqual([step["run"] for step in gate], list(self.COMMANDS))
+        for step in gate:
+            with self.subTest(run=step["run"]):
+                self.assertTrue(step.get("name"), "the step has no name")
+
+    def test_the_keys_are_dummies_in_the_job_env(self):
+        # The tests never call the API, so no repository secret is needed.
+        self.assertEqual(
+            self.settings["env"],
+            [
+                "env:",
+                "  SECRET_KEY: ci-dummy-secret-key",
+                "  OPENAI_API_KEY: sk-dummy",
             ],
         )
