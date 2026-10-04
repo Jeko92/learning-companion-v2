@@ -20,6 +20,7 @@ PATCHED_ENVIRON = {
     "OPENAI_MODEL": "wiring-test-model",
     # Never opened: reloading settings doesn't touch the live connections.
     "DATABASE_URL": "sqlite:////wiring-test/db.sqlite3",
+    "CSRF_TRUSTED_ORIGINS": "https://wiring.example, https://other.example",
 }
 
 
@@ -93,6 +94,17 @@ class SettingsWiringTests(SimpleTestCase):
                 }
             },
         )
+
+    def test_csrf_trusted_origins_come_from_the_environment(self):
+        self.assertEqual(
+            getattr(settings_module, "CSRF_TRUSTED_ORIGINS", None),
+            ["https://wiring.example", "https://other.example"],
+        )
+
+    def test_csrf_trusted_origins_are_empty_when_blank(self):
+        self.reload_with(CSRF_TRUSTED_ORIGINS="")
+
+        self.assertEqual(getattr(settings_module, "CSRF_TRUSTED_ORIGINS", None), [])
 
     def test_generated_secret_key_is_not_hardcoded(self):
         self.assertNotIn("django-insecure", SETTINGS_FILE.read_text())

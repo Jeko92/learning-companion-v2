@@ -30,6 +30,9 @@ DEBUG = _env.debug
 
 ALLOWED_HOSTS = _env.allowed_hosts
 
+# Needed when the site is reached through another origin, e.g. an HTTPS proxy.
+CSRF_TRUSTED_ORIGINS = _env.csrf_trusted_origins
+
 # OpenAI Chat Completions, used by the ai app (ai.services).
 OPENAI_API_KEY = _env.openai_api_key
 
