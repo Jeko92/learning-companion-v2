@@ -167,7 +167,7 @@
   - Test: `src/config/tests/test_settings.py`
   - Impl: `src/config/settings.py`
   - Covers: AC17
-- [ ] 9. `check --deploy` is clean.
+- [x] 9. `check --deploy` is clean.
   - Behaviour: a subprocess `manage.py check --deploy --fail-level WARNING` exits 0 with `DEBUG=False`, a 50+ character dummy key and blank `SECURE_*` variables. Before this step it fails on W005 and W021.
   - Test: `src/config/tests/test_deploy_check.py`
   - Impl: `src/config/settings.py` (`SILENCED_SYSTEM_CHECKS` with a comment)

@@ -48,6 +48,10 @@ CSRF_COOKIE_SECURE = _env.csrf_cookie_secure
 
 SECURE_HSTS_SECONDS = _env.hsts_seconds
 
+# HSTS covers this host only: includeSubDomains and preload commit the whole
+# domain, beyond this app, so they stay off and check --deploy is told so.
+SILENCED_SYSTEM_CHECKS = ["security.W005", "security.W021"]
+
 # Only behind a TLS-terminating proxy that sets X-Forwarded-Proto.
 SECURE_PROXY_SSL_HEADER = (
     ("HTTP_X_FORWARDED_PROTO", "https") if _env.proxy_ssl_header else None
