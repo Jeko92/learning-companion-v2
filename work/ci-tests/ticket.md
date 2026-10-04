@@ -72,3 +72,4 @@ As the person running this AI factory, I want every push and pull request checke
 - CI can't run before the branch is pushed, and pushing is only allowed once `final-review` passes. So the first real run is on the ticket's PR (AC6). A red run stops `factory-manager` before the merge, and a human decides on a fix.
 - Status check names come from the job names (`quality`, `docker-smoke`), which branch protection refers to. Renaming a job means updating the protection.
 - Handout: `instructions/challenge.md` → "Containerize and add CI": "Add a CI workflow (GitHub Actions or similar) that installs dependencies and runs the framework's test runner on every push."
+- **Approval:** the user approved the acceptance criteria (AC1–AC11) on 2026-10-04, including AC8 (the `factory-manager` exit-code handling).
