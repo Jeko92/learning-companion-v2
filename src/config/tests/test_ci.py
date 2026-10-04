@@ -268,11 +268,39 @@ class BranchProtectionScriptTests(WorkflowTestCase):
                 self.assertIn("usage:", result.stderr)
 
 
+CONFIG = ROOT / ".claude" / "hooks" / "config.sh"
+
+
+class ReadmeBadgeTests(SimpleTestCase):
+    """The README shows main's CI status at the top and says what CI runs."""
+
+    def setUp(self):
+        (repo,) = re.findall(r'^GH_REPO="(.+)"$', CONFIG.read_text(), re.MULTILINE)
+        self.workflow_url = f"https://github.com/{repo}/actions/workflows/ci.yml"
+        self.readme = (ROOT / "README.md").read_text().splitlines()
+
+    def test_the_ci_badge_for_main_links_to_the_workflow_runs(self):
+        badge = f"{self.workflow_url}/badge.svg?branch=main"
+        self.assertIn(f"[![CI]({badge})]({self.workflow_url})", self.readme[:5])
+
+    def test_a_ci_section_names_both_jobs(self):
+        self.assertIn("## CI", self.readme)
+        start = self.readme.index("## CI") + 1
+        end = next(
+            (i for i in range(start, len(self.readme)) if self.readme[i][:3] == "## "),
+            len(self.readme),
+        )
+        section = "\n".join(self.readme[start:end])
+        for job in ("quality", "docker-smoke"):
+            with self.subTest(job=job):
+                self.assertIn(f"`{job}`", section)
+
+
 class FactoryGateTests(SimpleTestCase):
     """With CI in place, a release PR merges only on passing checks."""
 
     def test_release_prs_require_passing_checks(self):
-        config = (ROOT / ".claude" / "hooks" / "config.sh").read_text()
+        config = CONFIG.read_text()
         self.assertEqual(
             re.findall(r"^REQUIRE_CHECKS=.*$", config, re.MULTILINE),
             ['REQUIRE_CHECKS="true"'],

@@ -1,5 +1,7 @@
 # Learning Companion
 
+[![CI](https://github.com/Jeko92/learning-companion-v2/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Jeko92/learning-companion-v2/actions/workflows/ci.yml)
+
 Django 6.1 project on Python 3.14.
 
 ## Setup
@@ -93,6 +95,37 @@ It removes everything it created and needs Docker; the test suite doesn't.
 ./.venv/bin/ruff format .
 ```
 
+## CI
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull
+request, with a read-only token; a newer run of the same branch cancels the
+older one. Two jobs run in parallel, and their ids are the status checks:
+
+- `quality` (Python 3.14, pip cache): `ruff check .`, `ruff format --check .`,
+  `manage.py check`, `manage.py makemigrations --check --dry-run` and
+  `manage.py test src`, each its own step. The two required keys are dummies
+  in the workflow (the tests never call the API); no secret is used.
+- `docker-smoke`: `scripts/docker-smoke.sh`, which builds the image, runs it
+  and checks it end to end.
+
+Branch protection requires both checks on `main` and on `develop`
+(`scripts/branch-protection.sh show` prints it, `apply` sets it; needs repo
+admin). On `develop`, admins may bypass them, so a release can push its
+`main`-into-`develop` merge commit directly. Release PRs into `main` merge
+only once both checks have passed.
+
+The same gate locally:
+
+```bash
+./.venv/bin/ruff check . && ./.venv/bin/ruff format --check .
+./.venv/bin/python src/manage.py check
+./.venv/bin/python src/manage.py makemigrations --check --dry-run
+./.venv/bin/python src/manage.py test src
+scripts/docker-smoke.sh   # needs Docker
+```
+
+Follow a run with `gh run list` or `gh pr checks <pr>`.
+
 ## Layout
 
 - `src/manage.py`, `src/config/`: Django project (settings, URLs, ASGI/WSGI)
@@ -112,6 +145,8 @@ It removes everything it created and needs Docker; the test suite doesn't.
 - `work/`: workflow artifacts per ticket (`ticket.md`, `plan.md`, `review.md`)
 - `Dockerfile`, `.dockerignore`, `docker/entrypoint.sh`: the production image and its start-up (migrate, then gunicorn)
 - `scripts/docker-smoke.sh`: builds and runs the image and checks it serves the app
+- `scripts/branch-protection.sh`: the branch protection of `main` and `develop` (`show`, `apply`)
+- `.github/workflows/ci.yml`: the CI workflow (jobs `quality` and `docker-smoke`)
 - `.claude/`: workflow rules, skills, and hooks
 
 ## Workflow
