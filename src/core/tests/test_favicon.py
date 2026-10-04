@@ -3,6 +3,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.test import TestCase
+from django.urls import resolve
 
 from core.tests.pages import AllPagesMixin
 
@@ -80,6 +81,16 @@ class FaviconRouteTests(TestCase):
             b"".join(response.streaming_content),
             (ASSETS / "favicon.ico").read_bytes(),
         )
+
+    def test_favicon_ico_answers_an_anonymous_head_request(self):
+        # The Docker HEALTHCHECK and uptime tools may probe with HEAD.
+        response = self.client.head("/favicon.ico")
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_favicon_ico_is_public_under_the_login_required_middleware(self):
+        # LoginRequiredMiddleware reads this attribute off the resolved view.
+        self.assertFalse(getattr(resolve("/favicon.ico").func, "login_required", True))
 
     def test_favicon_ico_may_be_cached_for_a_day(self):
         response = self.client.get("/favicon.ico")

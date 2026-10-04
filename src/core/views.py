@@ -13,6 +13,7 @@ def home(request):
     return render(request, "home.html")
 
 
+@login_not_required
 @require_safe
 @cache_control(public=True, max_age=86400)
 def favicon(request):
