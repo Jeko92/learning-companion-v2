@@ -6,7 +6,7 @@ from django.contrib.sessions.middleware import SessionMiddleware
 from django.test import RequestFactory, TestCase
 
 from core import views
-from core.tests.html import PageParser
+from core.tests.html import PageParser, has_class
 from core.tests.pages import AllPagesMixin
 
 
@@ -130,3 +130,33 @@ class PageTitleTests(AllPagesMixin, TestCase):
     def test_the_page_titles_are_all_different(self):
         titles = [parser.text("title") for _, parser in self.walk()]
         self.assertEqual(len(set(titles)), len(titles), titles)
+
+
+DELETE_PAGES = {"goal delete", "session delete", "resource delete"}
+
+
+def in_main(tag, attrs):
+    return tag == "main"
+
+
+def is_button(tag, attrs):
+    return tag == "button" or (tag == "input" and attrs.get("type") == "submit")
+
+
+class ButtonTests(AllPagesMixin, TestCase):
+    """Every button looks like one; the page's own actions stand out."""
+
+    def test_every_button_has_the_btn_class(self):
+        for page, parser in self.walk():
+            with self.subTest(page=page.name):
+                for tag, attrs in parser.elements:
+                    if is_button(tag, attrs):
+                        self.assertTrue(has_class(attrs, "btn"), attrs)
+
+    def test_actions_in_main_are_primary_and_deletes_are_error_buttons(self):
+        for page, parser in self.walk():
+            with self.subTest(page=page.name):
+                wanted = "btn-error" if page.name in DELETE_PAGES else "btn-primary"
+                for index, (tag, attrs) in enumerate(parser.elements):
+                    if is_button(tag, attrs) and parser.inside(index, in_main):
+                        self.assertTrue(has_class(attrs, wanted), attrs)

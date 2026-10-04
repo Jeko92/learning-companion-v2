@@ -1,15 +1,13 @@
-{% extends "base.html" %}
+{% extends "components/confirm_delete.html" %}
 {% load session_format %}
 
 {% block title %}Delete session · Learning Companion{% endblock %}
 
-{% block content %}
-  <h1 class="text-2xl font-bold">Delete this session?</h1>
-  <p class="mt-2 text-slate-500">{{ object.date|date:"j M Y" }} · {{ object.duration_minutes|duration }} · {{ object.goal.title }}</p>
-  <p class="mt-2 text-slate-500">This can't be undone.</p>
-  <form method="post" action="{% url 'learning_sessions:delete' object.pk %}" class="mt-6">
-    {% csrf_token %}
-    <button type="submit" class="font-medium text-red-700">Delete</button>
-  </form>
-  <a href="{{ object.goal.get_absolute_url }}" class="mt-4 inline-block hover:underline">Cancel</a>
+{% block heading %}Delete this session?{% endblock %}
+
+{% block details %}
+  <p class="text-base-content/80">{{ object.date|date:"j M Y" }} · {{ object.duration_minutes|duration }} · {{ object.goal.title }}</p>
 {% endblock %}
+
+{% block cancel_url %}{{ object.goal.get_absolute_url }}{% endblock %}
+{% block action_url %}{% url 'learning_sessions:delete' object.pk %}{% endblock %}

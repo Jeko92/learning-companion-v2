@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% comment %}
+  The delete confirmation pages extend this: fill heading, details (what is
+  deleted), warnings (what goes with it), action_url (the POST that deletes)
+  and cancel_url (back to the goal).
+{% endcomment %}
+
+{% block content %}
+  <div class="card card-border mx-auto max-w-xl bg-base-100">
+    <div class="card-body">
+      <div class="flex items-start gap-3">
+        <span class="text-error">{% include "components/_icon.html" with icon="warning" icon_class="size-8" %}</span>
+        <div class="min-w-0 space-y-2">
+          <h1 class="text-2xl font-bold tracking-tight">{% block heading %}{% endblock %}</h1>
+          {% block details %}{% endblock %}
+          <p class="text-base-content/80">This can't be undone.</p>
+          {% block warnings %}{% endblock %}
+        </div>
+      </div>
+      <div class="card-actions mt-4 justify-end">
+        <a href="{% block cancel_url %}{% endblock %}" class="btn btn-ghost">Cancel</a>
+        <form method="post" action="{% block action_url %}{% endblock %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-error">Delete</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}

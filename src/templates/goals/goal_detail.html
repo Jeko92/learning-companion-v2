@@ -32,7 +32,7 @@
     {% endif %}
     <form method="post" action="{% url 'goals:summary' goal.pk %}" class="mt-4">
       {% csrf_token %}
-      <button type="submit" class="font-medium hover:underline">{% if goal.summary %}Regenerate summary{% else %}Generate summary{% endif %}</button>
+      <button type="submit" class="btn btn-primary btn-sm">{% include "components/_icon.html" with icon="sparkles" icon_class="size-4" %}{% if goal.summary %}Regenerate summary{% else %}Generate summary{% endif %}</button>
     </form>
   </section>
   <section class="mt-10" aria-labelledby="next-steps-heading">
@@ -49,7 +49,7 @@
     {% endif %}
     <form method="post" action="{% url 'goals:next_steps' goal.pk %}" class="mt-4">
       {% csrf_token %}
-      <button type="submit" class="font-medium hover:underline">{% if goal.next_steps %}Suggest new next steps{% else %}Suggest next steps{% endif %}</button>
+      <button type="submit" class="btn btn-primary btn-sm">{% include "components/_icon.html" with icon="sparkles" icon_class="size-4" %}{% if goal.next_steps %}Suggest new next steps{% else %}Suggest next steps{% endif %}</button>
     </form>
   </section>
   <section class="mt-10">
@@ -85,7 +85,7 @@
     <form method="post" action="{% url 'resources:create' goal.pk %}" class="mt-6">
       {% csrf_token %}
       {{ resource_form }}
-      <button type="submit">Attach resource</button>
+      <button type="submit" class="btn btn-primary mt-4">Attach resource</button>
     </form>
   </section>
 {% endblock %}

@@ -1,0 +1,5 @@
+{# A page's <h1> and optional subtitle: {% include "components/_page_header.html" with heading="Sessions" subtitle_prefix="For" subtitle=goal.title %} #}
+<div class="mb-6">
+  <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">{{ heading }}</h1>
+  {% if subtitle %}<p class="mt-1 text-base-content/80">{% if subtitle_prefix %}{{ subtitle_prefix }} {% endif %}{{ subtitle }}</p>{% endif %}
+</div>
