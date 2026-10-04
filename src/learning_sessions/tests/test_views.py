@@ -926,3 +926,36 @@ class SessionViewsScopingTests(TestCase):
                     instance.setup(request, pk=mine.pk)
                     self.assertEqual(set(instance.get_queryset()), {mine, other})
                 self.assertNotIn(bobs, set(instance.get_queryset()))
+
+
+PILL = re.compile(r'<li class="([^"]*\bbadge\b[^"]*)">([^<]*)</li>')
+
+
+def pills_in_lists(html):
+    """Names of badge <li>s, each checked to sit directly in a <ul>."""
+    page = PageParser()
+    page.feed(html)
+    for index, (tag, attrs) in enumerate(page.elements):
+        if tag == "li" and "badge" in attrs.get("class", "").split():
+            assert page.ancestors[index][-1][0] == "ul", "a pill outside a <ul>"
+    return [text.strip() for _, text in PILL.findall(html)]
+
+
+class SessionTagPillTests(TestCase):
+    """A session's tags are a list of pills, on the session list and the goal page."""
+
+    def setUp(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=alice, title="Learn Django")
+        create_session(self.goal, tags=["Django", "ORM"])
+        self.client.force_login(alice)
+
+    def test_the_session_list_and_the_goal_page_show_tags_as_pills(self):
+        paths = (
+            reverse("learning_sessions:list", args=[self.goal.pk]),
+            self.goal.get_absolute_url(),
+        )
+        for path in paths:
+            with self.subTest(path=path):
+                html = self.client.get(path).content.decode()
+                self.assertEqual(pills_in_lists(html), ["Django", "ORM"])

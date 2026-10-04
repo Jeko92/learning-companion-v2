@@ -1,14 +1,28 @@
 {% extends "base.html" %}
 
+{% block title %}{% if object %}Edit goal{% else %}New goal{% endif %} · Learning Companion{% endblock %}
+
 {% block content %}
   {# Shared by create and edit: `object` is only set when editing. #}
-  <h1 class="text-2xl font-bold">{% if object %}Edit goal{% else %}New goal{% endif %}</h1>
-  <form method="post" action="{% if object %}{% url 'goals:edit' object.pk %}{% else %}{% url 'goals:create' %}{% endif %}">
-    {% csrf_token %}
-    {{ form }}
-    <button type="submit">Save</button>
-  </form>
-  {% if object %}
-    <a href="{{ object.get_absolute_url }}" class="mt-4 inline-block hover:underline">Cancel</a>
-  {% endif %}
+  <div class="mx-auto max-w-2xl">
+    {% if object %}
+      {% include "components/_page_header.html" with heading="Edit goal" %}
+    {% else %}
+      {% include "components/_page_header.html" with heading="New goal" %}
+    {% endif %}
+    <div class="card card-border bg-base-100">
+      <div class="card-body">
+        <form method="post" action="{% if object %}{% url 'goals:edit' object.pk %}{% else %}{% url 'goals:create' %}{% endif %}">
+          {% csrf_token %}
+          {{ form }}
+          <div class="mt-6 flex flex-wrap justify-end gap-2">
+            {% if object %}
+              <a href="{{ object.get_absolute_url }}" class="btn btn-ghost">Cancel</a>
+            {% endif %}
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 {% endblock %}

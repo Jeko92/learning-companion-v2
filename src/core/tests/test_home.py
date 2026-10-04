@@ -7,7 +7,7 @@ from django.contrib.messages.storage import default_storage
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.template.loader import render_to_string
 from django.test import RequestFactory, TestCase
-from django.urls import URLResolver, get_resolver, resolve
+from django.urls import URLResolver, get_resolver, resolve, reverse
 
 from core import urls as core_urls
 from core import views
@@ -94,7 +94,8 @@ class HomePageTests(TestCase):
 
     def test_logged_in_visitors_get_the_same_home_page_not_a_redirect(self):
         # dashboard-status sends log-in and sign-up to the dashboard, but "/"
-        # stays the public home page for everyone.
+        # stays the public home page for everyone. ui-polish gives each visitor
+        # their own call to action, so only the shared content is compared.
         anonymous_main = self.get_page().text("main")
         user = get_user_model().objects.create_user("alice")
         self.client.force_login(user)
@@ -103,7 +104,11 @@ class HomePageTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "home.html")
-        self.assertEqual(self.get_page().text("main"), anonymous_main)
+        logged_in_main = self.get_page().text("main")
+        for shared in ("Learning Companion", PITCH):
+            with self.subTest(shared=shared):
+                self.assertIn(shared, anonymous_main)
+                self.assertIn(shared, logged_in_main)
 
     def test_layout_has_a_footer(self):
         page = self.get_page()
@@ -118,3 +123,33 @@ class HomePageTests(TestCase):
         self.assertContains(
             response, '<link rel="stylesheet" href="/static/css/tailwind.css">'
         )
+
+
+class HomeCallToActionTests(TestCase):
+    """The home page's hero points each visitor at their next step."""
+
+    def main_links(self):
+        page = PageParser()
+        page.feed(self.client.get("/").content.decode())
+        links = {}
+        for index, (tag, attrs) in enumerate(page.elements):
+            if tag == "a" and page.inside(index, lambda t, _: t == "main"):
+                links[attrs["href"]] = attrs.get("class", "").split()
+        return page.links("main"), links
+
+    def test_anonymous_visitors_are_invited_to_sign_up_or_log_in(self):
+        links, classes = self.main_links()
+
+        self.assertIn((reverse("accounts:signup"), "Sign up"), links)
+        self.assertIn((reverse("accounts:login"), "Log in"), links)
+        self.assertIn("btn-primary", classes[reverse("accounts:signup")])
+        self.assertNotIn(reverse("dashboard:index"), classes)
+
+    def test_logged_in_users_are_sent_to_their_dashboard(self):
+        self.client.force_login(get_user_model().objects.create_user("alice"))
+
+        links, classes = self.main_links()
+
+        self.assertIn((reverse("dashboard:index"), "Go to your dashboard"), links)
+        self.assertIn("btn-primary", classes[reverse("dashboard:index")])
+        self.assertNotIn(reverse("accounts:signup"), classes)

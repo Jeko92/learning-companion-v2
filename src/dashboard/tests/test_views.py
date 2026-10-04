@@ -362,3 +362,55 @@ class DashboardQueryCountTests(TestCase):
         # per-week totals.
         with self.assertNumQueries(5):
             self.client.get("/dashboard/")
+
+
+@patch("django.utils.timezone.now", return_value=NOW)
+class DashboardBarTests(TestCase):
+    """Each per-tag and per-week row has a bar scaled to the table's largest
+    value; the table keeps the numbers, so the bars are hidden from screen
+    readers."""
+
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.client.force_login(self.alice)
+
+    def bars(self, heading_id):
+        """(value, max, aria-hidden) of each <progress> in the section, each
+        checked to sit in a table cell."""
+        page = get_page(self.client, "/dashboard/")
+        found = []
+        for index, (tag, attrs) in enumerate(page.elements):
+            if tag != "progress":
+                continue
+            ancestors = page.ancestors[index]
+            if not any(a.get("aria-labelledby") == heading_id for _, a in ancestors):
+                continue
+            self.assertIn("td", [t for t, _ in ancestors])
+            found.append(
+                (attrs.get("value"), attrs.get("max"), attrs.get("aria-hidden"))
+            )
+        return found
+
+    def test_tag_bars_follow_the_rows_and_scale_to_the_largest(self, _now):
+        add_session(self.alice, 90, tags=["Django"], day=date(2026, 10, 1))
+        add_session(self.alice, 30, tags=["ORM"], day=date(2026, 10, 1))
+        add_session(self.alice, 45, day=date(2026, 9, 22))
+
+        self.assertEqual(
+            self.bars("hours-per-tag-heading"),
+            [("90", "90", "true"), ("30", "90", "true"), ("45", "90", "true")],
+        )
+
+    def test_week_bars_follow_the_rows_and_scale_to_the_largest(self, _now):
+        add_session(self.alice, 90, tags=["Django"], day=date(2026, 10, 1))
+        add_session(self.alice, 30, day=date(2026, 9, 29))
+        add_session(self.alice, 45, day=date(2026, 9, 22))
+
+        values = ["120", "45"] + ["0"] * 6
+        self.assertEqual(
+            self.bars("hours-per-week-heading"),
+            [(value, "120", "true") for value in values],
+        )
+
+    def test_an_all_zero_week_table_still_has_bars(self, _now):
+        self.assertEqual(self.bars("hours-per-week-heading"), [("0", "1", "true")] * 8)

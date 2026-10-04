@@ -1,12 +1,21 @@
 {% extends "base.html" %}
 
+{% block title %}Attach a resource · Learning Companion{% endblock %}
+
 {% block content %}
-  <h1 class="text-2xl font-bold">Attach a resource</h1>
-  <p class="mt-2 text-sm text-slate-500">For {{ goal.title }}</p>
-  <form method="post" action="{% url 'resources:create' goal.pk %}" class="mt-6">
-    {% csrf_token %}
-    {{ form }}
-    <button type="submit">Save</button>
-  </form>
-  <a href="{{ goal.get_absolute_url }}" class="mt-4 inline-block hover:underline">Cancel</a>
+  <div class="mx-auto max-w-2xl">
+    {% include "components/_page_header.html" with heading="Attach a resource" subtitle_prefix="For" subtitle=goal.title %}
+    <div class="card card-border bg-base-100">
+      <div class="card-body">
+        <form method="post" action="{% url 'resources:create' goal.pk %}">
+          {% csrf_token %}
+          {{ form }}
+          <div class="mt-6 flex flex-wrap justify-end gap-2">
+            <a href="{{ goal.get_absolute_url }}" class="btn btn-ghost">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 {% endblock %}

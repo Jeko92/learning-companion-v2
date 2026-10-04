@@ -1,43 +1,104 @@
-{% load tailwind_cli %}<!doctype html>
+{% load static tailwind_cli %}<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Learning Companion{% endblock %}</title>
+  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="32x32">
+  <link rel="icon" href="{% static 'favicon.svg' %}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}">
+  <meta name="theme-color" content="#4b31ee">
   {% tailwind_css %}
 </head>
-<body class="flex min-h-screen flex-col bg-slate-50 text-slate-800">
-  <header class="border-b border-slate-200 bg-white">
-    <div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-      <span class="text-lg font-semibold">Learning Companion</span>
-      <nav class="flex gap-6 text-sm text-slate-500">
-        {% if user.is_authenticated %}
-          <a href="{% url 'dashboard:index' %}" class="hover:underline">Dashboard</a>
-          <a href="{% url 'goals:list' %}" class="hover:underline">Goals</a>
-          <a href="{% url 'profiles:mine' %}" class="font-medium text-slate-800 hover:underline">{{ user.get_username }}</a>
-          <form method="post" action="{% url 'accounts:logout' %}">
-            {% csrf_token %}
-            <button type="submit" class="hover:underline">Log out</button>
-          </form>
-        {% else %}
-          <a href="{% url 'accounts:login' %}" class="hover:underline">Log in</a>
-          <a href="{% url 'accounts:signup' %}" class="font-medium text-slate-800 hover:underline">Sign up</a>
-        {% endif %}
+<body class="min-h-screen bg-base-200 text-base-content">
+  <a href="#main" class="btn btn-primary sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50">Skip to content</a>
+  {# The nav is rendered once: a slide-in drawer below md, a sidebar from md up. #}
+  {# The checkbox is the focusable toggle (Space opens and closes it); the labels are pointer targets. #}
+  {# .drawer-side comes before .drawer-content, so an opened drawer's links are next in the Tab order; the grid places both. #}
+  <div class="drawer md:drawer-open">
+    <input id="nav-drawer" type="checkbox" class="drawer-toggle md:hidden" aria-label="Menu">
+    <div class="drawer-side z-20">
+      <label for="nav-drawer" aria-label="Close menu" class="drawer-overlay"></label>
+      <nav aria-label="Main" class="min-h-full w-64 border-r border-base-300 bg-base-100 p-4">
+        <ul class="menu w-full gap-1 p-0">
+          {% if user.is_authenticated %}
+            {# The section of the current page; sessions and resources belong to goals. #}
+            {% with section=request.resolver_match.namespace %}
+              <li>
+                {% if section == "dashboard" %}
+                  <a href="{% url 'dashboard:index' %}" class="menu-active" aria-current="page">{% include "components/_icon.html" with icon="chart" %}Dashboard</a>
+                {% else %}
+                  <a href="{% url 'dashboard:index' %}">{% include "components/_icon.html" with icon="chart" %}Dashboard</a>
+                {% endif %}
+              </li>
+              <li>
+                {% if section == "goals" or section == "learning_sessions" or section == "resources" %}
+                  <a href="{% url 'goals:list' %}" class="menu-active" aria-current="page">{% include "components/_icon.html" with icon="flag" %}Goals</a>
+                {% else %}
+                  <a href="{% url 'goals:list' %}">{% include "components/_icon.html" with icon="flag" %}Goals</a>
+                {% endif %}
+              </li>
+              <li>
+                {% if section == "profiles" %}
+                  <a href="{% url 'profiles:mine' %}" class="menu-active" aria-current="page">{% include "components/_icon.html" with icon="user" %}{{ user.get_username }}</a>
+                {% else %}
+                  <a href="{% url 'profiles:mine' %}">{% include "components/_icon.html" with icon="user" %}{{ user.get_username }}</a>
+                {% endif %}
+              </li>
+            {% endwith %}
+            <li class="mt-4 border-t border-base-300 pt-4">
+              <form method="post" action="{% url 'accounts:logout' %}" class="p-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-ghost btn-sm w-full justify-start gap-2 font-normal">{% include "components/_icon.html" with icon="logout" %}Log out</button>
+              </form>
+            </li>
+          {% else %}
+            <li><a href="{% url 'accounts:login' %}">{% include "components/_icon.html" with icon="login" %}Log in</a></li>
+            <li><a href="{% url 'accounts:signup' %}">{% include "components/_icon.html" with icon="user-plus" %}Sign up</a></li>
+          {% endif %}
+        </ul>
       </nav>
     </div>
-  </header>
-  {% if messages %}
-    <ul class="mx-auto mt-4 w-full max-w-3xl space-y-2 px-4">
-      {% for message in messages %}
-        <li class="rounded border border-sky-200 bg-sky-50 px-4 py-2 text-sm">{{ message }}</li>
-      {% endfor %}
-    </ul>
-  {% endif %}
-  <main class="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-    {% block content %}{% endblock %}
-  </main>
-  <footer class="border-t border-slate-200 py-6 text-center text-sm text-slate-500">
-    <p>Learning Companion</p>
-  </footer>
+    <div class="drawer-content flex min-h-screen flex-col">
+      <header class="navbar sticky top-0 z-10 gap-2 border-b border-base-300 bg-base-100 px-4">
+        <label for="nav-drawer" class="btn btn-square btn-ghost drawer-button md:hidden" aria-hidden="true">
+          {% include "components/_icon.html" with icon="menu" icon_class="size-6" %}
+        </label>
+        <a href="{% url 'home' %}" class="flex items-center gap-2 rounded-field px-2 py-1 text-lg font-semibold">
+          <span class="text-primary">{% include "components/_icon.html" with icon="book" icon_class="size-7" %}</span>
+          Learning Companion
+        </a>
+        {# CSS-only, not remembered: every page load starts at System, which follows the OS. #}
+        <fieldset class="join ms-auto">
+          <legend class="sr-only">Theme</legend>
+          {% include "components/_theme_option.html" with value="system" label="System" icon="computer" checked=True %}
+          {% include "components/_theme_option.html" with value="companion" label="Light" icon="sun" %}
+          {% include "components/_theme_option.html" with value="companion-dark" label="Dark" icon="moon" %}
+        </fieldset>
+      </header>
+      {% if messages %}
+        <div class="mx-auto mt-6 w-full max-w-4xl space-y-2 px-4">
+          {# Literal class names per level, so Tailwind finds them; errors interrupt, the rest wait. #}
+          {% for message in messages %}
+            {% if message.level_tag == "error" %}
+              <div role="alert" class="alert alert-error alert-soft">{{ message }}</div>
+            {% elif message.level_tag == "warning" %}
+              <div role="status" class="alert alert-warning alert-soft">{{ message }}</div>
+            {% elif message.level_tag == "success" %}
+              <div role="status" class="alert alert-success alert-soft">{{ message }}</div>
+            {% else %}
+              <div role="status" class="alert alert-info alert-soft">{{ message }}</div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      {% endif %}
+      <main id="main" tabindex="-1" class="mx-auto w-full max-w-4xl flex-1 px-4 py-8 focus:outline-none sm:py-10">
+        {% block content %}{% endblock %}
+      </main>
+      <footer class="border-t border-base-300 bg-base-100 px-4 py-6 text-center text-sm">
+        <p>Learning Companion</p>
+      </footer>
+    </div>
+  </div>
 </body>
 </html>

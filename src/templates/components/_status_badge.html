@@ -1,0 +1,2 @@
+{# A goal's status as a badge that always shows its label (colour is never the only cue). Literal classes so Tailwind finds them; a new Goal.Status needs a branch here. #}
+{% if goal.status == "done" %}<span class="badge badge-success">{{ goal.get_status_display }}</span>{% elif goal.status == "in-progress" %}<span class="badge badge-info">{{ goal.get_status_display }}</span>{% else %}<span class="badge badge-neutral">{{ goal.get_status_display }}</span>{% endif %}

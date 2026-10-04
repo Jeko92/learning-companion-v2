@@ -322,13 +322,10 @@ class ProfilePrivacyTests(TestCase):
         )
 
         self.assertNotIn("select", [tag for tag, _ in page.elements])
-        self.assertFalse(
-            [
-                a
-                for tag, a in page.elements
-                if tag == "input" and a.get("type") == "checkbox"
-            ]
-        )
+        # Only the profile form: the layout's nav drawer toggle is a checkbox
+        # too (ui-polish), and has nothing to do with the tags on offer.
+        ((_, inputs),) = page.forms("main")
+        self.assertFalse([a for a in inputs if a.get("type") == "checkbox"])
 
 
 class ProfileEscapingTests(TestCase):
@@ -361,3 +358,31 @@ class ProfileEscapingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, self.PAYLOAD)
         self.assertContains(response, "&lt;script&gt;alert(1)&lt;/script&gt;")
+
+
+class FocusAreaPillTests(TestCase):
+    """Focus areas are a list of pills on the profile page."""
+
+    def test_focus_areas_render_as_pills_in_a_list(self):
+        alice = get_user_model().objects.create_user(USERNAME, password=PASSWORD)
+        profile = alice.profile
+        profile.focus_areas.add(
+            Tag.objects.get_or_create_by_name("Python")[0],
+            Tag.objects.get_or_create_by_name("Django")[0],
+        )
+        self.client.force_login(alice)
+
+        html = self.client.get(reverse("profiles:detail", args=[profile.pk]))
+        page = PageParser()
+        page.feed(html.content.decode())
+
+        pills = [
+            index
+            for index, (tag, attrs) in enumerate(page.elements)
+            if tag == "li" and "badge" in attrs.get("class", "").split()
+        ]
+        self.assertEqual(len(pills), 2)
+        for index in pills:
+            self.assertEqual(page.ancestors[index][-1][0], "ul")
+        self.assertIn("Python", page.text("main"))
+        self.assertIn("Django", page.text("main"))
