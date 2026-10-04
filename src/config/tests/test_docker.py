@@ -24,3 +24,33 @@ class RequirementsTests(SimpleTestCase):
         for module in ("whitenoise", "gunicorn"):
             with self.subTest(module=module):
                 importlib.import_module(module)
+
+
+class DockerignoreTests(SimpleTestCase):
+    """Secrets, local state and build output stay out of the build context."""
+
+    EXCLUDED = (
+        ".env",
+        ".git",
+        ".venv",
+        "**/__pycache__",
+        ".ruff_cache",
+        "**/*.sqlite3*",
+        "src/assets/css/tailwind.css",
+        "src/.django_tailwind_cli",
+        "src/staticfiles",
+        "work",
+        ".claude",
+    )
+
+    def test_secrets_local_state_and_build_output_are_excluded(self):
+        path = ROOT / ".dockerignore"
+        self.assertTrue(path.is_file(), ".dockerignore is missing")
+        entries = {
+            line.strip()
+            for line in path.read_text().splitlines()
+            if line.strip() and not line.startswith("#")
+        }
+        for entry in self.EXCLUDED:
+            with self.subTest(entry=entry):
+                self.assertIn(entry, entries)

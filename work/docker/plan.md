@@ -98,7 +98,7 @@
   Also, loading the middleware with a missing `STATIC_ROOT` emits no "No directory at" warning (the settings filter, decision 3).
 
   — test: `src/config/tests/test_static_files.py` — impl: `src/config/settings.py` (warning filter; the rest from step 7) — covers: AC4, AC11
-- [ ] 9. `.dockerignore` lists:
+- [x] 9. `.dockerignore` lists:
   - `.env` and `.git`;
   - `.venv`, `__pycache__` and `.ruff_cache`;
   - `*.sqlite3*`;
