@@ -99,7 +99,8 @@ It removes everything it created and needs Docker; the test suite doesn't.
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push and pull
 request, with a read-only token; a newer run of the same branch cancels the
-older one. Two jobs run in parallel, and their ids are the status checks:
+older one, except on `main` and `develop` (a cancelled required check there
+would read as failed). Two jobs run in parallel, and their ids are the status checks:
 
 - `quality` (Python 3.14, pip cache): `ruff check .`, `ruff format --check .`,
   `manage.py check`, `manage.py makemigrations --check --dry-run` and

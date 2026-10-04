@@ -75,13 +75,17 @@ class WorkflowTriggerTests(WorkflowTestCase):
     def test_its_token_can_only_read_the_repository(self):
         self.assertEqual(self.top["permissions"], ["permissions:", "  contents: read"])
 
-    def test_a_newer_run_of_the_same_ref_cancels_the_older_one(self):
+    def test_a_newer_run_cancels_the_older_one_except_on_protected_branches(self):
+        # A cancelled required check on main or develop would read as failed.
         self.assertEqual(
             self.top["concurrency"],
             [
                 "concurrency:",
                 "  group: ${{ github.workflow }}-${{ github.ref }}",
-                "  cancel-in-progress: true",
+                (
+                    "  cancel-in-progress: ${{ github.ref != 'refs/heads/main'"
+                    " && github.ref != 'refs/heads/develop' }}"
+                ),
             ],
         )
 
