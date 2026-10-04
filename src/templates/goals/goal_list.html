@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Your goals · Learning Companion{% endblock %}
 
@@ -26,6 +27,11 @@
     </div>
   </nav>
   {% if goal_list %}
+  {% if not active_status %}
+    {# For the drag and drop script: it announces moves here and shows failed ones in the alert. #}
+    <p data-board-announce aria-live="polite" class="sr-only"></p>
+    <div data-board-error role="alert" class="alert alert-error alert-soft mb-4" hidden></div>
+  {% endif %}
   {# One column per status ("All") or just the filtered one. The column says the status, so cards carry no badge. #}
   <div data-board class="{% if active_status %}grid gap-4{% else %}grid gap-4 lg:grid-cols-3{% endif %}">
     {% for status, label, goals in columns %}
@@ -38,7 +44,7 @@
         <ul data-board-list data-status="{{ status }}" class="flex min-h-16 flex-1 flex-col gap-3">
           <li data-board-empty class="rounded-box border border-dashed border-base-300 px-3 py-4 text-center text-sm"{% if goals %} hidden{% endif %}>No goals.</li>
           {% for goal in goals %}
-            <li data-goal class="card card-border bg-base-100 shadow-sm">
+            <li data-goal data-move-url="{% url 'goals:move' goal.pk %}" class="card card-border cursor-grab bg-base-100 shadow-sm">
               <div class="card-body flex-row items-start justify-between gap-2 p-3">
                 <a href="{{ goal.get_absolute_url }}" class="link link-hover min-w-0 break-words font-medium">{{ goal.title }}</a>
                 {# CSS-only Move menu: works without JavaScript, by keyboard and with a screen reader. #}
@@ -65,5 +71,13 @@
   {% else %}
     {% url 'goals:create' as new_goal_url %}
     {% include "components/_empty_state.html" with text="No goals yet." cta_url=new_goal_url cta_label="New goal" empty_icon="flag" %}
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  {# Drag and drop needs at least two columns: only the "All" tab with goals. #}
+  {% if goal_list and not active_status %}
+    <script src="{% static 'js/vendor/sortable.min.js' %}" defer></script>
+    <script src="{% static 'js/goal-board.js' %}" defer></script>
   {% endif %}
 {% endblock %}

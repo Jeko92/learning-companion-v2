@@ -1,13 +1,17 @@
 """The goal board: one column per status, goals moved between them by drag and
 drop (SortableJS) or by each card's Move menu, both through goals:move."""
 
+import hashlib
 import json
 from datetime import UTC, datetime
 from html.parser import HTMLParser
+from pathlib import Path
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.messages import get_messages
-from django.test import Client, TestCase
+from django.templatetags.static import static
+from django.test import Client, SimpleTestCase, TestCase
 from django.urls import reverse
 
 from core.tests.html import VOID_ELEMENTS, collapse
@@ -449,3 +453,94 @@ class BoardMoveMenuTests(BoardTestCase):
         board = columns(get_tree(csrf_client, "/goals/"))
         self.assertEqual(card_titles(board["done"]), ["Learn Django"])
         self.assertEqual(cards(board["in-progress"]), [])
+
+
+SORTABLE = "js/vendor/sortable.min.js"
+# SortableJS 1.15.7, Sortable.min.js from the npm tarball (whose sha512 matched
+# the registry's dist.integrity). Update both when updating the file.
+SORTABLE_VERSION = "1.15.7"
+SORTABLE_SHA256 = "bf4241bc73fef7f11c59a283a69fe8051cdd31c6d8ff5a2b9ba219e7831fcf76"
+BOARD_SCRIPT = "js/goal-board.js"
+
+
+def asset(name):
+    return Path(settings.STATICFILES_DIRS[0]) / name
+
+
+def scripts(root):
+    return [n.attrs for n in root.find_all(lambda n: n.tag == "script")]
+
+
+class BoardAssetTests(SimpleTestCase):
+    def test_the_vendored_sortablejs_is_the_pinned_file(self):
+        content = asset(SORTABLE).read_bytes()
+
+        self.assertEqual(hashlib.sha256(content).hexdigest(), SORTABLE_SHA256)
+        self.assertTrue(
+            content.startswith(f"/*! Sortable {SORTABLE_VERSION} - MIT".encode())
+        )
+
+    def test_its_licence_is_vendored_with_it(self):
+        licence = asset("js/vendor/sortable.LICENSE.txt").read_text()
+
+        self.assertIn("MIT License", licence)
+        self.assertIn("All contributors to Sortable", licence)
+
+    def test_the_board_script_is_there(self):
+        self.assertTrue(asset(BOARD_SCRIPT).is_file())
+
+    def test_tailwind_does_not_scan_the_vendored_scripts(self):
+        css = (Path(settings.BASE_DIR) / settings.TAILWIND_CLI_SRC_CSS).read_text()
+
+        self.assertIn('@source not "../assets/js/vendor";', css)
+
+
+class BoardScriptTests(BoardTestCase):
+    def test_the_all_view_loads_sortablejs_then_the_board_script(self):
+        add_goal(self.alice, "a")
+
+        loaded = scripts(get_tree(self.client, "/goals/"))
+
+        self.assertEqual(
+            loaded,
+            [
+                {"src": static(SORTABLE), "defer": None},
+                {"src": static(BOARD_SCRIPT), "defer": None},
+            ],
+        )
+
+    def test_no_scripts_without_a_board_to_drag_on(self):
+        add_goal(self.alice, "a")
+        # A filtered tab has one column, nothing to drag between.
+        for path in ("/goals/?status=planned", "/goals/?status=done"):
+            with self.subTest(path=path):
+                self.assertEqual(scripts(get_tree(self.client, path)), [])
+        Goal.objects.all().delete()
+        self.assertEqual(scripts(get_tree(self.client, "/goals/")), [])
+
+    def test_other_pages_load_no_scripts(self):
+        goal = add_goal(self.alice, "a")
+
+        for path in ("/dashboard/", goal.get_absolute_url(), "/goals/new/"):
+            with self.subTest(path=path):
+                self.assertEqual(scripts(get_tree(self.client, path)), [])
+
+    def test_each_card_knows_its_move_url(self):
+        goal = add_goal(self.alice, "a")
+
+        (card,) = cards(columns(get_tree(self.client, "/goals/"))["planned"])
+
+        self.assertEqual(card.attrs["data-move-url"], f"/goals/{goal.pk}/move/")
+
+    def test_the_board_has_a_live_region_and_a_hidden_error_alert(self):
+        add_goal(self.alice, "a")
+        root = get_tree(self.client, "/goals/")
+
+        (announce,) = root.with_attr("data-board-announce")
+        self.assertEqual(announce.attrs["aria-live"], "polite")
+        self.assertIn("sr-only", announce.attrs["class"].split())
+        self.assertEqual(announce.text(), "")
+        (error,) = root.with_attr("data-board-error")
+        self.assertEqual(error.attrs["role"], "alert")
+        self.assertIn("hidden", error.attrs)
+        self.assertIn("alert-error", error.attrs["class"].split())
