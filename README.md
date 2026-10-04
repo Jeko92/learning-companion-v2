@@ -52,26 +52,34 @@ Values are read from the process environment first. `.env` at the repo root only
 
 ## Run with Docker
 
-The `Dockerfile` builds a production image: gunicorn, `DEBUG` off, static files (including the Tailwind CSS) served by WhiteNoise, and the SQLite database on a volume. The build downloads the Linux Tailwind binary from GitHub, so it needs network access.
+The `Dockerfile` builds a production image: gunicorn, `DEBUG` off, static files (including the Tailwind CSS) served by WhiteNoise, and the SQLite database on a volume. The build downloads the Linux Tailwind binary from GitHub, so it needs network access. The image's healthcheck uses `--start-interval`, which needs Docker Engine 25 or newer.
 
 ```bash
 docker build -t learning-companion .
-docker run --env-file .env -p 8000:8000 -v learning-companion-data:/app/data learning-companion
+docker run --env-file .env -e DEBUG=False -p 127.0.0.1:8000:8000 -v learning-companion-data:/app/data learning-companion
 # or pass the two required keys directly:
-docker run -e SECRET_KEY=... -e OPENAI_API_KEY=... -p 8000:8000 -v learning-companion-data:/app/data learning-companion
+docker run -e SECRET_KEY=... -e OPENAI_API_KEY=... -p 127.0.0.1:8000:8000 -v learning-companion-data:/app/data learning-companion
 ```
 
-Then open http://localhost:8000/. On every start the container applies migrations to `/app/data/db.sqlite3` (the image sets `DATABASE_URL` to it), then starts gunicorn on port 8000. Without `SECRET_KEY` or `OPENAI_API_KEY` it exits with an error that names the missing variable. The data survives new containers as long as they use the same volume. `docker ps` shows the container as healthy once it answers. A few options:
+Then open http://localhost:8000/.
+
+- **Start-up:** on every start the container applies migrations to `/app/data/db.sqlite3` (the image sets `DATABASE_URL` to it), then starts gunicorn on port 8000. Without `SECRET_KEY` or `OPENAI_API_KEY` it exits with an error that names the missing variable.
+- **Data:** it survives new containers as long as they use the same volume.
+- **Health:** `docker ps` shows the container as healthy once it answers.
+- **`.env` from `.env.example`:** it works with `--env-file`. `DATABASE_URL` is commented out there on purpose, because a blank `DATABASE_URL=` would override the image's own value. The example's `DEBUG=True` would reach the container too, which is why the command adds `-e DEBUG=False`: `-e` beats `--env-file`.
+- **Ports:** `-p 127.0.0.1:8000:8000` publishes the port on this machine only. Use `-p 8000:8000` to reach it from other devices.
+
+A few options:
 
 - `-e WEB_CONCURRENCY=3` runs more gunicorn workers (default 1).
-- Reached through another host name or an HTTPS proxy, add it with `-e ALLOWED_HOSTS=...` and `-e CSRF_TRUSTED_ORIGINS=https://...`.
-- `DEBUG=True` from a copied `.env` also reaches the container, so set `DEBUG=False` there (or drop it from the env file) for anything but local trials.
+- If the site is reached through another host name or an HTTPS proxy, set `-e ALLOWED_HOSTS=companion.example,127.0.0.1` and `-e CSRF_TRUSTED_ORIGINS=https://companion.example`. Keep `127.0.0.1` in `ALLOWED_HOSTS`: the healthcheck requests `http://127.0.0.1:8000/favicon.ico` inside the container, and without it the container stays unhealthy.
 
 `scripts/docker-smoke.sh` builds the image, runs it with dummy keys and checks it end to end:
 
 - the home page, the gzipped stylesheet and the favicon are served;
 - sign-up works through the real form;
-- an account survives a new container on the same volume;
+- an account survives a new container on the same volume, also when that container is started with `--env-file` and a `.env` made from `.env.example`;
+- `-e DEBUG=False` beats the example's `DEBUG=True`;
 - the app doesn't run as root;
 - the image holds no `.env` and no Tailwind binary.
 

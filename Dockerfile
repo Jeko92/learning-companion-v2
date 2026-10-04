@@ -2,10 +2,12 @@
 # served by WhiteNoise, SQLite on a volume.
 #
 #   docker build -t learning-companion .
-#   docker run --env-file .env -p 8000:8000 \
+#   docker run --env-file .env -e DEBUG=False -p 127.0.0.1:8000:8000 \
 #     -v learning-companion-data:/app/data learning-companion
 #
 # SECRET_KEY and OPENAI_API_KEY are required at run time and never baked in.
+# A custom ALLOWED_HOSTS must keep 127.0.0.1 for the HEALTHCHECK, whose
+# --start-interval needs Docker Engine 25 or newer.
 # scripts/docker-smoke.sh builds, runs and checks the image.
 
 # Build stage: the Linux Tailwind binary (about 80 MB, downloaded from GitHub)

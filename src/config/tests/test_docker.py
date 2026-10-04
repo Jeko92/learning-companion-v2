@@ -81,6 +81,13 @@ class SmokeScriptTests(SimpleTestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_the_smoke_script_runs_the_image_with_an_env_file_from_the_example(self):
+        # The documented `docker run --env-file .env` path, with a .env copied
+        # from .env.example, must keep the database on the volume.
+        script = self.SCRIPT.read_text()
+        self.assertIn(".env.example", script)
+        self.assertIn("--env-file", script)
+
 
 DOCKERFILE = ROOT / "Dockerfile"
 ENTRYPOINT = ROOT / "docker" / "entrypoint.sh"
