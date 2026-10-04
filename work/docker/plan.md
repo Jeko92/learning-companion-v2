@@ -146,3 +146,16 @@
 | AC10 smoke script | 10 (script), 11 (passes end to end); final-review reruns it |
 | AC11 local dev unchanged | 3 (default DB dict), 8 (no warning noise, hrefs), the suite green after every step |
 | AC12 docs | 12 |
+
+### Review findings (final-review 2026-10-04, `review.md`)
+- [ ] 13. A `DATABASE_URL` that django-environ can't even split, such as a non-integer port (`postgres://u:pw@host:abc/db`) or a password with an unencoded `/` (`postgres://u:pa/ss@db/x`), raises the same fixed `ImproperlyConfigured` as the other invalid values. It is raised `from None`, so no URL fragment is chained into the traceback. — test: `src/config/tests/test_env.py` (both URLs in `test_an_unparseable_database_url_raises_improperly_configured`; the exception has no `__cause__` or `__context__` showing the value) — impl: `src/config/env.py` (`database_config`) — covers: AC1
+- [ ] 14. **Test change (deliberate, its own commit; review finding):** `.env.example` documents `DATABASE_URL` as a commented-out example (`# DATABASE_URL=sqlite:////app/data/db.sqlite3`), so a `.env` copied from it, passed with `docker run --env-file`, never overrides the image's value with a blank. `test_env_example.py` changes its rule: every variable is documented, either as `NAME=` or, for `DATABASE_URL` only, as a commented-out `# DATABASE_URL=` example, and `DATABASE_URL` must not be a live assignment. The comment-above rule still holds. — test: `src/config/tests/test_env_example.py` — impl: `.env.example` — covers: AC3, AC7
+- [ ] 15. Smoke script and docs for the documented run path:
+  - `scripts/docker-smoke.sh` gains a check that a container started with `--env-file` (a temporary file copied from `.env.example`, with the two keys filled in) becomes healthy, with its database on the volume.
+  - `home_page_is_served` captures the body before matching.
+  - The README, the `Dockerfile` header and `CLAUDE.md` show `-e DEBUG=False` and `-p 127.0.0.1:8000:8000` in the `--env-file` run command.
+  - They state that `ALLOWED_HOSTS` must keep `127.0.0.1` for the healthcheck (shown in the example), and that `HEALTHCHECK --start-interval` needs Docker 25 or newer.
+
+  Verified by running the smoke script end to end, with its output recorded in the commit body. — test: `src/config/tests/test_docker.py` (`SmokeScriptTests`: the script reads `.env.example`) — impl: `scripts/docker-smoke.sh`, `README.md`, `Dockerfile` (comments only), `CLAUDE.md` — covers: AC7, AC8, AC10, AC12
+- [ ] 16. `.dockerignore` excludes `.env` files at any depth (`**/.env`, `**/.env.*`). — test: `src/config/tests/test_docker.py` (`DockerignoreTests.EXCLUDED`) — impl: `.dockerignore` — covers: AC9
+- [ ] 17. **Test-only:** the build stage's `RUN` runs `tailwind build` before `collectstatic`, so the collected files include the CSS. The order is asserted. — test: `src/config/tests/test_docker.py` — impl: none expected — covers: AC6
