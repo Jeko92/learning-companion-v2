@@ -7,8 +7,8 @@ As the person running this AI factory, I want every push and pull request checke
 ## Acceptance criteria
 
 ### Workflow
-- [ ] AC1 A workflow in `.github/workflows/` runs on every `push` (any branch) and every `pull_request`. It cancels an older run of the same workflow and ref still in progress (`concurrency`), and its token is read-only (`permissions: contents: read`).
-- [ ] AC2 A `quality` job on `ubuntu-latest` with Python 3.14 (`actions/setup-python`, pip cache keyed on the requirements files) installs `requirements-dev.txt`, then runs, each as its own named step:
+- [x] AC1 A workflow in `.github/workflows/` runs on every `push` (any branch) and every `pull_request`. It cancels an older run of the same workflow and ref still in progress (`concurrency`), and its token is read-only (`permissions: contents: read`).
+- [x] AC2 A `quality` job on `ubuntu-latest` with Python 3.14 (`actions/setup-python`, pip cache keyed on the requirements files) installs `requirements-dev.txt`, then runs, each as its own named step:
   - `ruff check .`
   - `ruff format --check .`
   - `manage.py check`
@@ -16,28 +16,28 @@ As the person running this AI factory, I want every push and pull request checke
   - `manage.py test src`
 
   The two required keys are dummy values set in the workflow's `env`, never repository secrets: the tests never call the API. No `.env` file is created.
-- [ ] AC3 A separate `docker-smoke` job runs `scripts/docker-smoke.sh` on every push and PR, in parallel with `quality`, and fails the workflow if any smoke check fails.
-- [ ] AC4 Each job has a timeout, and actions are pinned to a major version (e.g. `@v7`), not a branch.
-- [ ] AC5 A Django test pins these facts by reading the workflow file: the triggers, the read-only permissions, Python 3.14, the five `quality` commands, the smoke job's script and the dummy keys (no `secrets.` reference). It uses no new dependency.
-- [ ] AC6 The workflow's first run on the ticket's PR is green for both jobs. `final-review` opens the PR, and `factory-manager` confirms the run with `gh pr checks` before the squash-merge.
+- [x] AC3 A separate `docker-smoke` job runs `scripts/docker-smoke.sh` on every push and PR, in parallel with `quality`, and fails the workflow if any smoke check fails.
+- [x] AC4 Each job has a timeout, and actions are pinned to a major version (e.g. `@v7`), not a branch.
+- [x] AC5 A Django test pins these facts by reading the workflow file: the triggers, the read-only permissions, Python 3.14, the five `quality` commands, the smoke job's script and the dummy keys (no `secrets.` reference). It uses no new dependency.
+- [ ] AC6 The workflow's first run on the ticket's PR is green for both jobs. `final-review` opens the PR, and `factory-manager` confirms the run with `gh pr checks` before the squash-merge. *(Open until the PR exists: CI can only run once final-review pushes the branch.)*
 
 ### Factory and gates
-- [ ] AC7 `REQUIRE_CHECKS` in `.claude/hooks/config.sh` is `"true"`, so a release PR (develop → main) with no, pending or failed checks is not merged (`guard-bash.sh` and the `release` skill already handle `"true"`). Ticket PRs keep today's rule: the user chose release PRs only for the hook.
-- [ ] AC8 `factory-manager`'s close-out reads `gh pr checks` by exit code:
+- [x] AC7 `REQUIRE_CHECKS` in `.claude/hooks/config.sh` is `"true"`, so a release PR (develop → main) with no, pending or failed checks is not merged (`guard-bash.sh` and the `release` skill already handle `"true"`). Ticket PRs keep today's rule: the user chose release PRs only for the hook.
+- [x] AC8 `factory-manager`'s close-out reads `gh pr checks` by exit code:
   - `0`: merge.
   - `8` (pending), or `1` with "no checks reported" (the run hasn't registered yet): wait and stop, so a later call retries.
   - `1` with a failed check: report and stop.
 
   This is a skill text change, verified by reading.
-- [ ] AC9 GitHub branch protection requires the two CI checks (`quality` and `docker-smoke`):
+- [x] AC9 GitHub branch protection requires the two CI checks (`quality` and `docker-smoke`):
   - On `main`, they are added to the existing protection, and its PR-review and admin-enforcement settings are kept.
   - On `develop`, a protection is created that requires the two checks on PRs, but still lets the `release` skill push its `chore(release): merge main into develop` commit directly. That means no required PR reviews, and checks enforced in a way that lets the owner push that commit (exact setting chosen in the plan).
 
   It is applied with `gh api` only after the user confirms in that session. A `gh api` read-back afterwards is recorded in `review.md`. The next release must still complete.
 
 ### Docs
-- [ ] AC10 `README.md` shows a CI status badge for the workflow (on `main`) at the top, and a short "CI" section listing what runs.
-- [ ] AC11 `CLAUDE.md` (Stack/Commands/Workflow) and `.claude/rules/git.md` describe:
+- [x] AC10 `README.md` shows a CI status badge for the workflow (on `main`) at the top, and a short "CI" section listing what runs.
+- [x] AC11 `CLAUDE.md` (Stack/Commands/Workflow) and `.claude/rules/git.md` describe:
   - the workflow and its two jobs;
   - `REQUIRE_CHECKS="true"`;
   - the `gh pr checks` exit-code handling;
