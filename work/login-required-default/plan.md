@@ -38,7 +38,7 @@
   - (b) every non-admin route outside the allow-list redirects an anonymous GET to `/accounts/login/?next=<path>` (`int` converters filled with `1`; a converter the walker can't fill fails the test, so a new kind gets handled on purpose).
   A guard test, green on arrival; confirm it bites the same way as in step 6. — test: `src/core/tests/test_login_required.py` — impl: none — covers: AC10, AC6, AC11
 - [x] 8. Admin under the middleware: anonymous `/admin/` → `/admin/login/?next=/admin/`, anonymous `/admin/goals/goal/` → `/accounts/login/?next=/admin/goals/goal/`, anonymous `/admin/login/` → 200. A characterization test, green on arrival. — test: `src/core/tests/test_login_required.py` — impl: none — covers: AC9
-- [ ] 9. Docs. Markdown only, no test:
+- [x] 9. Docs. Markdown only, no test:
   - `CLAUDE.md`'s Auth section (middleware, public views, how to exempt a class-based view through `dispatch`, the walker's allow-list rule, the admin redirects);
   - its favicon note ("must mark it" → "marked");
   - Dashboard/Layout mentions where needed;
