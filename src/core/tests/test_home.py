@@ -94,7 +94,8 @@ class HomePageTests(TestCase):
 
     def test_logged_in_visitors_get_the_same_home_page_not_a_redirect(self):
         # dashboard-status sends log-in and sign-up to the dashboard, but "/"
-        # stays the public home page for everyone.
+        # stays the public home page for everyone. ui-polish gives each visitor
+        # their own call to action, so only the shared content is compared.
         anonymous_main = self.get_page().text("main")
         user = get_user_model().objects.create_user("alice")
         self.client.force_login(user)
@@ -103,7 +104,11 @@ class HomePageTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "home.html")
-        self.assertEqual(self.get_page().text("main"), anonymous_main)
+        logged_in_main = self.get_page().text("main")
+        for shared in ("Learning Companion", PITCH):
+            with self.subTest(shared=shared):
+                self.assertIn(shared, anonymous_main)
+                self.assertIn(shared, logged_in_main)
 
     def test_layout_has_a_footer(self):
         page = self.get_page()
