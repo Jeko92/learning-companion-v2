@@ -1,49 +1,57 @@
 # Review: docker
 
-## Verdict: FAIL
+## Verdict: PASS
 
-Two confirmed defects block the ticket.
+This is a re-review after the FAIL of 2026-10-04 (base `b9c6c6a`, the `docs(docker): review findings` commit), covering plan steps 13–17. All earlier findings are resolved.
+- The `DATABASE_URL` parse error no longer quotes the URL.
+- `.env.example` no longer blanks out the image's `DATABASE_URL` through `--env-file`, and the smoke script now runs the image that way.
+- The run commands keep `DEBUG` off and publish on `127.0.0.1`.
+- The healthcheck's `ALLOWED_HOSTS` requirement and the Docker 25 requirement are documented.
+- `.env` files at any depth stay out of the image.
+- The build order is asserted.
 
-1. **`DATABASE_URL` leaks part of the URL (AC1).** A malformed URL makes django-environ raise a raw `ValueError` that echoes part of the URL, a password fragment included. AC1 requires a fixed `ImproperlyConfigured` naming the variable.
-2. **The documented run command fails.** `.env.example`'s blank `DATABASE_URL=` line, copied into `.env` and passed with `docker run --env-file .env`, overrides the image's `DATABASE_URL`. The container then can't start (AC7/AC12).
-
-The healthcheck also goes unhealthy with the custom `ALLOWED_HOSTS` the README suggests. The image itself, the static file serving and the smoke check work: the suite is green, a no-cache build succeeds, and the smoke script passes all 13 checks. The findings below are new plan steps 13–17.
+The security re-review found nothing. The code re-review left three low findings, which don't block. Suite: 574 tests OK. Lint is clean, there are no migrations, and the smoke script passes all 17 checks.
 
 ## Acceptance criteria
-- AC1: `config.tests.test_env` (`test_database_*`, `test_an_unparseable_database_url_raises_improperly_configured`) and `config.tests.test_settings` (`test_the_database_comes_from_database_url`, `test_a_blank_database_url_keeps_the_sqlite_file_in_src`). **FAIL**: `postgres://u:pw@host:abc/db` and `postgres://u:pa/ss@db/x` raise `ValueError: Port could not be cast to integer value as 'abc'` / `'pa'`, reproduced in the main session. That is not the fixed `ImproperlyConfigured`, and the second leaks part of the password.
+- AC1: covered by `config.tests.test_env` (`test_database_*`, and `test_an_unparseable_database_url_raises_improperly_configured`, which now includes a non-integer port and a password with an unencoded `/`, and asserts no `__cause__` and a suppressed context) and `config.tests.test_settings` (`test_the_database_comes_from_database_url`, `test_a_blank_database_url_keeps_the_sqlite_file_in_src`). Both reviewers traced django-environ's `db_url_config`: every path that can quote the URL raises a `ValueError` or a subclass, and that is now dropped. PASS
 - AC2: covered by `test_env` (`test_csrf_trusted_origins_*`, `test_a_csrf_trusted_origin_without_http_or_https_raises`) and `test_settings` (`test_csrf_trusted_origins_*`). PASS
-- AC3: covered by `config.tests.test_env_example`. PASS for the criterion as written, but its blank `DATABASE_URL=` line breaks the container (finding 2).
-- AC4: covered by `test_settings.StaticFilesSettingsTests` and `config.tests.test_static_files` (gzip served after `collectstatic`, plain names, no missing-directory warning). The filter was proven by mutation: removing it turns `MissingStaticRootTests` red. PASS
+- AC3: covered by `config.tests.test_env_example`. `DATABASE_URL` is now a commented-out example (`COMMENTED_EXAMPLES`, `test_database_url_is_only_a_commented_out_example`); the code reviewer judged that narrowing fair. PASS
+- AC4: covered by `test_settings.StaticFilesSettingsTests` and `config.tests.test_static_files`. PASS
 - AC5: covered by `config.tests.test_docker.RequirementsTests`. PASS
-- AC6: covered by `DockerfileTests`. A `docker build --no-cache` from `6fd012b` succeeded (the Tailwind binary downloaded and the CSS built).
-  - The final image's `Config.Env` and `docker history` contain neither `SECRET_KEY` nor `OPENAI_API_KEY`.
-  - The user is `app`, the volume is `/app/data` (owned by `app`), and `/app/src` is root-owned.
-  - `src/staticfiles` holds `css/tailwind.css` and `.gz` copies. The image is 359 MB.
+- AC6: covered by `DockerfileTests`, now including the build order, which was proven by a temporary mutation that swapped `tailwind build` and `collectstatic` and turned the test red. The first review's no-cache build and image inspection still apply: no key in the image config or history, `app` user, `/app/data` owned by `app`, root-owned `/app/src`, and compressed static files. Only comments changed in the `Dockerfile` since. PASS
+- AC7: covered by `EntrypointTests` and the smoke checks: healthy after migrate, missing `SECRET_KEY` exits non-zero and names it, `docker stop` exits 0, and now a container started with `--env-file` (a `.env` built from `.env.example`) becomes healthy.
+  - Regression check in the main session: the same image started with an env file containing a blank `DATABASE_URL=` exits 1 with `sqlite3.OperationalError: unable to open database file`. The new smoke check would therefore have caught the original defect.
 
   PASS
-- AC7: covered by `EntrypointTests` and the smoke checks (healthy after migrate, missing `SECRET_KEY` exits non-zero and names it, `docker stop` exits 0). **FAIL** on the documented `--env-file .env` path (finding 2).
-- AC8: covered by `DockerfileTests.test_the_healthcheck_requests_the_favicon_with_python` and the smoke script's wait for healthy. PASS as specified; see finding 3 for custom `ALLOWED_HOSTS`.
-- AC9: covered by `DockerignoreTests`. PASS (finding 4 widens it).
-- AC10: `scripts/docker-smoke.sh` passed all 13 checks in the main session on `6fd012b` and left no container, volume or image behind. PASS
-- AC11: the suite runs 572 tests OK, without Docker and without the WhiteNoise warning. Lint is clean, there are no migrations, and the default database dict is unchanged (`test_a_blank_database_url_keeps_the_sqlite_file_in_src`). PASS
-- AC12: `README.md` "Run with Docker" and `CLAUDE.md` updated. **FAIL** in substance: the first documented command fails with a `.env` made from `.env.example`, it can carry `DEBUG=True`, and the `ALLOWED_HOSTS` advice breaks the healthcheck (findings 2, 3, 5).
+- AC8: covered by `DockerfileTests.test_the_healthcheck_requests_the_favicon_with_python` and the smoke script's waits for healthy. The `127.0.0.1` requirement for a custom `ALLOWED_HOSTS` is documented in the README, the `Dockerfile` comment and `CLAUDE.md`. PASS
+- AC9: covered by `DockerignoreTests`, now including `**/.env` and `**/.env.*`. A throwaway build in the main session confirmed that the root `.env`, `src/.env`, `.env.local` and `.env.example` are excluded while other files are kept. PASS
+- AC10: `scripts/docker-smoke.sh` passed all 17 checks on `5e7db29` and left no container, volume or image behind. The new checks cover the `.env.example`/`--env-file` path, `-e DEBUG=False` beating `DEBUG=True`, and log-in on the shared volume. PASS
+- AC11: the suite runs 574 tests OK without Docker and without the WhiteNoise warning. Lint is clean, there are no migrations, and the default database is unchanged. PASS
+- AC12: the README "Run with Docker" section and `CLAUDE.md` now document:
+  - the safe run command (`-e DEBUG=False`, `-p 127.0.0.1:8000:8000`);
+  - why `DATABASE_URL` is commented out;
+  - the healthcheck's `127.0.0.1` requirement and the Docker 25 requirement.
+
+  PASS
 
 ## Findings
-- [medium] `src/config/env.py` (`database_config`): `env.db_url_config()` raises `ValueError` for a non-integer port, including a password containing an unencoded `/`, `#` or `?`. The message echoes part of the URL, which breaks AC1's fixed message and its never-echo guarantee; it would show up in the container's start-up traceback and logs. Recommendation: catch the parse error and raise the fixed `ImproperlyConfigured … from None`, with both URLs as test cases. Plan step 13.
-- [medium] `.env.example` and the documented `docker run --env-file .env`: a `.env` copied from `.env.example` carries `DATABASE_URL=` (blank). A blank `--env-file` line overrides the image's `ENV DATABASE_URL` (verified with `docker run --env-file`), so the app falls back to `/app/src/db.sqlite3` in a root-owned directory, and `migrate` fails. Recommendation:
-  - document `DATABASE_URL` in `.env.example` as a commented-out example (a deliberate change to `test_env_example.py`'s rule for optional variables);
-  - add a smoke check that runs the image with an env file made from `.env.example`.
+Previous findings (review of `6fd012b`), all resolved:
+- [medium] `DATABASE_URL` `ValueError` leak: resolved by step 13.
+- [medium] blank `DATABASE_URL` in `.env.example` overriding the image through `--env-file`: resolved by steps 14 and 15.
+- [medium] healthcheck with a custom `ALLOWED_HOSTS`: resolved by documentation in step 15.
+- [low] nested `.env` files in the build context: resolved by step 16.
+- [low] `DEBUG=True` and the port on all interfaces in the run commands: resolved by step 15.
+- [low] build order not asserted: resolved by step 17.
+- [low] `curl | grep` under `pipefail`: resolved by step 15.
+- [low] Docker 25 requirement undocumented: resolved by step 15.
+- [low] a single gunicorn worker by default: accepted earlier as a design choice (`WEB_CONCURRENCY`).
+- [info, for #36] `SECURE_PROXY_SSL_HEADER` and gunicorn `--forwarded-allow-ips` behind an HTTPS proxy: still for #36.
 
-  Plan steps 14 and 15.
-- [medium] `Dockerfile` `HEALTHCHECK` with README's `-e ALLOWED_HOSTS=...`: the check sends `Host: 127.0.0.1`. If `ALLOWED_HOSTS` leaves it out, Django answers 400 and the container stays unhealthy for good. Recommendation: document that `ALLOWED_HOSTS` must keep `127.0.0.1` (show it in the example), in the README, the Dockerfile comment and `CLAUDE.md`. Plan step 15.
-- [low] `.dockerignore`: `.env` only matches the root file, but `.gitignore` ignores `.env` at any depth, so a nested `src/.env` or a `.env.local` would reach the image through `COPY src/ src/`. Recommendation: `**/.env` and `**/.env.*`. Plan step 16.
-- [low] README, Dockerfile header and `CLAUDE.md` run commands: `--env-file .env` from `.env.example` carries `DEBUG=True`, and `-p 8000:8000` publishes on every interface, so debug pages are reachable from the LAN. Recommendation: show `-e DEBUG=False` (which beats `--env-file`) and `-p 127.0.0.1:8000:8000` in the documented commands. Plan step 15.
-- [low] `src/config/tests/test_docker.py` (`test_the_build_stage_installs_requirements_builds_css_and_collects`): swapping `tailwind build` and `collectstatic`, which would collect without the CSS, still passes. Recommendation: assert the order. Plan step 17.
-- [low] `scripts/docker-smoke.sh` (`home_page_is_served`): `curl … | grep -q` under `pipefail` can fail spuriously if `grep` exits before curl has finished writing. Recommendation: capture the body first. Plan step 15.
-- [low] `Dockerfile`: `HEALTHCHECK --start-interval` needs Docker Engine 25 or newer. Recommendation: say so in the README. Plan step 15.
-- [low] `Dockerfile` `CMD`: a single sync worker by default, so one slow AI call blocks every other request. `WEB_CONCURRENCY` is documented. Accepted as a design choice, no action.
-- [info, for #36] Behind an HTTPS proxy the README relies on `CSRF_TRUSTED_ORIGINS`. #36 should set `SECURE_PROXY_SSL_HEADER` (and gunicorn's `--forwarded-allow-ips`), and may reject `http://` origins once HTTPS is required. Wildcards like `https://*.example` pass the scheme check, which is Django's own behaviour.
-- Security review: high 0, medium 0, low 2 (the `ValueError` leak and the `DEBUG` run command, both above), info 3 (the nested `.env`, the blank `DATABASE_URL` and the #36 note, all above).
+New (all low, non-blocking):
+- [low] `scripts/docker-smoke.sh` (`debug_is_off`): it passes for any body without "URLconf", so an empty or non-404 reply would pass too. It is called right after the container reports healthy, on the port read back from that container, so a 404 page is what comes back. Recommendation: when the script next changes, also assert the 404 status and a non-empty body. No action now.
+- [low] `src/config/tests/test_docker.py` (`test_the_smoke_script_runs_the_image_with_an_env_file_from_the_example`): it is a presence check of two substrings, which is acceptable because the script itself can't run in the suite. No action.
+- [low] `src/config/tests/test_env_example.py`: the commented example's value is pinned to an exact string, deliberately. No action.
+- Security re-review: no findings (high 0, medium 0, low 0, info 0). The temporary env file lives in the `mktemp -d` directory and is removed by the `EXIT` trap, and `check()` prints only check names.
 
 ## Reviewed
-commit 6fd012b, 2026-10-04 (base 09e62ed)
+commit 5e7db29, 2026-10-04 (base b9c6c6a, re-review)
