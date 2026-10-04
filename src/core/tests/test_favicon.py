@@ -64,3 +64,25 @@ class FaviconLinkTests(AllPagesMixin, TestCase):
             ico_sizes((ASSETS / "favicon.ico").read_bytes()),
             [(16, 16), (32, 32), (48, 48)],
         )
+
+
+class FaviconRouteTests(TestCase):
+    """Browsers and tools that ask for /favicon.ico get the real icon."""
+
+    def test_favicon_ico_serves_the_committed_icon_to_anyone(self):
+        response = self.client.get("/favicon.ico")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            response["Content-Type"], ("image/x-icon", "image/vnd.microsoft.icon")
+        )
+        self.assertEqual(
+            b"".join(response.streaming_content),
+            (ASSETS / "favicon.ico").read_bytes(),
+        )
+
+    def test_favicon_ico_may_be_cached_for_a_day(self):
+        response = self.client.get("/favicon.ico")
+
+        self.assertIn("max-age=86400", response["Cache-Control"])
+        self.assertIn("public", response["Cache-Control"])
