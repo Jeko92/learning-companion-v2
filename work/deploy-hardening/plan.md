@@ -200,7 +200,7 @@
   - Test: `src/accounts/tests/test_lockout.py` (`LockoutTests`)
   - Impl: `settings.py`
   - Covers: AC2, AC5, AC9
-- [ ] 14. The lockout applies only to the same username + IP.
+- [x] 14. The lockout applies only to the same username + IP.
   - Behaviour: after alice is locked out from `127.0.0.1`, alice logs in from `REMOTE_ADDR="10.0.0.2"`, and bob logs in from `127.0.0.1`.
   - `AXES_LOCKOUT_PARAMETERS` is pinned.
   - Test: `src/accounts/tests/test_lockout.py`

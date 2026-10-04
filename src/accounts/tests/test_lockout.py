@@ -23,7 +23,7 @@ class LockoutTestCase(TestCase):
             REMOTE_ADDR=ip,
         )
 
-    def fail(self, times, username=USERNAME, ip="127.0.0.1"):
+    def fail_log_ins(self, times, username=USERNAME, ip="127.0.0.1"):
         return [self.log_in(username, WRONG_PASSWORD, ip) for _ in range(times)]
 
     def assert_logged_out(self):
@@ -81,7 +81,7 @@ class LockoutTests(LockoutTestCase):
         # the two cases apart.
         for username, ip in ((USERNAME, "10.0.0.1"), ("nobody", "10.0.0.9")):
             with self.subTest(username=username):
-                first_four = self.fail(4, username, ip)
+                first_four = self.fail_log_ins(4, username, ip)
                 for response in first_four:
                     self.assertEqual(response.status_code, 200)
                     page = PageParser()
@@ -89,9 +89,30 @@ class LockoutTests(LockoutTestCase):
                     self.assertIn(INVALID_LOGIN, page.text("main"))
 
                 # django-axes refuses the 5th failure itself.
-                (fifth,) = self.fail(1, username, ip)
+                (fifth,) = self.fail_log_ins(1, username, ip)
                 sixth = self.log_in(username, PASSWORD, ip)
 
                 self.assertEqual(fifth.status_code, 429)
                 self.assertEqual(sixth.status_code, 429)
                 self.assert_logged_out()
+
+    def test_the_lockout_is_per_username_and_ip_address(self):
+        self.assertEqual(
+            getattr(settings, "AXES_LOCKOUT_PARAMETERS", None),
+            [["username", "ip_address"]],
+        )
+
+    def test_a_locked_out_username_can_still_log_in_from_another_ip(self):
+        self.fail_log_ins(5, USERNAME, "127.0.0.1")
+
+        response = self.log_in(USERNAME, PASSWORD, "10.0.0.2")
+
+        self.assertRedirects(response, "/dashboard/", fetch_redirect_response=False)
+
+    def test_another_username_can_still_log_in_from_a_locked_out_ip(self):
+        get_user_model().objects.create_user("bob", password=PASSWORD)
+        self.fail_log_ins(5, USERNAME, "127.0.0.1")
+
+        response = self.log_in("bob", PASSWORD, "127.0.0.1")
+
+        self.assertRedirects(response, "/dashboard/", fetch_redirect_response=False)

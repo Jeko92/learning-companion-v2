@@ -165,6 +165,11 @@ AUTHENTICATION_BACKENDS = [
 # The 5th failure is refused with the lockout page, and so is every attempt
 # after it, even with the right password.
 AXES_FAILURE_LIMIT = 5
+# Counted per username and IP address together, so an attacker elsewhere can't
+# lock a user out, nor one username lock out everyone behind an IP. Without
+# django-ipware the IP is REMOTE_ADDR: behind a reverse proxy every client
+# shares the proxy's, and the lockout is in effect per username.
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
 
 
 # Password validation
