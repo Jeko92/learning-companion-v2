@@ -172,7 +172,7 @@
   - Test: `src/config/tests/test_deploy_check.py`
   - Impl: `src/config/settings.py` (`SILENCED_SYSTEM_CHECKS` with a comment)
   - Covers: AC18
-- [ ] 10. `.env.example` documents the five new variables as commented-out examples, each with a comment line above it. `VARIABLES` and `COMMENTED_EXAMPLES` are extended, and a test pins each example line.
+- [x] 10. `.env.example` documents the five new variables as commented-out examples, each with a comment line above it. `VARIABLES` and `COMMENTED_EXAMPLES` are extended, and a test pins each example line.
   - Test: `src/config/tests/test_env_example.py`
   - Impl: `.env.example`
   - Covers: AC15
