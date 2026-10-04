@@ -85,3 +85,4 @@ As someone running Learning Companion, I want to build one container image and s
 - New settings follow the existing env pattern: an `EnvSettings` field in `config/env.py`, tests in `test_env.py` (`environ()` helper) and `test_settings.py` (`PATCHED_ENVIRON`), and the variable list in `test_env_example.py`.
 - Handout: `instructions/challenge.md` → "Containerize and add CI": "Write a `Dockerfile` for the app using the framework's common base image and startup command, and confirm `docker build` + `docker run` serves the app."
 - Docker 29.8 is available locally for the smoke check.
+- **Approval:** the user approved the acceptance criteria (AC1–AC12) on 2026-10-04.
