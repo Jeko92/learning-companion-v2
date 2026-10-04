@@ -22,6 +22,22 @@ class EnvSettings:
     openai_model: str
     # None when DATABASE_URL is unset or blank: settings.py keeps its default.
     database: dict | None
+    csrf_trusted_origins: list[str]
+
+
+def trimmed_list(env: django_environ.Env, name: str, default: list[str]) -> list[str]:
+    """A comma-separated list, each entry trimmed, empty entries dropped."""
+    return [entry.strip() for entry in env.list(name, default=default) if entry.strip()]
+
+
+def csrf_trusted_origins(env: django_environ.Env) -> list[str]:
+    origins = trimmed_list(env, "CSRF_TRUSTED_ORIGINS", default=[])
+    if not all(origin.startswith(("http://", "https://")) for origin in origins):
+        raise ImproperlyConfigured(
+            "The CSRF_TRUSTED_ORIGINS environment variable must list "
+            "origins that start with http:// or https://"
+        )
+    return origins
 
 
 def database_config(env: django_environ.Env) -> dict | None:
@@ -65,14 +81,11 @@ def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
     return EnvSettings(
         secret_key=required_raw(Env.ENVIRON, "SECRET_KEY"),
         debug=env.bool("DEBUG", default=False),
-        allowed_hosts=[
-            host.strip()
-            for host in env.list("ALLOWED_HOSTS", default=DEFAULT_ALLOWED_HOSTS)
-            if host.strip()
-        ],
+        allowed_hosts=trimmed_list(env, "ALLOWED_HOSTS", default=DEFAULT_ALLOWED_HOSTS),
         openai_api_key=required_raw(Env.ENVIRON, "OPENAI_API_KEY"),
         # Set but blank means the default, like unset.
         openai_model=Env.ENVIRON.get("OPENAI_MODEL", "").strip()
         or DEFAULT_OPENAI_MODEL,
         database=database_config(env),
+        csrf_trusted_origins=csrf_trusted_origins(env),
     )

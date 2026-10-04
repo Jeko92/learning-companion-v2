@@ -213,6 +213,53 @@ class ResolveSettingsTests(SimpleTestCase):
                 )
                 self.assertEqual(caught, [])
 
+    def test_csrf_trusted_origins_is_a_trimmed_comma_separated_list(self):
+        cases = {
+            "https://a.example, http://b.example:8000": [
+                "https://a.example",
+                "http://b.example:8000",
+            ],
+            " , https://a.example,,": ["https://a.example"],
+            "": [],
+        }
+        for raw, expected in cases.items():
+            with self.subTest(CSRF_TRUSTED_ORIGINS=raw):
+                settings = self.resolve(
+                    environ(SECRET_KEY="x", CSRF_TRUSTED_ORIGINS=raw)
+                )
+
+                self.assertEqual(settings.csrf_trusted_origins, expected)
+
+    def test_csrf_trusted_origins_defaults_to_an_empty_list(self):
+        settings = self.resolve(environ(SECRET_KEY="x"))
+
+        self.assertEqual(settings.csrf_trusted_origins, [])
+
+    def test_csrf_trusted_origins_from_environment_wins_over_env_file(self):
+        env_file = self.write_env_file("CSRF_TRUSTED_ORIGINS=https://file.example\n")
+
+        from_file = self.resolve(environ(SECRET_KEY="x"), env_file)
+        from_env = self.resolve(
+            environ(SECRET_KEY="x", CSRF_TRUSTED_ORIGINS="https://env.example"),
+            env_file,
+        )
+
+        self.assertEqual(from_file.csrf_trusted_origins, ["https://file.example"])
+        self.assertEqual(from_env.csrf_trusted_origins, ["https://env.example"])
+
+    def test_a_csrf_trusted_origin_without_http_or_https_raises(self):
+        for raw in ("example.com", "https://ok.example, ftp://files.example"):
+            with self.subTest(CSRF_TRUSTED_ORIGINS=raw):
+                with self.assertRaises(ImproperlyConfigured) as raised:
+                    self.resolve(environ(SECRET_KEY="x", CSRF_TRUSTED_ORIGINS=raw))
+
+                # A fixed message: it names the variable, never the value.
+                self.assertEqual(
+                    str(raised.exception),
+                    "The CSRF_TRUSTED_ORIGINS environment variable must list "
+                    "origins that start with http:// or https://",
+                )
+
     def test_values_come_from_env_file(self):
         env_file = self.write_env_file(
             "SECRET_KEY=from-file\nDEBUG=True\nALLOWED_HOSTS=example.com\n"
