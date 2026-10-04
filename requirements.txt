@@ -2,3 +2,5 @@ Django>=6.1,<6.2
 django-environ>=0.14,<0.15
 django-tailwind-cli>=4.8,<4.9
 openai>=3.24,<3.25
+gunicorn>=26.2,<27
+whitenoise>=6.12,<7
