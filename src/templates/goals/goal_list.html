@@ -24,6 +24,7 @@
       {% endfor %}
     </div>
   </nav>
+  {% if goal_list %}
   <ul class="space-y-3">
     {% for goal in goal_list %}
       <li class="card card-border bg-base-100">
@@ -32,9 +33,13 @@
           {% include "components/_status_badge.html" %}
         </div>
       </li>
-    {% empty %}
-      <li>{% if active_status and has_goals %}No goals with this status.{% else %}No goals yet.{% endif %}</li>
     {% endfor %}
   </ul>
+  {% elif active_status and has_goals %}
+    {% include "components/_empty_state.html" with text="No goals with this status." empty_icon="flag" %}
+  {% else %}
+    {% url 'goals:create' as new_goal_url %}
+    {% include "components/_empty_state.html" with text="No goals yet." cta_url=new_goal_url cta_label="New goal" empty_icon="flag" %}
+  {% endif %}
   {% include "components/_pagination.html" %}
 {% endblock %}

@@ -28,7 +28,7 @@
       <p class="mt-2">{{ goal.summary|linebreaksbr }}</p>
       <p class="mt-1 text-sm text-slate-500">Generated {{ goal.summary_generated_at|date:"j M Y, H:i" }}</p>
     {% else %}
-      <p class="mt-2 text-slate-500">No summary yet.</p>
+      <div class="mt-2">{% include "components/_empty_state.html" with text="No summary yet." empty_icon="sparkles" %}</div>
     {% endif %}
     <form method="post" action="{% url 'goals:summary' goal.pk %}" class="mt-4">
       {% csrf_token %}
@@ -45,7 +45,7 @@
       </ol>
       <p class="mt-1 text-sm text-slate-500">Suggested {{ goal.next_steps_generated_at|date:"j M Y, H:i" }}</p>
     {% else %}
-      <p class="mt-2 text-slate-500">No next steps yet.</p>
+      <div class="mt-2">{% include "components/_empty_state.html" with text="No next steps yet." empty_icon="sparkles" %}</div>
     {% endif %}
     <form method="post" action="{% url 'goals:next_steps' goal.pk %}" class="mt-4">
       {% csrf_token %}
@@ -59,13 +59,16 @@
       <a href="{% url 'learning_sessions:create' goal.pk %}" class="font-medium hover:underline">Add session</a>
       <a href="{% url 'learning_sessions:list' goal.pk %}" class="hover:underline">All sessions</a>
     </div>
-    <ul class="mt-4 space-y-3">
-      {% for session in recent_sessions %}
-        {% include "learning_sessions/_session_item.html" %}
-      {% empty %}
-        <li>No sessions yet.</li>
-      {% endfor %}
-    </ul>
+    {% if recent_sessions %}
+      <ul class="mt-4 space-y-3">
+        {% for session in recent_sessions %}
+          {% include "learning_sessions/_session_item.html" %}
+        {% endfor %}
+      </ul>
+    {% else %}
+      {% url 'learning_sessions:create' goal.pk as add_session_url %}
+      <div class="mt-4">{% include "components/_empty_state.html" with text="No sessions yet." cta_url=add_session_url cta_label="Add session" empty_icon="clock" %}</div>
+    {% endif %}
   </section>
   <section class="mt-10" aria-labelledby="resources-heading">
     <h2 id="resources-heading" class="text-lg font-semibold">Resources</h2>
@@ -80,7 +83,7 @@
         {% endfor %}
       </ul>
     {% empty %}
-      <p class="mt-4">No resources yet.</p>
+      <div class="mt-4">{% include "components/_empty_state.html" with text="No resources yet." empty_icon="link" %}</div>
     {% endfor %}
     <form method="post" action="{% url 'resources:create' goal.pk %}" class="mt-6">
       {% csrf_token %}

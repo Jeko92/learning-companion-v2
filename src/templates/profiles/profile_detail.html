@@ -25,7 +25,8 @@
               {% if focus_areas %}
                 {% include "components/_tag_list.html" with tags=focus_areas label="Focus areas" %}
               {% else %}
-                <p>No focus areas yet.</p>
+                {% url 'profiles:edit' profile.pk as edit_profile_url %}
+                {% include "components/_empty_state.html" with text="No focus areas yet." cta_url=edit_profile_url cta_label="Edit profile" empty_icon="tag" %}
               {% endif %}
             {% endwith %}
           </dd>

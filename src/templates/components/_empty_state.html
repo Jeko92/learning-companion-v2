@@ -1,0 +1,12 @@
+{% comment %}
+  An empty list or section: the text as before, plus the next action if there is one.
+  {% url 'goals:create' as new_goal_url %}
+  {% include "components/_empty_state.html" with text="No goals yet." cta_url=new_goal_url cta_label="New goal" empty_icon="flag" %}
+  Keep it one <div> with no nested <div>s: core/tests/test_empty_states.py reads
+  each block with a regex. The text must stay word for word (page tests pin it).
+{% endcomment %}
+<div data-empty-state class="flex flex-col items-center gap-3 rounded-box border border-dashed border-base-300 bg-base-100 px-4 py-8 text-center">
+  {% include "components/_icon.html" with icon=empty_icon|default:"inbox" icon_class="size-8 text-base-content/60" %}
+  <p class="text-base-content/80">{{ text }}</p>
+  {% if cta_url %}<a href="{{ cta_url }}" class="btn btn-primary btn-sm">{{ cta_label }}</a>{% endif %}
+</div>
