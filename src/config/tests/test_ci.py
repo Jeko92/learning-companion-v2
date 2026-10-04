@@ -13,6 +13,9 @@ from django.test import SimpleTestCase
 
 ROOT = settings.BASE_DIR.parent
 WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
+# No step needs git auth, so the job token isn't left in .git/config for the
+# later steps (the PR's own test code, the smoke script) to read.
+CHECKOUT = {"uses": "actions/checkout@v7", "with": "", "persist-credentials": "false"}
 
 
 def blocks(lines, indent):
@@ -111,7 +114,7 @@ class QualityJobTests(WorkflowTestCase):
         self.assertRegex(self.settings["timeout-minutes"][0], r"^timeout-minutes: \d+$")
 
     def test_it_checks_out_and_sets_up_python_3_14_with_a_pip_cache(self):
-        self.assertEqual(self.steps[0], {"uses": "actions/checkout@v7"})
+        self.assertEqual(self.steps[0], CHECKOUT)
         self.assertEqual(
             self.steps[1],
             {
@@ -160,7 +163,7 @@ class DockerSmokeJobTests(WorkflowTestCase):
         self.assertEqual(
             steps(self.job("docker-smoke")),
             [
-                {"uses": "actions/checkout@v7"},
+                CHECKOUT,
                 {"name": "Build and check the image", "run": "scripts/docker-smoke.sh"},
             ],
         )
