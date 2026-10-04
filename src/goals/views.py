@@ -44,8 +44,10 @@ class OwnGoalsMixin(LoginRequiredMixin):
 
 
 class GoalListView(OwnGoalsMixin, ListView):
+    """The goal board: a column per status (just one for a ?status= filter),
+    each newest first. Not paginated: a board shows every goal."""
+
     template_name = "goals/goal_list.html"
-    paginate_by = 20
 
     def active_status(self):
         """The status to filter by, or "" (All) for a missing or unknown one."""
@@ -62,6 +64,13 @@ class GoalListView(OwnGoalsMixin, ListView):
         context = super().get_context_data(**kwargs)
         context["active_status"] = self.active_status()
         context["statuses"] = Goal.Status.choices
+        # (value, label, goals) per shown column, from the one list query.
+        goals = list(context["object_list"])
+        context["columns"] = [
+            (value, label, [g for g in goals if g.status == value])
+            for value, label in Goal.Status.choices
+            if value == self.active_status() or not self.active_status()
+        ]
         # Before filtering: tells "filter hides everything" from "no goals".
         context["has_goals"] = super().get_queryset().exists()
         return context

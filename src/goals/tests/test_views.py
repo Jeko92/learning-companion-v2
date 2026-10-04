@@ -59,7 +59,11 @@ class GoalListTests(TestCase):
         )
 
     def test_lists_only_your_goals_newest_first_with_status(self):
-        older = Goal.objects.create(owner=self.alice, title="Read docs")
+        # Same status: the board orders each column newest first
+        # (test_board.py covers the columns).
+        older = Goal.objects.create(
+            owner=self.alice, title="Read docs", status=Goal.Status.IN_PROGRESS
+        )
         Goal.objects.filter(pk=older.pk).update(
             created_at=datetime(2026, 1, 1, tzinfo=UTC)
         )
@@ -253,39 +257,6 @@ class GoalCreateCsrfTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(Goal.objects.exists())
-
-
-class GoalListPaginationTests(TestCase):
-    def setUp(self):
-        User = get_user_model()
-        alice = User.objects.create_user("alice", password=PASSWORD)
-        bob = User.objects.create_user("bob")
-        for n in range(1, 22):  # g01 (oldest) .. g21 (newest)
-            goal = Goal.objects.create(owner=alice, title=f"g{n:02}")
-            Goal.objects.filter(pk=goal.pk).update(
-                created_at=datetime(2026, 1, n, tzinfo=UTC)
-            )
-        for n in range(30):
-            Goal.objects.create(owner=bob, title=f"bob-{n}")
-        self.client.force_login(alice)
-
-    def titles(self, page):
-        # Only the seeded titles ("g01".."g21", "bob-N"), not words like "goals".
-        return re.findall(r"\b(?:g\d\d|bob-\d+)\b", page.text("main"))
-
-    def test_twenty_goals_per_page_counting_only_yours(self):
-        first = get_page(self.client, "/goals/")
-        second = get_page(self.client, "/goals/?page=2")
-
-        self.assertEqual(self.titles(first), [f"g{n:02}" for n in range(21, 1, -1)])
-        self.assertEqual(self.titles(second), ["g01"])
-        self.assertIn(("?page=2", "Next"), first.links("main"))
-        self.assertNotIn("Previous", first.text("main"))
-        self.assertIn(("?page=1", "Previous"), second.links("main"))
-        self.assertNotIn("Next", second.text("main"))
-
-    def test_an_out_of_range_page_is_not_found(self):
-        self.assertEqual(self.client.get("/goals/?page=99").status_code, 404)
 
 
 class GoalDetailTests(TestCase):
@@ -721,46 +692,16 @@ class GoalStatusFilterTests(TestCase):
         self.assertEqual(self.active_filter("/goals/?status=bogus"), ["All"])
 
 
-class GoalFilteredPaginationTests(TestCase):
-    def setUp(self):
-        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
-        for n in range(1, 22):  # d01 (oldest) .. d21 (newest), all done
-            goal = Goal.objects.create(
-                owner=alice, title=f"d{n:02}", status=Goal.Status.DONE
-            )
-            Goal.objects.filter(pk=goal.pk).update(
-                created_at=datetime(2026, 1, n, tzinfo=UTC)
-            )
-        for n in range(5):
-            Goal.objects.create(owner=alice, title=f"p{n}", status=Goal.Status.PLANNED)
-        self.client.force_login(alice)
-
-    def titles(self, page):
-        return re.findall(r"\b[dp]\d\d?\b", page.text("main"))
-
-    def test_pagination_keeps_the_filter(self):
-        first = get_page(self.client, "/goals/?status=done")
-        second = get_page(self.client, "/goals/?status=done&page=2")
-
-        self.assertEqual(self.titles(first), [f"d{n:02}" for n in range(21, 1, -1)])
-        self.assertIn(("?status=done&page=2", "Next"), first.links("main"))
-        self.assertEqual(self.titles(second), ["d01"])
-        self.assertIn(("?status=done&page=1", "Previous"), second.links("main"))
-
-    def test_filter_links_start_at_page_one(self):
-        second = get_page(self.client, "/goals/?status=done&page=2")
-
-        filter_links = [h for h, _ in second.links("main") if h.startswith("/goals/")]
-        self.assertTrue(filter_links)
-        self.assertFalse([h for h in filter_links if "page=" in h])
-
+class GoalFilterQueryTests(TestCase):
     def test_query_parameters_are_never_reflected_raw(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        Goal.objects.create(owner=alice, title="d", status=Goal.Status.DONE)
+        self.client.force_login(alice)
         payload = "<script>alert(1)</script>"
-        # 21 done goals, so the pagination links (which carry the query) render.
+
         response = self.client.get("/goals/", {"status": "done", "x": payload})
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Next")
         self.assertNotContains(response, payload)
 
 
@@ -1860,15 +1801,6 @@ class GoalStatusBadgeTests(TestCase):
     def badges(self, path):
         html = self.client.get(path).content.decode()
         return [(text, classes.split()) for classes, text in BADGE.findall(html)]
-
-    def test_each_goal_in_the_list_has_its_status_badge(self):
-        badges = self.badges(reverse("goals:list"))
-
-        for status, variant in STATUS_BADGES.items():
-            with self.subTest(status=status):
-                label = Goal.Status(status).label
-                (classes,) = [c for text, c in badges if text == label]
-                self.assertIn(variant, classes)
 
     def test_the_goal_page_shows_its_status_badge(self):
         for status, variant in STATUS_BADGES.items():
