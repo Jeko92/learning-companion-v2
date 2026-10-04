@@ -20,6 +20,16 @@
 @plugin "./daisyui.mjs" { themes: false; }
 
 /*
+ * daisyUI marks keyboard focus on a menu item only with a faint background
+ * (about 1.1:1 on white), so sidebar links and the log-out button get a clear
+ * outline. Unlayered, so it beats daisyUI's layered rules.
+ */
+.menu :where(a, button):focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/*
  * Colours are oklch() inside the sRGB gamut, and every *-content colour has at
  * least 4.5:1 contrast on its background (core/tests/test_theme.py).
  */

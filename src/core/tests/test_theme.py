@@ -205,3 +205,24 @@ class ThemeTests(SimpleTestCase):
                         each[f"--color-{text}"], each[f"--color-{background}"]
                     )
                     self.assertGreaterEqual(ratio, 4.5)
+
+
+RULE = re.compile(r"([^{}]+)\{([^{}]*)\}")
+
+
+class FocusStyleTests(SimpleTestCase):
+    """Keyboard focus on a sidebar menu item is clearly visible: daisyUI's own
+    menu focus is only a faint background change."""
+
+    def test_menu_items_get_a_primary_coloured_focus_visible_outline(self):
+        # Outside any @plugin block, so a plain (unlayered) rule beats daisyUI's.
+        css = THEME_BLOCK.sub("", source_css_path().read_text())
+        rules = [
+            dict(DECLARATION.findall(body))
+            for selector, body in RULE.findall(css)
+            if ".menu" in selector and ":focus-visible" in selector
+        ]
+        self.assertEqual(len(rules), 1, rules)
+        (rule,) = rules
+        self.assertEqual(rule.get("outline"), "2px solid var(--color-primary)")
+        self.assertIn("outline-offset", rule)
