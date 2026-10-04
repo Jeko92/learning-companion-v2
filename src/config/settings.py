@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import os
+import warnings
 from pathlib import Path
 
 from config.env import resolve_settings
@@ -29,6 +30,9 @@ SECRET_KEY = _env.secret_key
 DEBUG = _env.debug
 
 ALLOWED_HOSTS = _env.allowed_hosts
+
+# Needed when the site is reached through another origin, e.g. an HTTPS proxy.
+CSRF_TRUSTED_ORIGINS = _env.csrf_trusted_origins
 
 # OpenAI Chat Completions, used by the ai app (ai.services).
 OPENAI_API_KEY = _env.openai_api_key
@@ -61,6 +65,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serves STATIC_ROOT when DEBUG is off (the container); right after Security.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -97,8 +103,10 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
+# DATABASE_URL (the container sets one on its data volume), else src/db.sqlite3.
 DATABASES = {
-    "default": {
+    "default": _env.database
+    or {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
     }
@@ -155,6 +163,24 @@ STATIC_URL = "static/"
 # django-tailwind-cli builds css/tailwind.css into the first entry; the built
 # file is git-ignored, so run 'manage.py tailwind build' after checkout.
 STATICFILES_DIRS = [BASE_DIR / "assets"]
+
+# collectstatic gathers the files here (git-ignored; the Docker build runs it).
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# WhiteNoise stores a gzipped copy next to each file and serves it to clients
+# that accept it. No hashed (manifest) names, so {% static %} URLs stay as they
+# are and pages render without running collectstatic first.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
+
+# Local runs and the test suite never run collectstatic, so STATIC_ROOT doesn't
+# exist there, and WhiteNoise would warn about it on every start. The container
+# build collects into it (scripts/docker-smoke.sh checks the CSS is served).
+# Matched by WhiteNoise's wording: a module filter would match the caller (the
+# request handler), not WhiteNoise.
+warnings.filterwarnings("ignore", message=r"No directory at: ", category=UserWarning)
 
 # Pinned, so builds are reproducible and don't look up the latest release.
 TAILWIND_CLI_VERSION = "4.3.3"
