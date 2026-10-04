@@ -74,7 +74,7 @@
 
 ## Steps
 - [x] 1. `whitenoise` and `gunicorn` are range-pinned requirements (`whitenoise>=6.12,<7`, `gunicorn>=26.2,<27`), and both import. Install them into the local `.venv` (`./.venv/bin/pip install -r requirements-dev.txt`) before going green. — test: `src/config/tests/test_docker.py` (`RequirementsTests`: one regex-pinned line each, as `ai/tests/test_apps.py` does for openai) — impl: `requirements.txt` — covers: AC5
-- [ ] 2. `resolve_settings` reads an optional `DATABASE_URL` into `EnvSettings.database`.
+- [x] 2. `resolve_settings` reads an optional `DATABASE_URL` into `EnvSettings.database`.
   - Unset or blank gives `None`. `sqlite:////abs/x.sqlite3` gives the sqlite engine with that `NAME`, and a postgres URL gives the postgres engine.
   - The environment wins over `.env`.
   - Garbage (`not-a-url`) and an unknown scheme (`foo://x/y`) each raise the exact fixed message, which doesn't contain the value, and no django-environ warning escapes (`assertNoLogs`/`warnings` check).

@@ -1,5 +1,6 @@
 """Resolve environment-specific settings from the process environment and .env."""
 
+import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,6 +20,26 @@ class EnvSettings:
     allowed_hosts: list[str]
     openai_api_key: str
     openai_model: str
+    # None when DATABASE_URL is unset or blank: settings.py keeps its default.
+    database: dict | None
+
+
+def database_config(env: django_environ.Env) -> dict | None:
+    """DATABASE_URL parsed by django-environ, which only warns about a value
+    it can't parse (or accepts an unknown scheme as an engine) and leaves
+    Django to fail at the first query. The error names the variable, never
+    the value: a URL can carry a password."""
+    raw = env.ENVIRON.get("DATABASE_URL", "").strip()
+    if not raw:
+        return None
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        config = env.db_url_config(raw)
+    if config.get("ENGINE") not in env.DB_SCHEMES.values():
+        raise ImproperlyConfigured(
+            "The DATABASE_URL environment variable is not a valid database URL"
+        )
+    return config
 
 
 def required_raw(environ: Mapping[str, str], name: str) -> str:
@@ -53,4 +74,5 @@ def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
         # Set but blank means the default, like unset.
         openai_model=Env.ENVIRON.get("OPENAI_MODEL", "").strip()
         or DEFAULT_OPENAI_MODEL,
+        database=database_config(env),
     )
