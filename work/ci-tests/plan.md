@@ -50,7 +50,7 @@
 - [x] 3. A `docker-smoke` job runs `scripts/docker-smoke.sh`, with no `needs` (so it runs in parallel) and a `timeout-minutes`. — test: `src/config/tests/test_ci.py` (`DockerSmokeJobTests`) — impl: `.github/workflows/ci.yml` — covers: AC3, AC4
 - [x] 4. Every `uses:` pins a major version (`@v<N>`), not a branch or `@main`. The file never references `secrets.`, and the job ids are exactly `quality` and `docker-smoke` (the check names). — test: `src/config/tests/test_ci.py` (`WorkflowHygieneTests`) — impl: `.github/workflows/ci.yml` if needed — covers: AC4, AC5
 - [x] 5. Release PRs need passing CI checks: `REQUIRE_CHECKS="true"` in `.claude/hooks/config.sh`, with the comment updated (CI exists; a release PR with no, pending or failed checks is blocked). — test: `src/config/tests/test_ci.py` (`FactoryGateTests`: `config.sh` sets `REQUIRE_CHECKS="true"`) — impl: `.claude/hooks/config.sh` — covers: AC7
-- [ ] 6. `factory-manager`'s close-out step 3.2 reads `gh pr checks` by exit code:
+- [x] 6. `factory-manager`'s close-out step 3.2 reads `gh pr checks` by exit code:
   - `0`: merge.
   - `8`, or `1` with "no checks reported": report "waiting for checks on PR #<n>" and stop.
   - `1` with a failure: report the failed checks and stop.
