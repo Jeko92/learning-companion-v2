@@ -4,91 +4,117 @@
 {% block title %}{{ goal.title }} · Learning Companion{% endblock %}
 
 {% block content %}
-  <h1 class="text-2xl font-bold tracking-tight break-words sm:text-3xl">{{ goal.title }}</h1>
-  <p class="mt-2">{% include "components/_status_badge.html" %}</p>
-  <div class="mt-6">
-    {% if goal.description %}
-      <p>{{ goal.description|linebreaksbr }}</p>
-    {% else %}
-      <p class="text-slate-500">No description.</p>
-    {% endif %}
-  </div>
-  <dl class="mt-6 grid grid-cols-[auto_1fr] gap-x-4 text-sm text-slate-500">
-    <dt>Created</dt><dd>{{ goal.created_at|date:"j M Y, H:i" }}</dd>
-    <dt>Updated</dt><dd>{{ goal.updated_at|date:"j M Y, H:i" }}</dd>
-  </dl>
-  <div class="mt-6 flex gap-6">
-    <a href="{% url 'goals:edit' goal.pk %}" class="font-medium hover:underline">Edit goal</a>
-    <a href="{% url 'goals:delete' goal.pk %}" class="font-medium text-red-700 hover:underline">Delete goal</a>
-    <a href="{% url 'goals:list' %}" class="font-medium hover:underline">Back to goals</a>
-  </div>
-  <section class="mt-10" aria-labelledby="summary-heading">
-    <h2 id="summary-heading" class="text-lg font-semibold">Summary</h2>
-    {% if goal.summary %}
-      <p class="mt-2">{{ goal.summary|linebreaksbr }}</p>
-      <p class="mt-1 text-sm text-slate-500">Generated {{ goal.summary_generated_at|date:"j M Y, H:i" }}</p>
-    {% else %}
-      <div class="mt-2">{% include "components/_empty_state.html" with text="No summary yet." empty_icon="sparkles" %}</div>
-    {% endif %}
-    <form method="post" action="{% url 'goals:summary' goal.pk %}" class="mt-4">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-primary btn-sm">{% include "components/_icon.html" with icon="sparkles" icon_class="size-4" %}{% if goal.summary %}Regenerate summary{% else %}Generate summary{% endif %}</button>
-    </form>
-  </section>
-  <section class="mt-10" aria-labelledby="next-steps-heading">
-    <h2 id="next-steps-heading" class="text-lg font-semibold">Next steps</h2>
-    {% if goal.next_steps %}
-      <ol class="mt-2 list-decimal space-y-1 pl-6">
-        {% for step in goal.next_steps %}
-          <li>{{ step }}</li>
-        {% endfor %}
-      </ol>
-      <p class="mt-1 text-sm text-slate-500">Suggested {{ goal.next_steps_generated_at|date:"j M Y, H:i" }}</p>
-    {% else %}
-      <div class="mt-2">{% include "components/_empty_state.html" with text="No next steps yet." empty_icon="sparkles" %}</div>
-    {% endif %}
-    <form method="post" action="{% url 'goals:next_steps' goal.pk %}" class="mt-4">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-primary btn-sm">{% include "components/_icon.html" with icon="sparkles" icon_class="size-4" %}{% if goal.next_steps %}Suggest new next steps{% else %}Suggest next steps{% endif %}</button>
-    </form>
-  </section>
-  <section class="mt-10">
-    <h2 class="text-lg font-semibold">Sessions</h2>
-    <p class="mt-1 text-sm text-slate-500">Total: {{ total_minutes|duration }}</p>
-    <div class="mt-4 flex gap-6">
-      <a href="{% url 'learning_sessions:create' goal.pk %}" class="font-medium hover:underline">Add session</a>
-      <a href="{% url 'learning_sessions:list' goal.pk %}" class="hover:underline">All sessions</a>
+  <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <div class="min-w-0">
+      <h1 class="text-2xl font-bold tracking-tight break-words sm:text-3xl">{{ goal.title }}</h1>
+      <p class="mt-2">{% include "components/_status_badge.html" %}</p>
     </div>
-    {% if recent_sessions %}
-      <ul class="mt-4 space-y-3">
-        {% for session in recent_sessions %}
-          {% include "learning_sessions/_session_item.html" %}
+    <div class="flex flex-wrap gap-2">
+      <a href="{% url 'goals:list' %}" class="btn btn-ghost">Back to goals</a>
+      <a href="{% url 'goals:edit' goal.pk %}" class="btn btn-outline">Edit goal</a>
+      <a href="{% url 'goals:delete' goal.pk %}" class="btn btn-outline btn-error">Delete goal</a>
+    </div>
+  </div>
+
+  <div class="card card-border mb-6 bg-base-100">
+    <div class="card-body">
+      {% if goal.description %}
+        <p class="break-words">{{ goal.description|linebreaksbr }}</p>
+      {% else %}
+        <p class="text-base-content/80">No description.</p>
+      {% endif %}
+      <dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-4 text-sm text-base-content/80">
+        <dt>Created</dt><dd>{{ goal.created_at|date:"j M Y, H:i" }}</dd>
+        <dt>Updated</dt><dd>{{ goal.updated_at|date:"j M Y, H:i" }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="grid gap-6 lg:grid-cols-2">
+    <section class="card card-border bg-base-100" aria-labelledby="summary-heading">
+      <div class="card-body">
+        <h2 id="summary-heading" class="card-title text-lg">Summary</h2>
+        {% if goal.summary %}
+          <p>{{ goal.summary|linebreaksbr }}</p>
+          <p class="text-sm text-base-content/80">Generated {{ goal.summary_generated_at|date:"j M Y, H:i" }}</p>
+        {% else %}
+          {% include "components/_empty_state.html" with text="No summary yet." empty_icon="sparkles" %}
+        {% endif %}
+        <form method="post" action="{% url 'goals:summary' goal.pk %}" class="card-actions mt-2">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary btn-sm">{% include "components/_icon.html" with icon="sparkles" icon_class="size-4" %}{% if goal.summary %}Regenerate summary{% else %}Generate summary{% endif %}</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="card card-border bg-base-100" aria-labelledby="next-steps-heading">
+      <div class="card-body">
+        <h2 id="next-steps-heading" class="card-title text-lg">Next steps</h2>
+        {% if goal.next_steps %}
+          <ol class="list-decimal space-y-1 pl-6">
+            {% for step in goal.next_steps %}
+              <li>{{ step }}</li>
+            {% endfor %}
+          </ol>
+          <p class="text-sm text-base-content/80">Suggested {{ goal.next_steps_generated_at|date:"j M Y, H:i" }}</p>
+        {% else %}
+          {% include "components/_empty_state.html" with text="No next steps yet." empty_icon="sparkles" %}
+        {% endif %}
+        <form method="post" action="{% url 'goals:next_steps' goal.pk %}" class="card-actions mt-2">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary btn-sm">{% include "components/_icon.html" with icon="sparkles" icon_class="size-4" %}{% if goal.next_steps %}Suggest new next steps{% else %}Suggest next steps{% endif %}</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="card card-border bg-base-100 lg:col-span-2" aria-labelledby="sessions-heading">
+      <div class="card-body">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 id="sessions-heading" class="card-title text-lg">Sessions</h2>
+            <p class="text-sm text-base-content/80">Total: {{ total_minutes|duration }}</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <a href="{% url 'learning_sessions:list' goal.pk %}" class="btn btn-ghost btn-sm">All sessions</a>
+            <a href="{% url 'learning_sessions:create' goal.pk %}" class="btn btn-primary btn-sm">{% include "components/_icon.html" with icon="plus" icon_class="size-4" %}Add session</a>
+          </div>
+        </div>
+        {% if recent_sessions %}
+          <ul class="mt-2 space-y-3">
+            {% for session in recent_sessions %}
+              {% include "learning_sessions/_session_item.html" %}
+            {% endfor %}
+          </ul>
+        {% else %}
+          {% url 'learning_sessions:create' goal.pk as add_session_url %}
+          <div class="mt-2">{% include "components/_empty_state.html" with text="No sessions yet." cta_url=add_session_url cta_label="Add session" empty_icon="clock" %}</div>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="card card-border bg-base-100 lg:col-span-2" aria-labelledby="resources-heading">
+      <div class="card-body">
+        <h2 id="resources-heading" class="card-title text-lg">Resources</h2>
+        {% for heading, resources in resource_groups %}
+          <h3 class="mt-2 font-semibold">{{ heading }}</h3>
+          <ul class="space-y-2">
+            {% for resource in resources %}
+              <li class="flex items-start justify-between gap-4 rounded-box border border-base-300 px-4 py-3">
+                <a href="{{ resource.url }}" target="_blank" rel="noopener noreferrer" class="link link-hover break-all font-medium">{{ resource.title }}</a>
+                <a href="{% url 'resources:delete' resource.pk %}" class="btn btn-ghost btn-xs text-error">Delete</a>
+              </li>
+            {% endfor %}
+          </ul>
+        {% empty %}
+          {% include "components/_empty_state.html" with text="No resources yet." empty_icon="link" %}
         {% endfor %}
-      </ul>
-    {% else %}
-      {% url 'learning_sessions:create' goal.pk as add_session_url %}
-      <div class="mt-4">{% include "components/_empty_state.html" with text="No sessions yet." cta_url=add_session_url cta_label="Add session" empty_icon="clock" %}</div>
-    {% endif %}
-  </section>
-  <section class="mt-10" aria-labelledby="resources-heading">
-    <h2 id="resources-heading" class="text-lg font-semibold">Resources</h2>
-    {% for heading, resources in resource_groups %}
-      <h3 class="mt-4 font-medium">{{ heading }}</h3>
-      <ul class="mt-2 space-y-3">
-        {% for resource in resources %}
-          <li class="flex items-start justify-between gap-4 rounded border border-slate-200 bg-white px-4 py-3">
-            <a href="{{ resource.url }}" target="_blank" rel="noopener noreferrer" class="break-all font-medium hover:underline">{{ resource.title }}</a>
-            <a href="{% url 'resources:delete' resource.pk %}" class="font-medium text-red-700 hover:underline">Delete</a>
-          </li>
-        {% endfor %}
-      </ul>
-    {% empty %}
-      <div class="mt-4">{% include "components/_empty_state.html" with text="No resources yet." empty_icon="link" %}</div>
-    {% endfor %}
-    <form method="post" action="{% url 'resources:create' goal.pk %}" class="mt-6">
-      {% csrf_token %}
-      {{ resource_form }}
-      <button type="submit" class="btn btn-primary mt-4">Attach resource</button>
-    </form>
-  </section>
+        <div class="divider my-2"></div>
+        <form method="post" action="{% url 'resources:create' goal.pk %}">
+          {% csrf_token %}
+          {{ resource_form }}
+          <button type="submit" class="btn btn-primary mt-4">Attach resource</button>
+        </form>
+      </div>
+    </section>
+  </div>
 {% endblock %}

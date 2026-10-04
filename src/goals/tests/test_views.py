@@ -1880,3 +1880,30 @@ class GoalStatusBadgeTests(TestCase):
 
     def test_every_status_has_a_badge_colour(self):
         self.assertEqual(set(STATUS_BADGES), set(Goal.Status.values))
+
+
+class GoalDetailCardTests(TestCase):
+    """The goal page's sections are cards, each named by its own heading."""
+
+    def test_summary_next_steps_sessions_and_resources_are_labelled_cards(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        goal = Goal.objects.create(owner=alice, title="Learn Django")
+        self.client.force_login(alice)
+
+        page = get_page(self.client, goal.get_absolute_url())
+
+        sections = [a for t, a in page.elements if t == "section"]
+        self.assertEqual(
+            [a.get("aria-labelledby") for a in sections],
+            [
+                "summary-heading",
+                "next-steps-heading",
+                "sessions-heading",
+                "resources-heading",
+            ],
+        )
+        h2_ids = {a.get("id") for t, a in page.elements if t == "h2"}
+        for attrs in sections:
+            with self.subTest(section=attrs["aria-labelledby"]):
+                self.assertIn("card", attrs.get("class", "").split())
+                self.assertIn(attrs["aria-labelledby"], h2_ids)
