@@ -32,6 +32,13 @@ class TestRunnerTests(SimpleTestCase):
 
         self.assertIs(settings.SECURE_SSL_REDIRECT, True)
 
+    def test_teardown_after_a_failed_setup_does_not_hide_its_error(self):
+        # If DiscoverRunner's setup raised, the override was never enabled;
+        # teardown must not add an AttributeError on top.
+        runner = get_runner(settings)()
+        with mock.patch.object(DiscoverRunner, "teardown_test_environment"):
+            runner.teardown_test_environment()
+
     def test_parallel_workers_load_their_settings_without_the_ssl_redirect(self):
         # A spawned --parallel worker loads the settings afresh: its setup
         # runs before django.setup(), so it sets the environment variable the

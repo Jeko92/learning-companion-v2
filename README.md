@@ -61,7 +61,7 @@ The five HTTPS variables are commented out in `.env.example`: set one only to ov
 
 Failed log-ins are locked out by [django-axes](https://django-axes.readthedocs.io/), on the log-in page and the admin's alike:
 
-- After 5 failed log-ins for the same username from the same IP address, that username is refused from that address for 15 minutes after the last attempt, even with the right password. The page (HTTP 429) says "Too many failed log-in attempts. Try again in 15 minutes." and names no account. A username that doesn't exist is counted the same way.
+- After 5 failed log-ins for the same username from the same IP address, that username is refused from that address for 15 minutes after the last attempt, even with the right password. The page (HTTP 429) says "Too many failed log-in attempts. Try again in 15 minutes." and names no account. A username that doesn't exist is counted the same way, and so are case variants: "Alice" and "ALICE" share one counter.
 - Another IP address, or another username from the same address, is not affected. A successful log-in clears the earlier failures.
 - The attempts are stored in the database (Access attempts in the admin). Clear them with `./.venv/bin/python src/manage.py axes_reset` (in the container: `docker exec <container> python src/manage.py axes_reset`); `axes_reset_username <name>` clears one user.
 - The IP address is the connection's (`REMOTE_ADDR`). Behind a reverse proxy every client shares the proxy's address, so the lockout is then in effect per username. Reading the client address from `X-Forwarded-For` isn't set up.

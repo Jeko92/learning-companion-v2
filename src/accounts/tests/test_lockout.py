@@ -105,6 +105,23 @@ class LockoutTests(LockoutTestCase):
             [["username", "ip_address"]],
         )
 
+    def test_usernames_are_counted_casefolded(self):
+        self.assertEqual(
+            getattr(settings, "AXES_USERNAME_CALLABLE", None),
+            "accounts.lockout.lockout_username",
+        )
+
+    def test_case_variants_of_a_username_share_one_counter(self):
+        # On a database that matches usernames regardless of case, each
+        # variant would log in as alice: they must not get 5 tries each.
+        for variant in ("Alice", "ALICE", "alice", "aLiCe", "ALICe"):
+            self.log_in(variant, WRONG_PASSWORD)
+
+        response = self.log_in(USERNAME, PASSWORD)
+
+        self.assertEqual(response.status_code, 429)
+        self.assert_logged_out()
+
     def test_a_locked_out_username_can_still_log_in_from_another_ip(self):
         self.fail_log_ins(5, USERNAME, "127.0.0.1")
 

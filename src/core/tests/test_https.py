@@ -28,7 +28,12 @@ class SslRedirectTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_only_the_favicon_itself_is_exempt(self):
-        for path in ("/favicon.ico/", "/static/favicon.ico", "/favicon.icon"):
+        for path in (
+            "/favicon.ico/",
+            "/static/favicon.ico",
+            "/favicon.icon",
+            "/favicon.ico%0A",
+        ):
             with self.subTest(path=path):
                 response = self.client.get(path)
 

@@ -40,8 +40,9 @@ CSRF_TRUSTED_ORIGINS = _env.csrf_trusted_origins
 SECURE_SSL_REDIRECT = _env.ssl_redirect
 
 # The container's HEALTHCHECK requests the favicon over plain HTTP inside the
-# container. Matched against the path without its leading slash.
-SECURE_REDIRECT_EXEMPT = [r"^favicon\.ico$"]
+# container. Matched against the path without its leading slash; \Z, not $,
+# which would also match before a trailing newline (/favicon.ico%0A).
+SECURE_REDIRECT_EXEMPT = [r"^favicon\.ico\Z"]
 
 SESSION_COOKIE_SECURE = _env.session_cookie_secure
 
@@ -171,6 +172,8 @@ AXES_FAILURE_LIMIT = 5
 # django-ipware the IP is REMOTE_ADDR: behind a reverse proxy every client
 # shares the proxy's, and the lockout is in effect per username.
 AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
+# Casefolded, so case variants of a username share one counter.
+AXES_USERNAME_CALLABLE = "accounts.lockout.lockout_username"
 # Rendered with status 429 (django-axes' default code).
 AXES_LOCKOUT_TEMPLATE = "accounts/locked_out.html"
 # The lockout lifts 15 minutes after the last failure (an attempt while locked

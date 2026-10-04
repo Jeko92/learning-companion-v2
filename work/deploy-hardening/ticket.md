@@ -24,7 +24,7 @@ As the operator of Learning Companion, I want the production configuration to be
 - [x] AC13 With the SSL redirect on, a plain-HTTP request for a page gets a 301 to the `https://` URL. `/favicon.ico` is exempt, so the container's HTTP `HEALTHCHECK` keeps working with the default settings.
 - [x] AC14 With HSTS on, an HTTPS response carries `Strict-Transport-Security: max-age=<seconds>`, without `includeSubDomains` or `preload`.
 - [x] AC15 Every new variable is documented in `.env.example`, as a commented-out example (added to `COMMENTED_EXAMPLES`, because a blank `--env-file` line would override the default), and in the README's variable table. Each is also in `test_settings.py`'s `PATCHED_ENVIRON` with a non-default value, so a developer's `.env` can't leak into the tests.
-- [ ] AC16 The test suite passes whatever `DEBUG` is in the environment, including CI, which doesn't set `DEBUG` at all.
+- [x] AC16 The test suite passes whatever `DEBUG` is in the environment, including CI, which doesn't set `DEBUG` at all.
 
 ### Email
 - [x] AC17 With `DEBUG=True`, mail goes to the console backend. With `DEBUG=False`, it goes to Django's default SMTP backend. No new env vars.

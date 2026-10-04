@@ -23,6 +23,9 @@ class TestRunner(DiscoverRunner):
     for the test client. Tests of the redirect turn it on themselves."""
 
     parallel_test_suite = PlainHttpParallelTestSuite
+    # Set once the override is on: a setup that failed before then leaves
+    # nothing to undo, and teardown must not hide its error.
+    _plain_http = None
 
     def setup_test_environment(self, **kwargs):
         super().setup_test_environment(**kwargs)
@@ -30,5 +33,7 @@ class TestRunner(DiscoverRunner):
         self._plain_http.enable()
 
     def teardown_test_environment(self, **kwargs):
-        self._plain_http.disable()
+        if self._plain_http is not None:
+            self._plain_http.disable()
+            self._plain_http = None
         super().teardown_test_environment(**kwargs)

@@ -257,23 +257,23 @@
   - Test: `src/config/tests/test_runner.py`
   - Impl: `src/config/runner.py`
   - Covers: AC16
-- [ ] 21. The runner's teardown tolerates a setup that failed before the override was enabled (low).
+- [x] 21. The runner's teardown tolerates a setup that failed before the override was enabled (low).
   - Behaviour: `teardown_test_environment()` on a fresh `TestRunner`, with `DiscoverRunner`'s own teardown patched out, raises nothing.
   - Test: `src/config/tests/test_runner.py`
   - Impl: `src/config/runner.py`
   - Covers: AC16
-- [ ] 22. Case variants of a username share one lockout counter (low).
+- [x] 22. Case variants of a username share one lockout counter (low).
   - Behaviour: 5 failed log-ins as `Alice`, `ALICE`, `alice`, `aLiCe` and `ALICe` from one IP lock out `alice`, so the right password gets 429.
   - `AXES_USERNAME_CALLABLE` is a function in `accounts/lockout.py` that casefolds the submitted username. It is pinned.
   - Test: `src/accounts/tests/test_lockout.py`
   - Impl: `src/accounts/lockout.py`, `settings.py`
   - Covers: AC2, AC3
-- [ ] 23. The favicon exemption matches exactly `favicon.ico` (info).
+- [x] 23. The favicon exemption matches exactly `favicon.ico` (info).
   - Behaviour: `/favicon.ico%0A` is redirected like any other path when the redirect is on. The pattern is `r"^favicon\.ico\Z"`.
   - Test: `src/core/tests/test_https.py` (`test_only_the_favicon_itself_is_exempt`)
   - Impl: `settings.py`
   - Covers: AC13
-- [ ] 24. Docs: `CLAUDE.md` (runner bullet: parallel workers too; Auth lockout bullet: usernames casefolded for the count; the exemption pattern), README lockout paragraph (case variants count together). No test, doc-only commit.
+- [x] 24. Docs: `CLAUDE.md` (runner bullet: parallel workers too; Auth lockout bullet: usernames casefolded for the count; the exemption pattern), README lockout paragraph (case variants count together). No test, doc-only commit.
   - Covers: AC21
 
 ## Coverage
