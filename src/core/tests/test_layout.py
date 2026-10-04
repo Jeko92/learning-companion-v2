@@ -180,3 +180,25 @@ class TableWrapperTests(AllPagesMixin, TestCase):
                         )
         # The dashboard has three (the fixture logs a tagged session).
         self.assertEqual(tables, 3)
+
+
+def is_faded(tag, attrs):
+    """daisyUI fades table headers and footers (60%) and inactive tabs (50%)
+    below 4.5:1 in the light theme."""
+    return tag in ("thead", "tfoot") or (tag == "a" and has_class(attrs, "tab"))
+
+
+class FadedTextTests(AllPagesMixin, TestCase):
+    """Text daisyUI fades is shown in the full base-content colour instead."""
+
+    def test_table_headers_footers_and_inactive_tabs_use_the_full_text_colour(self):
+        faded = []
+        for page, parser in self.walk():
+            with self.subTest(page=page.name):
+                for tag, attrs in parser.elements:
+                    if is_faded(tag, attrs):
+                        faded.append(tag)
+                        self.assertTrue(has_class(attrs, "text-base-content"), attrs)
+        # Three theads and a tfoot on the dashboard; the unfiltered goal list's
+        # three status tabs (All is the active one).
+        self.assertEqual(sorted(faded), ["a"] * 3 + ["tfoot"] + ["thead"] * 3)

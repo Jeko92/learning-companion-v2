@@ -8,10 +8,11 @@
     <a href="{% url 'goals:create' %}" class="btn btn-primary">{% include "components/_icon.html" with icon="plus" %}New goal</a>
   </div>
   {# Links, not ARIA tabs: each filter is its own page. The active one is a span with aria-current. #}
+  {# Inactive tabs get text-base-content: daisyUI's 50% fade is below 4.5:1 in the light theme. #}
   <nav aria-label="Filter by status" class="mb-6 overflow-x-auto">
     <div class="tabs tabs-box w-max">
       {% if active_status %}
-        <a href="{% url 'goals:list' %}" class="tab">All</a>
+        <a href="{% url 'goals:list' %}" class="tab text-base-content">All</a>
       {% else %}
         <span aria-current="page" class="tab tab-active">All</span>
       {% endif %}
@@ -19,7 +20,7 @@
         {% if value == active_status %}
           <span aria-current="page" class="tab tab-active">{{ label }}</span>
         {% else %}
-          <a href="{% url 'goals:list' %}?status={{ value }}" class="tab">{{ label }}</a>
+          <a href="{% url 'goals:list' %}?status={{ value }}" class="tab text-base-content">{{ label }}</a>
         {% endif %}
       {% endfor %}
     </div>

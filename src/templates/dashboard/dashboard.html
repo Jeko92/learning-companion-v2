@@ -11,8 +11,9 @@
       <div class="card-body">
         <h2 id="goals-by-status-heading" class="card-title text-lg">Goals by status</h2>
         <div class="overflow-x-auto">
+          {# text-base-content on thead/tfoot: daisyUI's 60% fade is below 4.5:1 in the light theme. #}
           <table class="table">
-            <thead>
+            <thead class="text-base-content">
               <tr>
                 <th scope="col">Status</th>
                 <th scope="col" class="text-right">Goals</th>
@@ -28,7 +29,7 @@
                 </tr>
               {% endfor %}
             </tbody>
-            <tfoot>
+            <tfoot class="text-base-content">
               <tr>
                 <th scope="row">
                   <a href="{% url 'goals:list' %}" class="link link-hover">Total</a>
@@ -51,7 +52,7 @@
         {% if tag_rows %}
           <div class="overflow-x-auto">
             <table class="table">
-              <thead>
+              <thead class="text-base-content">
                 <tr>
                   <th scope="col">Tag</th>
                   <th scope="col" class="text-right">Time</th>
@@ -82,7 +83,7 @@
         <h2 id="hours-per-week-heading" class="card-title text-lg">Hours per week</h2>
         <div class="overflow-x-auto">
           <table class="table">
-            <thead>
+            <thead class="text-base-content">
               <tr>
                 <th scope="col">Week</th>
                 <th scope="col" class="text-right">Time</th>

@@ -44,6 +44,9 @@ As a learner using Learning Companion on a phone or a desktop, in light or dark 
 ### No behaviour change
 - [x] AC26 URLs, views' responses and redirects, form fields and validation, the copy that tests pin, and every `assertNumQueries` pin are unchanged. The full existing suite stays green and lint is clean.
 
+### Theme switch (added 2026-10-04 at the user's request)
+- [ ] AC29 The header has a CSS-only theme switch, using daisyUI's `theme-controller` with no JavaScript and no server code: a group of three radio inputs (`name="theme"`, class `theme-controller`) with the values `system` (checked by default; it matches no theme, so the OS preference applies as before), `companion` (Light) and `companion-dark` (Dark). Each radio has an accessible name ("System", "Light", "Dark"), and the group is labelled "Theme". The choice is not remembered: every page load starts at System (the user chose this over a cookie-backed switch and over JavaScript). It sits in the header, outside every `<nav>` and `<main>`, so the nav, form and page-text pins are unchanged. A choice of Light beats an OS dark preference, and Dark beats an OS light one (checked in the AC27 Playwright pass). The switch has a visible focus indicator.
+
 ### Visual check (after implementation)
 - [ ] AC27 (final-review: Playwright pass) Once every other criterion is implemented, a Playwright pass against the dev server (with the built CSS) checks each page type at 360, 768 and 1280 px wide, in both light and dark colour schemes (`prefers-color-scheme` emulated):
   - no horizontal page scroll (`scrollWidth <= innerWidth`);
@@ -59,10 +62,11 @@ As a learner using Learning Companion on a phone or a desktop, in light or dark 
   - daisyUI and the vendored files (and how to update their version);
   - the themes;
   - the project-wide form rendering and the shared partials;
-  - the favicon files and the public `/favicon.ico` route.
+  - the favicon files and the public `/favicon.ico` route;
+  - the CSS-only theme switch (AC29).
 
 ## Out of scope
-- JavaScript frameworks or runtimes (Alpine, htmx, Flowbite JS), chart libraries, a manual theme toggle
+- JavaScript frameworks or runtimes (Alpine, htmx, Flowbite JS), chart libraries; a remembered (persisted) theme choice
 - New pages, features, model fields or URLs (except `/favicon.ico`); copy rewrites beyond the empty-state calls to action and page titles
 - Restyling the Django admin
 - Docker and CI changes (#20 and #21 pick up the `tailwind build` step and the vendored files)
@@ -81,4 +85,4 @@ As a learner using Learning Companion on a phone or a desktop, in light or dark 
 - The dashboard bars' `max` can be computed in Python from the rows already fetched (no extra query; AC22).
 - Python has no image library here, so the `.ico` and PNG are generated once (for example with the standard library or a macOS tool) and committed; nothing generates them at runtime.
 - This ticket goes before #20, #21, #36, #42 and #66, at the user's request.
-- **Approval:** the user approved the acceptance criteria (AC1–AC28) on 2026-10-04.
+- **Approval:** the user approved the acceptance criteria (AC1–AC28) on 2026-10-04. On 2026-10-04, after the first final review, the user asked for a light/dark switch and chose the CSS-only daisyUI `theme-controller` (not remembered across page loads) over a cookie-backed form and a JavaScript toggle; that added AC29.
