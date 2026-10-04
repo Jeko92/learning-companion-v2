@@ -122,7 +122,7 @@
   Green also requires `docker build` to succeed and `scripts/docker-smoke.sh` to pass end to end; record its output in the commit message body.
 
   — test: `src/config/tests/test_docker.py` (`DockerfileTests`, `EntrypointTests`) — impl: `Dockerfile`, `docker/entrypoint.sh` — covers: AC6, AC7, AC8, AC10
-- [ ] 12. Documentation:
+- [x] 12. Documentation:
   - **`README.md`:** a "Run with Docker" section (build; run with `--env-file .env` or `-e SECRET_KEY=… -e OPENAI_API_KEY=…`; `-p 8000:8000`; `-v learning-companion-data:/app/data`; `WEB_CONCURRENCY`; `CSRF_TRUSTED_ORIGINS` for a non-localhost origin; `scripts/docker-smoke.sh`), and the new variables in the settings section.
   - **`CLAUDE.md`:**
     - Stack: the image and its two stages, WhiteNoise and `STATIC_ROOT` plus the warning filter, `DATABASE_URL`, `CSRF_TRUSTED_ORIGINS`, the entrypoint and the smoke script.

@@ -45,8 +45,37 @@ Settings come from the environment via `django-environ`, read in `src/config/env
 | `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Comma-separated. If it's set but empty, every host is rejected when `DEBUG` is off |
 | `OPENAI_API_KEY` | none, so startup fails | Required and must not be empty. `sk-dummy` (the `.env.example` value) is enough to run the tests and the dev server; the AI features need a real key |
 | `OPENAI_MODEL` | `gpt-4.1-mini` | The Chat Completions model for the AI features; empty also means the default |
+| `DATABASE_URL` | `src/db.sqlite3` | The database as a URL, e.g. `sqlite:////app/data/db.sqlite3` (four slashes for an absolute path); empty also means the default. A value that isn't a valid database URL stops startup with an error that names the variable |
+| `CSRF_TRUSTED_ORIGINS` | empty | Comma-separated origins with their scheme (`https://companion.example`), needed when the site is reached through another origin such as an HTTPS proxy. Each must start with `http://` or `https://` |
 
 Values are read from the process environment first. `.env` at the repo root only fills in variables that aren't already set. `.env` is git-ignored, and `.env.example` documents every variable. Write one `NAME=value` per line with no spaces around `=`. `DEBUG=True` is for local development only. The test suite needs `SECRET_KEY` and `OPENAI_API_KEY` too, so set up `.env` before running the tests. The tests never call the OpenAI API.
+
+## Run with Docker
+
+The `Dockerfile` builds a production image: gunicorn, `DEBUG` off, static files (including the Tailwind CSS) served by WhiteNoise, and the SQLite database on a volume. The build downloads the Linux Tailwind binary from GitHub, so it needs network access.
+
+```bash
+docker build -t learning-companion .
+docker run --env-file .env -p 8000:8000 -v learning-companion-data:/app/data learning-companion
+# or pass the two required keys directly:
+docker run -e SECRET_KEY=... -e OPENAI_API_KEY=... -p 8000:8000 -v learning-companion-data:/app/data learning-companion
+```
+
+Then open http://localhost:8000/. On every start the container applies migrations to `/app/data/db.sqlite3` (the image sets `DATABASE_URL` to it), then starts gunicorn on port 8000. Without `SECRET_KEY` or `OPENAI_API_KEY` it exits with an error that names the missing variable. The data survives new containers as long as they use the same volume. `docker ps` shows the container as healthy once it answers. A few options:
+
+- `-e WEB_CONCURRENCY=3` runs more gunicorn workers (default 1).
+- Reached through another host name or an HTTPS proxy, add it with `-e ALLOWED_HOSTS=...` and `-e CSRF_TRUSTED_ORIGINS=https://...`.
+- `DEBUG=True` from a copied `.env` also reaches the container, so set `DEBUG=False` there (or drop it from the env file) for anything but local trials.
+
+`scripts/docker-smoke.sh` builds the image, runs it with dummy keys and checks it end to end:
+
+- the home page, the gzipped stylesheet and the favicon are served;
+- sign-up works through the real form;
+- an account survives a new container on the same volume;
+- the app doesn't run as root;
+- the image holds no `.env` and no Tailwind binary.
+
+It removes everything it created and needs Docker; the test suite doesn't.
 
 ## Tests and lint
 
@@ -73,6 +102,8 @@ Values are read from the process environment first. `.env` at the repo root only
 - `src/tailwind/`: the Tailwind source stylesheet with the app's themes, and the vendored daisyUI plugin files
 - `src/assets/`: static source files (the favicons); the built `css/tailwind.css` is git-ignored
 - `work/`: workflow artifacts per ticket (`ticket.md`, `plan.md`, `review.md`)
+- `Dockerfile`, `.dockerignore`, `docker/entrypoint.sh`: the production image and its start-up (migrate, then gunicorn)
+- `scripts/docker-smoke.sh`: builds and runs the image and checks it serves the app
 - `.claude/`: workflow rules, skills, and hooks
 
 ## Workflow
