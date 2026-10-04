@@ -49,8 +49,22 @@ Settings come from the environment via `django-environ`, read in `src/config/env
 | `OPENAI_MODEL` | `gpt-4.1-mini` | The Chat Completions model for the AI features; empty also means the default |
 | `DATABASE_URL` | `src/db.sqlite3` | The database as a URL, e.g. `sqlite:////app/data/db.sqlite3` (four slashes for an absolute path); empty also means the default. A value that isn't a valid database URL stops startup with an error that names the variable |
 | `CSRF_TRUSTED_ORIGINS` | empty | Comma-separated origins with their scheme (`https://companion.example`), needed when the site is reached through another origin such as an HTTPS proxy. Each must start with `http://` or `https://` |
+| `SECURE_SSL_REDIRECT` | `True` without `DEBUG`, else `False` | Redirects plain-HTTP requests to `https://` (301), except `/favicon.ico`, which the container's healthcheck requests over HTTP. `False` only for a plain-HTTP run |
+| `SESSION_COOKIE_SECURE` | `True` without `DEBUG`, else `False` | The session cookie is only sent over HTTPS. `False` only for a plain-HTTP run |
+| `CSRF_COOKIE_SECURE` | `True` without `DEBUG`, else `False` | The CSRF cookie is only sent over HTTPS. `False` only for a plain-HTTP run, or forms fail |
+| `SECURE_HSTS_SECONDS` | `3600` without `DEBUG`, else `0` | `Strict-Transport-Security` max-age on HTTPS responses, a whole number of seconds (`0` sends none). Browsers remember it, so raise it (e.g. to `31536000`) once HTTPS is known to work. It never covers subdomains or the preload list |
+| `SECURE_PROXY_SSL_HEADER` | `False` | `True` only behind a TLS-terminating proxy that sets `X-Forwarded-Proto`: requests it forwarded over HTTPS then count as secure (no redirect loop). Without such a proxy, any client could claim HTTPS |
 
 Values are read from the process environment first. `.env` at the repo root only fills in variables that aren't already set. `.env` is git-ignored, and `.env.example` documents every variable. Write one `NAME=value` per line with no spaces around `=`. `DEBUG=True` is for local development only. The test suite needs `SECRET_KEY` and `OPENAI_API_KEY` too, so set up `.env` before running the tests. The tests never call the OpenAI API.
+
+The five HTTPS variables are commented out in `.env.example`: set one only to override its default, which follows `DEBUG`. Unset or empty means the default. The booleans take `true`/`false`, `yes`/`no`, `on`/`off` or `1`/`0`, and anything else stops startup with an error that names the variable (a typo never turns HTTPS off quietly). With `DEBUG` off, email goes to Django's SMTP backend (the app sends none yet); with `DEBUG` on, to the console.
+
+Failed log-ins are locked out by [django-axes](https://django-axes.readthedocs.io/), on the log-in page and the admin's alike:
+
+- After 5 failed log-ins for the same username from the same IP address, that username is refused from that address for 15 minutes after the last attempt, even with the right password. The page (HTTP 429) says "Too many failed log-in attempts. Try again in 15 minutes." and names no account. A username that doesn't exist is counted the same way.
+- Another IP address, or another username from the same address, is not affected. A successful log-in clears the earlier failures.
+- The attempts are stored in the database (Access attempts in the admin). Clear them with `./.venv/bin/python src/manage.py axes_reset` (in the container: `docker exec <container> python src/manage.py axes_reset`); `axes_reset_username <name>` clears one user.
+- The IP address is the connection's (`REMOTE_ADDR`). Behind a reverse proxy every client shares the proxy's address, so the lockout is then in effect per username. Reading the client address from `X-Forwarded-For` isn't set up.
 
 ## Run with Docker
 
@@ -58,12 +72,15 @@ The `Dockerfile` builds a production image: gunicorn, `DEBUG` off, static files 
 
 ```bash
 docker build -t learning-companion .
-docker run --env-file .env -e DEBUG=False -p 127.0.0.1:8000:8000 -v learning-companion-data:/app/data learning-companion
+# Behind a TLS-terminating proxy (production):
+docker run --env-file .env -e DEBUG=False -e SECURE_PROXY_SSL_HEADER=True -p 127.0.0.1:8000:8000 -v learning-companion-data:/app/data learning-companion
+# Locally over plain HTTP: turn the HTTPS redirect and Secure-only cookies off.
+docker run --env-file .env -e DEBUG=False -e SECURE_SSL_REDIRECT=False -e SESSION_COOKIE_SECURE=False -e CSRF_COOKIE_SECURE=False -p 127.0.0.1:8000:8000 -v learning-companion-data:/app/data learning-companion
 # or pass the two required keys directly:
-docker run -e SECRET_KEY=... -e OPENAI_API_KEY=... -p 127.0.0.1:8000:8000 -v learning-companion-data:/app/data learning-companion
+docker run -e SECRET_KEY=... -e OPENAI_API_KEY=... -e SECURE_SSL_REDIRECT=False -e SESSION_COOKIE_SECURE=False -e CSRF_COOKIE_SECURE=False -p 127.0.0.1:8000:8000 -v learning-companion-data:/app/data learning-companion
 ```
 
-Then open http://localhost:8000/.
+Then open http://localhost:8000/ (the plain-HTTP run). With the default HTTPS settings, every page except the favicon redirects to `https://`, which only a TLS proxy in front of the container answers.
 
 - **Start-up:** on every start the container applies migrations to `/app/data/db.sqlite3` (the image sets `DATABASE_URL` to it), then starts gunicorn on port 8000. Without `SECRET_KEY` or `OPENAI_API_KEY` it exits with an error that names the missing variable.
 - **Data:** it survives new containers as long as they use the same volume.
@@ -75,6 +92,7 @@ A few options:
 
 - `-e WEB_CONCURRENCY=3` runs more gunicorn workers (default 1).
 - If the site is reached through another host name or an HTTPS proxy, set `-e ALLOWED_HOSTS=companion.example,127.0.0.1` and `-e CSRF_TRUSTED_ORIGINS=https://companion.example`. Keep `127.0.0.1` in `ALLOWED_HOSTS`: the healthcheck requests `http://127.0.0.1:8000/favicon.ico` inside the container, and without it the container stays unhealthy.
+- Behind an HTTPS proxy, also set `-e SECURE_PROXY_SSL_HEADER=True`, and make sure the proxy sets `X-Forwarded-Proto` (and strips any the client sent). Without it the app sees plain HTTP and redirects every request again.
 
 `scripts/docker-smoke.sh` builds the image, runs it with dummy keys and checks it end to end:
 
@@ -82,6 +100,7 @@ A few options:
 - sign-up works through the real form;
 - an account survives a new container on the same volume, also when that container is started with `--env-file` and a `.env` made from `.env.example`;
 - `-e DEBUG=False` beats the example's `DEBUG=True`;
+- with the default HTTPS settings, the container still becomes healthy and serves the favicon over HTTP, redirects `/` to `https://`, and sends no `Strict-Transport-Security` over plain HTTP (the other containers run with the three HTTP overrides);
 - the app doesn't run as root;
 - the image holds no `.env` and no Tailwind binary.
 
@@ -103,9 +122,13 @@ older one, except on `main` and `develop` (a cancelled required check there
 would read as failed). Two jobs run in parallel, and their ids are the status checks:
 
 - `quality` (Python 3.14, pip cache): `ruff check .`, `ruff format --check .`,
-  `manage.py check`, `manage.py makemigrations --check --dry-run` and
-  `manage.py test src`, each its own step. The two required keys are dummies
-  in the workflow (the tests never call the API); no secret is used.
+  `manage.py check`, `manage.py check --deploy --fail-level WARNING`,
+  `manage.py makemigrations --check --dry-run` and `manage.py test src`, each
+  its own step. The two required keys are dummies in the workflow (the tests
+  never call the API); no secret is used. The deployment check runs with
+  `DEBUG=False` and its own dummy key, long enough for Django's key check. The
+  tests pass whatever `DEBUG` is: the project's test runner keeps the SSL
+  redirect off for them.
 - `docker-smoke`: `scripts/docker-smoke.sh`, which builds the image, runs it
   and checks it end to end.
 
@@ -120,6 +143,8 @@ The same gate locally:
 ```bash
 ./.venv/bin/ruff check . && ./.venv/bin/ruff format --check .
 ./.venv/bin/python src/manage.py check
+DEBUG=False SECRET_KEY=local-deploy-check-dummy-key-0123456789-abcdefghijklmnop \
+  ./.venv/bin/python src/manage.py check --deploy --fail-level WARNING
 ./.venv/bin/python src/manage.py makemigrations --check --dry-run
 ./.venv/bin/python src/manage.py test src
 scripts/docker-smoke.sh   # needs Docker
@@ -129,10 +154,10 @@ Follow a run with `gh run list` or `gh pr checks <pr>`.
 
 ## Layout
 
-- `src/manage.py`, `src/config/`: Django project (settings, URLs, ASGI/WSGI)
+- `src/manage.py`, `src/config/`: Django project (settings, URLs, ASGI/WSGI, the test runner)
 - `src/<app>/`: Django apps, each with its own tests
 - `src/core/`: the home page and other site-wide views
-- `src/accounts/`: the custom user model (`accounts.User`), and sign-up, log-in and log-out under `/accounts/`
+- `src/accounts/`: the custom user model (`accounts.User`), and sign-up, log-in and log-out under `/accounts/`, with the failed log-in lockout page
 - `src/tags/`: shared tags (case-insensitive unique names), used for focus areas and session tags, plus the comma-separated tag field both forms use
 - `src/profiles/`: each user's profile (name, cohort, focus areas), created automatically for new users, and the profile pages under `/profile/`
 - `src/goals/`: learning goals (title, description, status planned / in-progress / done), each owned by one user; listed at `/goals/`, created at `/goals/new/`, and viewed, edited or deleted at `/goals/<id>/`

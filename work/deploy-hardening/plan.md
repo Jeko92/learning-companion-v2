@@ -236,7 +236,7 @@
   - Test: `src/config/tests/test_docker.py`
   - Impl: `scripts/docker-smoke.sh`
   - Covers: AC20
-- [ ] 19. Docs (no test, doc-only commit).
+- [x] 19. Docs (no test, doc-only commit).
   - **README**
     - the env table rows for the five variables
     - "Run with Docker": local HTTP needs the three `-e …=False`, the HTTPS proxy needs `SECURE_PROXY_SSL_HEADER=True`, and `axes_reset` clears a lockout
