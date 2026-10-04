@@ -37,3 +37,5 @@ Constraints from the codebase:
 - The Docker HEALTHCHECK and `scripts/docker-smoke.sh` request `/favicon.ico`, `/`, sign-up and log-in anonymously; `/no-such-page/` must stay 404.
 - `GoalSessionsMixin`/`GoalResourcesMixin` check `request.user.is_authenticated` in `dispatch`; that stays harmless.
 - `core/tests/pages.py` lists the public pages (home, log in, sign up, locked out); the walker's allow-list must agree with it.
+
+Acceptance criteria approved by the user on 2026-10-04.
