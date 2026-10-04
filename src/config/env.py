@@ -1,5 +1,6 @@
 """Resolve environment-specific settings from the process environment and .env."""
 
+import re
 import warnings
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -13,6 +14,9 @@ DEFAULT_ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 DEFAULT_OPENAI_MODEL = "gpt-4.1-mini"
 TRUE_VALUES = frozenset({"true", "1", "yes", "on"})
 FALSE_VALUES = frozenset({"false", "0", "no", "off"})
+# An hour to start with: HSTS is sticky in browsers, so raise it once HTTPS
+# is known to work.
+DEFAULT_HSTS_SECONDS = 3600
 
 
 @dataclass(frozen=True)
@@ -28,6 +32,7 @@ class EnvSettings:
     ssl_redirect: bool
     session_cookie_secure: bool
     csrf_cookie_secure: bool
+    hsts_seconds: int
 
 
 def trimmed_list(env: django_environ.Env, name: str, default: list[str]) -> list[str]:
@@ -83,6 +88,20 @@ def optional_bool(env: django_environ.Env, name: str, default: bool) -> bool:
     raise ImproperlyConfigured(f"The {name} environment variable must be true or false")
 
 
+def optional_non_negative_int(env: django_environ.Env, name: str, default: int) -> int:
+    """A whole number, 0 or more (ASCII digits only); set but blank means the
+    default, like unset."""
+    raw = env.ENVIRON.get(name, "").strip()
+    if not raw:
+        return default
+    if not re.fullmatch(r"[0-9]+", raw):
+        raise ImproperlyConfigured(
+            f"The {name} environment variable must be a whole number of "
+            "seconds, 0 or more"
+        )
+    return int(raw)
+
+
 def required_raw(environ: Mapping[str, str], name: str) -> str:
     """A required secret, read raw: env.str() would expand a leading "$" as a
     reference to another variable, and generated keys can start with "$".
@@ -121,4 +140,7 @@ def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
             env, "SESSION_COOKIE_SECURE", default=not debug
         ),
         csrf_cookie_secure=optional_bool(env, "CSRF_COOKIE_SECURE", default=not debug),
+        hsts_seconds=optional_non_negative_int(
+            env, "SECURE_HSTS_SECONDS", default=0 if debug else DEFAULT_HSTS_SECONDS
+        ),
     )

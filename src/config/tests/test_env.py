@@ -345,6 +345,43 @@ class ResolveSettingsTests(SimpleTestCase):
                     f"The {name} environment variable must be true or false",
                 )
 
+    def test_hsts_seconds_default_to_an_hour_unless_debug(self):
+        cases = (
+            ({"DEBUG": "False"}, 3600),
+            ({"DEBUG": "True"}, 0),
+            ({"DEBUG": "False", "SECURE_HSTS_SECONDS": ""}, 3600),
+            ({"DEBUG": "True", "SECURE_HSTS_SECONDS": "  "}, 0),
+        )
+        for values, expected in cases:
+            with self.subTest(**values):
+                settings = self.resolve(environ(SECRET_KEY="x", **values))
+
+                self.assertEqual(settings.hsts_seconds, expected)
+
+    def test_explicit_hsts_seconds_win_over_the_debug_default(self):
+        cases = (
+            ({"DEBUG": "False", "SECURE_HSTS_SECONDS": "0"}, 0),
+            ({"DEBUG": "False", "SECURE_HSTS_SECONDS": " 31536000 "}, 31536000),
+            ({"DEBUG": "True", "SECURE_HSTS_SECONDS": "60"}, 60),
+        )
+        for values, expected in cases:
+            with self.subTest(**values):
+                settings = self.resolve(environ(SECRET_KEY="x", **values))
+
+                self.assertEqual(settings.hsts_seconds, expected)
+
+    def test_hsts_seconds_that_are_not_a_whole_number_0_or_more_raise(self):
+        for raw in ("abc", "1.5", "-1", "1e3"):
+            with self.subTest(SECURE_HSTS_SECONDS=raw):
+                with self.assertRaises(ImproperlyConfigured) as raised:
+                    self.resolve(environ(SECRET_KEY="x", SECURE_HSTS_SECONDS=raw))
+
+                self.assertEqual(
+                    str(raised.exception),
+                    "The SECURE_HSTS_SECONDS environment variable must be a "
+                    "whole number of seconds, 0 or more",
+                )
+
     def test_values_come_from_env_file(self):
         env_file = self.write_env_file(
             "SECRET_KEY=from-file\nDEBUG=True\nALLOWED_HOSTS=example.com\n"

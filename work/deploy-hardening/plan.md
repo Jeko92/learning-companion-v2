@@ -131,7 +131,7 @@
   - Test: `src/config/tests/test_env.py`
   - Impl: `src/config/env.py`
   - Covers: AC10, AC11
-- [ ] 3. `SECURE_HSTS_SECONDS` resolves from the environment.
+- [x] 3. `SECURE_HSTS_SECONDS` resolves from the environment.
   - Behaviour: 3600 when `DEBUG` is off and 0 when on. An explicit integer wins (including `0` with DEBUG off), and blank means the default. `abc`, `1.5` and `-1` are `ImproperlyConfigured` naming the variable ("must be a whole number of seconds, 0 or more").
   - Test: `src/config/tests/test_env.py`
   - Impl: `src/config/env.py` (`optional_non_negative_int`, `DEFAULT_HSTS_SECONDS`)
