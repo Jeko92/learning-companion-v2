@@ -18,6 +18,7 @@ As a developer, I want the dashboard's per-week page tests to pin "today" to a d
 - The `add_session` helper's default `day` (used only by tests that don't depend on "today").
 
 ## Notes
+- Acceptance criteria approved by the user on 2026-10-04.
 - Interview answers (2026-10-04): the pin is a Saturday in 2030 (user's choice over a 2024 date); both `DashboardHoursPerWeekTests` and `DashboardBarTests` move with the shared `NOW`; both optional extras are in scope (the `minutes_per_week` comment, from review finding 2 of `work/dashboard-hours/review.md`, and the guard test).
 - Future fixture dates are fine: `add_session` uses `LearningSession.objects.create()`, which skips `full_clean()` and so `reject_future_dates`. The guard test (AC4) will start failing in early 2030, when the real date reaches the pinned window; that is intended, it says the pin needs moving.
 - Today (Sun Oct 4, 2026) is in the same week as the old pin (Sat Oct 3, 2026), so the current tests can't tell a patched today from the real one.
