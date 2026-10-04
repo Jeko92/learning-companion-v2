@@ -803,7 +803,7 @@ class GoalViewsScopingTests(TestCase):
         # A new route must be added here deliberately, not slip past the check.
         self.assertEqual(
             set(views),
-            {"list", "detail", "edit", "delete", "summary", "next_steps"},
+            {"list", "detail", "edit", "delete", "summary", "next_steps", "move"},
         )
         for name, view in views.items():
             with self.subTest(view=name):
