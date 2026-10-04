@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import os
+import warnings
 from pathlib import Path
 
 from config.env import resolve_settings
@@ -173,6 +174,13 @@ STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
 }
+
+# Local runs and the test suite never run collectstatic, so STATIC_ROOT doesn't
+# exist there, and WhiteNoise would warn about it on every start. The container
+# build collects into it (scripts/docker-smoke.sh checks the CSS is served).
+# Matched by WhiteNoise's wording: a module filter would match the caller (the
+# request handler), not WhiteNoise.
+warnings.filterwarnings("ignore", message=r"No directory at: ", category=UserWarning)
 
 # Pinned, so builds are reproducible and don't look up the latest release.
 TAILWIND_CLI_VERSION = "4.3.3"

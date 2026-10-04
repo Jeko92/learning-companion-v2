@@ -90,7 +90,7 @@
   - `STORAGES["staticfiles"]["BACKEND"]` is `whitenoise.storage.CompressedStaticFilesStorage`, and `STORAGES["default"]` is Django's `FileSystemStorage`.
 
   — test: `src/config/tests/test_settings.py` (`StaticFilesSettingsTests`) — impl: `src/config/settings.py` — covers: AC4
-- [ ] 8. Collected static files are served compressed with `DEBUG` off. With `override_settings(STATIC_ROOT=<temp dir>)` and `call_command("collectstatic", interactive=False, verbosity=0)` in the test:
+- [x] 8. Collected static files are served compressed with `DEBUG` off. With `override_settings(STATIC_ROOT=<temp dir>)` and `call_command("collectstatic", interactive=False, verbosity=0)` in the test:
   - `GET /static/favicon.svg` with `Accept-Encoding: gzip` returns 200 with `Content-Encoding: gzip`;
   - without that header it returns the plain file;
   - the page's `{% static %}` hrefs are unchanged.
