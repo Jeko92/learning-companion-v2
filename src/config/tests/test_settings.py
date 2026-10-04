@@ -195,6 +195,20 @@ class SettingsWiringTests(SimpleTestCase):
         self.assertNotIn("sk-", SETTINGS_FILE.read_text())
 
 
+class LoginRequiredSettingsTests(SimpleTestCase):
+    """Every view needs a logged-in user unless it is marked login_not_required."""
+
+    def test_login_required_middleware_comes_right_after_authentication(self):
+        # It reads request.user, which AuthenticationMiddleware sets.
+        middleware = settings.MIDDLEWARE
+
+        self.assertEqual(
+            middleware.index("django.contrib.auth.middleware.LoginRequiredMiddleware"),
+            middleware.index("django.contrib.auth.middleware.AuthenticationMiddleware")
+            + 1,
+        )
+
+
 class StaticFilesSettingsTests(SimpleTestCase):
     """Outside runserver, WhiteNoise serves the files collectstatic gathers."""
 
