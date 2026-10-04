@@ -251,8 +251,8 @@
   - Covers: AC21
 
 ### Review findings (review.md, 2026-10-04)
-- [ ] 20. `--parallel` workers also run without the SSL redirect (medium).
-  - Behaviour: the project runner's `parallel_test_suite` is a `ParallelTestSuite` subclass. Its worker setup (`process_setup`, run in each worker process) leaves `SECURE_SSL_REDIRECT` `False` even when it was `True`. Test it by calling the worker setup directly under `override_settings(SECURE_SSL_REDIRECT=True)`, and disable the override afterwards so the test doesn't leak.
+- [x] 20. `--parallel` workers also run without the SSL redirect (medium).
+  - Behaviour: the project runner's `parallel_test_suite` is a `ParallelTestSuite` subclass. Its worker setup (`process_setup`) runs in each spawned worker **before `django.setup()`**, when settings aren't loaded yet, so `override_settings` can't work there. It sets `os.environ["SECURE_SSL_REDIRECT"] = "False"` instead, which the worker's settings then read. The test calls it under `mock.patch.dict(os.environ)`.
   - Then verify by hand that `DEBUG=False ./.venv/bin/python src/manage.py test accounts.tests.test_login accounts.tests.test_nav --parallel 2` passes. Put the output in the commit message.
   - Test: `src/config/tests/test_runner.py`
   - Impl: `src/config/runner.py`

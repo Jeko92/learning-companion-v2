@@ -1,3 +1,4 @@
+import os
 from unittest import mock
 
 from django.conf import settings
@@ -30,3 +31,13 @@ class TestRunnerTests(SimpleTestCase):
                 runner.teardown_test_environment()
 
         self.assertIs(settings.SECURE_SSL_REDIRECT, True)
+
+    def test_parallel_workers_load_their_settings_without_the_ssl_redirect(self):
+        # A spawned --parallel worker loads the settings afresh: its setup
+        # runs before django.setup(), so it sets the environment variable the
+        # settings read.
+        suite_class = get_runner(settings).parallel_test_suite
+        with mock.patch.dict(os.environ, {"SECURE_SSL_REDIRECT": "True"}):
+            suite_class.process_setup(*suite_class.process_setup_args)
+
+            self.assertEqual(os.environ["SECURE_SSL_REDIRECT"], "False")
