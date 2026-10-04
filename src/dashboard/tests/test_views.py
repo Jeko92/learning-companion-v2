@@ -6,7 +6,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import connection
 from django.shortcuts import resolve_url
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
@@ -282,24 +282,40 @@ class DashboardHoursPerTagTests(TestCase):
         self.assertNotIn("No sessions logged yet.", hours.text())
 
 
-NOW = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)  # a Saturday
+NOW = datetime(2030, 3, 16, 12, 0, tzinfo=UTC)  # a Saturday
 
 
-@patch("django.utils.timezone.now", return_value=NOW)
+class PinnedTodayTests(SimpleTestCase):
+    """The page tests below patch "today" to NOW. They only prove the view
+    reads the patched date while the real one lies outside the weeks shown."""
+
+    def test_the_real_date_is_outside_the_weeks_shown_around_now(self):
+        newest = NOW.date() - timedelta(days=NOW.weekday())
+        first, last = newest - timedelta(weeks=7), newest + timedelta(days=6)
+
+        self.assertFalse(
+            first <= datetime.now(UTC).date() <= last,
+            f"Today is within {first}..{last}: move NOW and the fixture dates.",
+        )
+
+
 class DashboardHoursPerWeekTests(TestCase):
     def setUp(self):
+        # Patched before logging in: a session started at the real date would
+        # have expired by NOW.
+        self.enterContext(patch("django.utils.timezone.now", return_value=NOW))
         self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
         self.client.force_login(self.alice)
         bob = get_user_model().objects.create_user("bob")
-        add_session(bob, 500, day=date(2026, 10, 1))
+        add_session(bob, 500, day=date(2030, 3, 14))
 
     def week_rows(self):
         return section(self.client, "hours-per-week-heading").rows
 
-    def test_lists_the_last_eight_weeks_newest_first(self, _now):
-        add_session(self.alice, 45, day=date(2026, 9, 29))
-        add_session(self.alice, 30, day=date(2026, 10, 1))
-        add_session(self.alice, 120, day=date(2026, 9, 15))
+    def test_lists_the_last_eight_weeks_newest_first(self):
+        add_session(self.alice, 45, day=date(2030, 3, 12))
+        add_session(self.alice, 30, day=date(2030, 3, 14))
+        add_session(self.alice, 120, day=date(2030, 2, 26))
 
         hours = section(self.client, "hours-per-week-heading")
 
@@ -308,18 +324,18 @@ class DashboardHoursPerWeekTests(TestCase):
             hours.rows,
             [
                 ["Week", "Time"],
-                ["Week of Sep 28, 2026", "1 h 15 min"],
-                ["Week of Sep 21, 2026", "0 min"],
-                ["Week of Sep 14, 2026", "2 h"],
-                ["Week of Sep 7, 2026", "0 min"],
-                ["Week of Aug 31, 2026", "0 min"],
-                ["Week of Aug 24, 2026", "0 min"],
-                ["Week of Aug 17, 2026", "0 min"],
-                ["Week of Aug 10, 2026", "0 min"],
+                ["Week of Mar 11, 2030", "1 h 15 min"],
+                ["Week of Mar 4, 2030", "0 min"],
+                ["Week of Feb 25, 2030", "2 h"],
+                ["Week of Feb 18, 2030", "0 min"],
+                ["Week of Feb 11, 2030", "0 min"],
+                ["Week of Feb 4, 2030", "0 min"],
+                ["Week of Jan 28, 2030", "0 min"],
+                ["Week of Jan 21, 2030", "0 min"],
             ],
         )
 
-    def test_without_sessions_every_week_shows_zero(self, _now):
+    def test_without_sessions_every_week_shows_zero(self):
         rows = self.week_rows()
 
         self.assertEqual(len(rows), 9)
@@ -364,13 +380,14 @@ class DashboardQueryCountTests(TestCase):
             self.client.get("/dashboard/")
 
 
-@patch("django.utils.timezone.now", return_value=NOW)
 class DashboardBarTests(TestCase):
     """Each per-tag and per-week row has a bar scaled to the table's largest
     value; the table keeps the numbers, so the bars are hidden from screen
     readers."""
 
     def setUp(self):
+        # Patched before logging in, as in DashboardHoursPerWeekTests.
+        self.enterContext(patch("django.utils.timezone.now", return_value=NOW))
         self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
         self.client.force_login(self.alice)
 
@@ -391,20 +408,20 @@ class DashboardBarTests(TestCase):
             )
         return found
 
-    def test_tag_bars_follow_the_rows_and_scale_to_the_largest(self, _now):
-        add_session(self.alice, 90, tags=["Django"], day=date(2026, 10, 1))
-        add_session(self.alice, 30, tags=["ORM"], day=date(2026, 10, 1))
-        add_session(self.alice, 45, day=date(2026, 9, 22))
+    def test_tag_bars_follow_the_rows_and_scale_to_the_largest(self):
+        add_session(self.alice, 90, tags=["Django"], day=date(2030, 3, 14))
+        add_session(self.alice, 30, tags=["ORM"], day=date(2030, 3, 14))
+        add_session(self.alice, 45, day=date(2030, 3, 5))
 
         self.assertEqual(
             self.bars("hours-per-tag-heading"),
             [("90", "90", "true"), ("30", "90", "true"), ("45", "90", "true")],
         )
 
-    def test_week_bars_follow_the_rows_and_scale_to_the_largest(self, _now):
-        add_session(self.alice, 90, tags=["Django"], day=date(2026, 10, 1))
-        add_session(self.alice, 30, day=date(2026, 9, 29))
-        add_session(self.alice, 45, day=date(2026, 9, 22))
+    def test_week_bars_follow_the_rows_and_scale_to_the_largest(self):
+        add_session(self.alice, 90, tags=["Django"], day=date(2030, 3, 14))
+        add_session(self.alice, 30, day=date(2030, 3, 12))
+        add_session(self.alice, 45, day=date(2030, 3, 5))
 
         values = ["120", "45"] + ["0"] * 6
         self.assertEqual(
@@ -412,5 +429,5 @@ class DashboardBarTests(TestCase):
             [(value, "120", "true") for value in values],
         )
 
-    def test_an_all_zero_week_table_still_has_bars(self, _now):
+    def test_an_all_zero_week_table_still_has_bars(self):
         self.assertEqual(self.bars("hours-per-week-heading"), [("0", "1", "true")] * 8)
