@@ -185,7 +185,7 @@
   - Covers: AC19
 
 ### Lockout (django-axes)
-- [ ] 12. django-axes is installed and wired.
+- [x] 12. django-axes is installed and wired.
   - Requirement `django-axes>=8.3,<8.4` (pinned by regex, and `axes` is importable), the app `axes`, `AxesMiddleware` last.
   - `AUTHENTICATION_BACKENDS` lists the axes backend first, then `ModelBackend`.
   - `AXES_HANDLER` and the response code keep their defaults (database, 429) and are pinned.

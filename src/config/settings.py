@@ -75,6 +75,8 @@ INSTALLED_APPS = [
     # Django's own form templates, for the TemplatesSetting renderer below.
     "django.forms",
     "django_tailwind_cli",
+    # Failed log-in lockout (settings under Authentication).
+    "axes",
     "core",
     "accounts",
     "tags",
@@ -96,6 +98,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Last, as django-axes requires: swaps in the lockout response.
+    "axes.middleware.AxesMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -149,6 +153,15 @@ LOGIN_REDIRECT_URL = "dashboard:index"
 LOGIN_URL = "accounts:login"
 # Where log-out sends the user.
 LOGOUT_REDIRECT_URL = "/"
+
+# django-axes refuses a locked-out log-in first (the app's and the admin's,
+# with the database handler, so every worker sees the same counts); Django's
+# model backend then logs the user in. With two backends, login() needs an
+# explicit backend (see accounts.views.SignUpView).
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
 
 
 # Password validation
