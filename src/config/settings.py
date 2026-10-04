@@ -177,6 +177,8 @@ AXES_LOCKOUT_TEMPLATE = "accounts/locked_out.html"
 # out counts as one). The page says so: change both together. A timedelta,
 # since django-axes reads a plain number as hours.
 AXES_COOLOFF_TIME = timedelta(minutes=15)
+# A successful log-in clears that username and IP's earlier failures.
+AXES_RESET_ON_SUCCESS = True
 
 
 # Password validation

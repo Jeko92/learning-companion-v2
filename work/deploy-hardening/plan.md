@@ -222,7 +222,7 @@
   - Test: `src/accounts/tests/test_lockout.py`
   - Impl: `settings.py`
   - Covers: AC6, AC9
-- [ ] 17. A successful log-in resets the count.
+- [x] 17. A successful log-in resets the count.
   - Behaviour: 4 failures, then a successful log-in, a log-out and 4 more failures leave alice able to log in (no 429).
   - `AXES_RESET_ON_SUCCESS` is pinned.
   - Test: `src/accounts/tests/test_lockout.py`

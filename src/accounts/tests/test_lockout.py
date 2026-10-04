@@ -124,6 +124,22 @@ class LockoutTests(LockoutTestCase):
 LOCKED_OUT = "Too many failed log-in attempts. Try again in 15 minutes."
 
 
+class ResetOnSuccessTests(LockoutTestCase):
+    def test_a_successful_log_in_resets_the_count(self):
+        self.assertIs(getattr(settings, "AXES_RESET_ON_SUCCESS", None), True)
+
+    def test_failures_before_a_successful_log_in_no_longer_count(self):
+        self.fail_log_ins(4)
+        self.log_in(USERNAME, PASSWORD)
+        self.client.post("/accounts/logout/")
+
+        after = self.fail_log_ins(4)
+        response = self.log_in(USERNAME, PASSWORD)
+
+        self.assertEqual([r.status_code for r in after], [200] * 4)
+        self.assertRedirects(response, "/dashboard/", fetch_redirect_response=False)
+
+
 class CoolOffTests(LockoutTestCase):
     def age_failures(self, **delta):
         """Moves every recorded failure back in time, as if it were older."""
