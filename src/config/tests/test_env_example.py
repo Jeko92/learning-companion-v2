@@ -10,11 +10,24 @@ VARIABLES = [
     "DATABASE_URL",
     "OPENAI_API_KEY",
     "OPENAI_MODEL",
+    "SECURE_SSL_REDIRECT",
+    "SESSION_COOKIE_SECURE",
+    "CSRF_COOKIE_SECURE",
+    "SECURE_HSTS_SECONDS",
+    "SECURE_PROXY_SSL_HEADER",
 ]
 # Documented as a commented-out example, never a live NAME= line: copied into
 # .env and passed with docker run --env-file, a blank DATABASE_URL= would
-# override the image's own value and leave the app without a writable database.
-COMMENTED_EXAMPLES = ["DATABASE_URL"]
+# override the image's own value and leave the app without a writable database,
+# and a set HTTPS variable would override the default that follows DEBUG.
+COMMENTED_EXAMPLES = [
+    "DATABASE_URL",
+    "SECURE_SSL_REDIRECT",
+    "SESSION_COOKIE_SECURE",
+    "CSRF_COOKIE_SECURE",
+    "SECURE_HSTS_SECONDS",
+    "SECURE_PROXY_SSL_HEADER",
+]
 
 
 class EnvExampleTests(SimpleTestCase):
@@ -37,6 +50,18 @@ class EnvExampleTests(SimpleTestCase):
         lines = self.read_lines()
         self.assertNotIn("DATABASE_URL", self.assignments())
         self.assertIn("# DATABASE_URL=sqlite:////app/data/db.sqlite3", lines)
+
+    def test_the_https_variables_are_commented_out_examples(self):
+        lines = self.read_lines()
+        for line in (
+            "# SECURE_SSL_REDIRECT=False",
+            "# SESSION_COOKIE_SECURE=False",
+            "# CSRF_COOKIE_SECURE=False",
+            "# SECURE_HSTS_SECONDS=3600",
+            "# SECURE_PROXY_SSL_HEADER=True",
+        ):
+            with self.subTest(line=line):
+                self.assertIn(line, lines)
 
     def test_each_variable_has_a_comment_above_it(self):
         lines = self.read_lines()

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 import os
 import warnings
+from datetime import timedelta
 from pathlib import Path
 
 from config.env import resolve_settings
@@ -34,6 +35,30 @@ ALLOWED_HOSTS = _env.allowed_hosts
 # Needed when the site is reached through another origin, e.g. an HTTPS proxy.
 CSRF_TRUSTED_ORIGINS = _env.csrf_trusted_origins
 
+# HTTPS: on unless DEBUG, each one overridable through the environment (for a
+# plain-HTTP local run, set the first three to False).
+SECURE_SSL_REDIRECT = _env.ssl_redirect
+
+# The container's HEALTHCHECK requests the favicon over plain HTTP inside the
+# container. Matched against the path without its leading slash; \Z, not $,
+# which would also match before a trailing newline (/favicon.ico%0A).
+SECURE_REDIRECT_EXEMPT = [r"^favicon\.ico\Z"]
+
+SESSION_COOKIE_SECURE = _env.session_cookie_secure
+
+CSRF_COOKIE_SECURE = _env.csrf_cookie_secure
+
+SECURE_HSTS_SECONDS = _env.hsts_seconds
+
+# HSTS covers this host only: includeSubDomains and preload commit the whole
+# domain, beyond this app, so they stay off and check --deploy is told so.
+SILENCED_SYSTEM_CHECKS = ["security.W005", "security.W021"]
+
+# Only behind a TLS-terminating proxy that sets X-Forwarded-Proto.
+SECURE_PROXY_SSL_HEADER = (
+    ("HTTP_X_FORWARDED_PROTO", "https") if _env.proxy_ssl_header else None
+)
+
 # OpenAI Chat Completions, used by the ai app (ai.services).
 OPENAI_API_KEY = _env.openai_api_key
 
@@ -52,6 +77,8 @@ INSTALLED_APPS = [
     # Django's own form templates, for the TemplatesSetting renderer below.
     "django.forms",
     "django_tailwind_cli",
+    # Failed log-in lockout (settings under Authentication).
+    "axes",
     "core",
     "accounts",
     "tags",
@@ -73,6 +100,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Last, as django-axes requires: swaps in the lockout response.
+    "axes.middleware.AxesMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -99,6 +128,9 @@ FORM_RENDERER = "django.forms.renderers.TemplatesSetting"
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+# Keeps the suite on plain HTTP whatever DEBUG is (see config/runner.py).
+TEST_RUNNER = "config.runner.TestRunner"
+
 
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
@@ -123,6 +155,33 @@ LOGIN_REDIRECT_URL = "dashboard:index"
 LOGIN_URL = "accounts:login"
 # Where log-out sends the user.
 LOGOUT_REDIRECT_URL = "/"
+
+# django-axes refuses a locked-out log-in first (the app's and the admin's,
+# with the database handler, so every worker sees the same counts); Django's
+# model backend then logs the user in. With two backends, login() needs an
+# explicit backend (see accounts.views.SignUpView).
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+# The 5th failure is refused with the lockout page, and so is every attempt
+# after it, even with the right password.
+AXES_FAILURE_LIMIT = 5
+# Counted per username and IP address together, so an attacker elsewhere can't
+# lock a user out, nor one username lock out everyone behind an IP. Without
+# django-ipware the IP is REMOTE_ADDR: behind a reverse proxy every client
+# shares the proxy's, and the lockout is in effect per username.
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
+# Casefolded, so case variants of a username share one counter.
+AXES_USERNAME_CALLABLE = "accounts.lockout.lockout_username"
+# Rendered with status 429 (django-axes' default code).
+AXES_LOCKOUT_TEMPLATE = "accounts/locked_out.html"
+# The lockout lifts 15 minutes after the last failure (an attempt while locked
+# out counts as one). The page says so: change both together. A timedelta,
+# since django-axes reads a plain number as hours.
+AXES_COOLOFF_TIME = timedelta(minutes=15)
+# A successful log-in clears that username and IP's earlier failures.
+AXES_RESET_ON_SUCCESS = True
 
 
 # Password validation
@@ -192,8 +251,12 @@ TAILWIND_CLI_SRC_CSS = "tailwind/source.css"
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
+# The console in development; SMTP otherwise (check --deploy rejects the
+# console). The app sends no email yet, so no SMTP host is configured.
 MAILERS = {
     "default": {
-        "BACKEND": "django.core.mail.backends.console.EmailBackend",
+        "BACKEND": "django.core.mail.backends.console.EmailBackend"
+        if DEBUG
+        else "django.core.mail.backends.smtp.EmailBackend",
     },
 }

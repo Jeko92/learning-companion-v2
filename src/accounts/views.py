@@ -26,7 +26,12 @@ class SignUpView(CreateView):
 
     def form_valid(self, form):
         response = super().form_valid(form)
-        login(self.request, self.object)
+        # Named: with the axes backend configured too, Django can't pick one.
+        login(
+            self.request,
+            self.object,
+            backend="django.contrib.auth.backends.ModelBackend",
+        )
         messages.success(self.request, f"Welcome, {self.object.get_username()}!")
         return response
 

@@ -4,3 +4,4 @@ django-tailwind-cli>=4.8,<4.9
 openai>=3.24,<3.25
 gunicorn>=26.2,<27
 whitenoise>=6.12,<7
+django-axes>=8.3,<8.4

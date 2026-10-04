@@ -42,6 +42,14 @@ jobs:
         run: ruff format --check .
       - name: Django system checks
         run: python src/manage.py check
+      # Production settings: DEBUG off turns the HTTPS settings on, and the
+      # job's dummy key is too short for check --deploy, so this step has its
+      # own (still a dummy; no secret is used).
+      - name: Deployment checks
+        run: python src/manage.py check --deploy --fail-level WARNING
+        env:
+          DEBUG: "False"
+          SECRET_KEY: ci-deploy-check-dummy-key-0123456789-abcdefghijklmnopqrstuvwxyz
       - name: Migrations match the models
         run: python src/manage.py makemigrations --check --dry-run
       - name: Tests
