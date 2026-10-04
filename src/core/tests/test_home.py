@@ -35,6 +35,10 @@ class HomePageTests(TestCase):
         self.assertEqual(match.url_name, "home")
         self.assertIs(resolve("/", urlconf="core.urls").func, views.home)
 
+    def test_home_is_public_under_the_login_required_middleware(self):
+        # LoginRequiredMiddleware reads this attribute off the resolved view.
+        self.assertFalse(getattr(resolve("/").func, "login_required", True))
+
     def test_root_urlconf_includes_core_urls_at_the_root(self):
         # resolve() gives the same match for a direct path() to the view, so
         # check the root URLconf for the include itself. include() imports the
