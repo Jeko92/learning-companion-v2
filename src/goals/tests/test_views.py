@@ -1907,3 +1907,21 @@ class GoalDetailCardTests(TestCase):
             with self.subTest(section=attrs["aria-labelledby"]):
                 self.assertIn("card", attrs.get("class", "").split())
                 self.assertIn(attrs["aria-labelledby"], h2_ids)
+
+    def test_resource_titles_wrap_between_words_not_inside_them(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        goal = Goal.objects.create(owner=alice, title="Learn Django")
+        Resource.objects.create(
+            goal=goal, url="https://docs.djangoproject.com/", title="Django docs"
+        )
+        self.client.force_login(alice)
+
+        page = get_page(self.client, goal.get_absolute_url())
+
+        (link,) = [
+            a.get("class", "").split()
+            for t, a in page.elements
+            if t == "a" and a.get("href") == "https://docs.djangoproject.com/"
+        ]
+        self.assertIn("break-words", link)
+        self.assertNotIn("break-all", link)

@@ -100,7 +100,7 @@
           <ul class="space-y-2">
             {% for resource in resources %}
               <li class="flex items-start justify-between gap-4 rounded-box border border-base-300 px-4 py-3">
-                <a href="{{ resource.url }}" target="_blank" rel="noopener noreferrer" class="link link-hover break-all font-medium">{{ resource.title }}</a>
+                <a href="{{ resource.url }}" target="_blank" rel="noopener noreferrer" class="link link-hover break-words font-medium">{{ resource.title }}</a>
                 <a href="{% url 'resources:delete' resource.pk %}" class="btn btn-ghost btn-xs text-error">Delete</a>
               </li>
             {% endfor %}
