@@ -12,12 +12,14 @@ TEST_GUARD_FILE="src/manage.py"
 # tests are then only enforced at commit time.
 RUN_TESTS_ON_WRITE="true"
 
-# Release PRs (develop -> main): with "false", a PR with no checks reported
-# is merged on the strength of the local suite + lint (run by guard-bash.sh
-# right before 'gh pr merge'). Flip to "true" once CI exists (ticket ci-tests):
-# then every check must have passed, and a release PR with no, pending or
-# failed checks is blocked. Any value other than "false" counts as on.
-REQUIRE_CHECKS="false"
+# Release PRs (develop -> main): CI (.github/workflows/ci.yml, jobs quality
+# and docker-smoke) runs on every push and PR, so every check must have
+# passed: a release PR with no, pending or failed checks is blocked.
+# guard-bash.sh still re-runs the local suite + lint right before
+# 'gh pr merge'. With "false", a PR with no checks reported would be merged
+# on the local gate alone; any value other than "false" counts as on.
+# src/config/tests/test_ci.py keeps this "true".
+REQUIRE_CHECKS="true"
 
 # Gitflow branches (see .claude/rules/git.md). Ticket branches are cut from
 # DEVELOP_BRANCH and squash-merged back into it; after every ticket the

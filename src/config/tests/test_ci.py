@@ -182,3 +182,14 @@ class WorkflowHygieneTests(WorkflowTestCase):
         for job in self.jobs:
             with self.subTest(job=job):
                 self.assertNotIn("name", self.settings_of(job))
+
+
+class FactoryGateTests(SimpleTestCase):
+    """With CI in place, a release PR merges only on passing checks."""
+
+    def test_release_prs_require_passing_checks(self):
+        config = (ROOT / ".claude" / "hooks" / "config.sh").read_text()
+        self.assertEqual(
+            re.findall(r"^REQUIRE_CHECKS=.*$", config, re.MULTILINE),
+            ['REQUIRE_CHECKS="true"'],
+        )
