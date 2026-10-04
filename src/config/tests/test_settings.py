@@ -22,6 +22,21 @@ PATCHED_ENVIRON = {
     # Never opened: reloading settings doesn't touch the live connections.
     "DATABASE_URL": "sqlite:////wiring-test/db.sqlite3",
     "CSRF_TRUSTED_ORIGINS": "https://wiring.example, https://other.example",
+    # With DEBUG on, each of these defaults to off.
+    "SECURE_SSL_REDIRECT": "True",
+    "SESSION_COOKIE_SECURE": "True",
+    "CSRF_COOKIE_SECURE": "True",
+    "SECURE_HSTS_SECONDS": "7200",
+    "SECURE_PROXY_SSL_HEADER": "True",
+}
+
+# Blank means the default; it also beats a developer's .env.
+HTTPS_DEFAULTS = {
+    "SECURE_SSL_REDIRECT": "",
+    "SESSION_COOKIE_SECURE": "",
+    "CSRF_COOKIE_SECURE": "",
+    "SECURE_HSTS_SECONDS": "",
+    "SECURE_PROXY_SSL_HEADER": "",
 }
 
 
@@ -106,6 +121,58 @@ class SettingsWiringTests(SimpleTestCase):
         self.reload_with(CSRF_TRUSTED_ORIGINS="")
 
         self.assertEqual(getattr(settings_module, "CSRF_TRUSTED_ORIGINS", None), [])
+
+    def https_settings(self):
+        return {
+            name: getattr(settings_module, name, None)
+            for name in (
+                "SECURE_SSL_REDIRECT",
+                "SESSION_COOKIE_SECURE",
+                "CSRF_COOKIE_SECURE",
+                "SECURE_HSTS_SECONDS",
+                "SECURE_PROXY_SSL_HEADER",
+            )
+        }
+
+    def test_https_settings_come_from_the_environment(self):
+        self.assertEqual(
+            self.https_settings(),
+            {
+                "SECURE_SSL_REDIRECT": True,
+                "SESSION_COOKIE_SECURE": True,
+                "CSRF_COOKIE_SECURE": True,
+                "SECURE_HSTS_SECONDS": 7200,
+                "SECURE_PROXY_SSL_HEADER": ("HTTP_X_FORWARDED_PROTO", "https"),
+            },
+        )
+
+    def test_https_settings_are_on_by_default_without_debug(self):
+        self.reload_with(DEBUG="False", **HTTPS_DEFAULTS)
+
+        self.assertEqual(
+            self.https_settings(),
+            {
+                "SECURE_SSL_REDIRECT": True,
+                "SESSION_COOKIE_SECURE": True,
+                "CSRF_COOKIE_SECURE": True,
+                "SECURE_HSTS_SECONDS": 3600,
+                "SECURE_PROXY_SSL_HEADER": None,
+            },
+        )
+
+    def test_https_settings_are_off_by_default_with_debug(self):
+        self.reload_with(DEBUG="True", **HTTPS_DEFAULTS)
+
+        self.assertEqual(
+            self.https_settings(),
+            {
+                "SECURE_SSL_REDIRECT": False,
+                "SESSION_COOKIE_SECURE": False,
+                "CSRF_COOKIE_SECURE": False,
+                "SECURE_HSTS_SECONDS": 0,
+                "SECURE_PROXY_SSL_HEADER": None,
+            },
+        )
 
     def test_generated_secret_key_is_not_hardcoded(self):
         self.assertNotIn("django-insecure", SETTINGS_FILE.read_text())

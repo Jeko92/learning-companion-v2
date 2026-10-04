@@ -148,7 +148,7 @@
   - Test: `src/config/tests/test_runner.py`
   - Impl: `src/config/runner.py` (`TestRunner(DiscoverRunner)`), `settings.py` (`TEST_RUNNER = "config.runner.TestRunner"`). It is not `config/test_runner.py`, because that name matches the `test*.py` discovery pattern.
   - Covers: AC16
-- [ ] 6. `settings.py` assigns the HTTPS settings from `EnvSettings`.
+- [x] 6. `settings.py` assigns the HTTPS settings from `EnvSettings`.
   - Settings: `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, `SECURE_HSTS_SECONDS`, and `SECURE_PROXY_SSL_HEADER` (the tuple, or `None`).
   - `PATCHED_ENVIRON` gets non-default values for all five, so the `.env` leak guard covers them.
   - A wiring test asserts the patched values, a `reload_with(DEBUG="False", <the five blank>)` test asserts the secure defaults, and a `DEBUG="True"` test asserts the insecure ones.

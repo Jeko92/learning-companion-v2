@@ -34,6 +34,21 @@ ALLOWED_HOSTS = _env.allowed_hosts
 # Needed when the site is reached through another origin, e.g. an HTTPS proxy.
 CSRF_TRUSTED_ORIGINS = _env.csrf_trusted_origins
 
+# HTTPS: on unless DEBUG, each one overridable through the environment (for a
+# plain-HTTP local run, set the first three to False).
+SECURE_SSL_REDIRECT = _env.ssl_redirect
+
+SESSION_COOKIE_SECURE = _env.session_cookie_secure
+
+CSRF_COOKIE_SECURE = _env.csrf_cookie_secure
+
+SECURE_HSTS_SECONDS = _env.hsts_seconds
+
+# Only behind a TLS-terminating proxy that sets X-Forwarded-Proto.
+SECURE_PROXY_SSL_HEADER = (
+    ("HTTP_X_FORWARDED_PROTO", "https") if _env.proxy_ssl_header else None
+)
+
 # OpenAI Chat Completions, used by the ai app (ai.services).
 OPENAI_API_KEY = _env.openai_api_key
 
