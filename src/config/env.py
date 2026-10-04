@@ -11,6 +11,8 @@ from django.core.exceptions import ImproperlyConfigured
 
 DEFAULT_ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 DEFAULT_OPENAI_MODEL = "gpt-4.1-mini"
+TRUE_VALUES = frozenset({"true", "1", "yes", "on"})
+FALSE_VALUES = frozenset({"false", "0", "no", "off"})
 
 
 @dataclass(frozen=True)
@@ -23,6 +25,7 @@ class EnvSettings:
     # None when DATABASE_URL is unset or blank: settings.py keeps its default.
     database: dict | None
     csrf_trusted_origins: list[str]
+    ssl_redirect: bool
 
 
 def trimmed_list(env: django_environ.Env, name: str, default: list[str]) -> list[str]:
@@ -63,6 +66,21 @@ def database_config(env: django_environ.Env) -> dict | None:
     return config
 
 
+def optional_bool(env: django_environ.Env, name: str, default: bool) -> bool:
+    """A strict boolean: set but blank means the default, like unset. Unlike
+    env.bool(), which reads anything unknown as False, a value that isn't
+    clearly true or false is an error, so a typo can't quietly turn a
+    security setting off."""
+    raw = env.ENVIRON.get(name, "").strip().lower()
+    if not raw:
+        return default
+    if raw in TRUE_VALUES:
+        return True
+    if raw in FALSE_VALUES:
+        return False
+    raise ImproperlyConfigured(f"The {name} environment variable must be true or false")
+
+
 def required_raw(environ: Mapping[str, str], name: str) -> str:
     """A required secret, read raw: env.str() would expand a leading "$" as a
     reference to another variable, and generated keys can start with "$".
@@ -83,9 +101,10 @@ def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
 
     Env.read_env(env_file)
     env = Env()
+    debug = env.bool("DEBUG", default=False)
     return EnvSettings(
         secret_key=required_raw(Env.ENVIRON, "SECRET_KEY"),
-        debug=env.bool("DEBUG", default=False),
+        debug=debug,
         allowed_hosts=trimmed_list(env, "ALLOWED_HOSTS", default=DEFAULT_ALLOWED_HOSTS),
         openai_api_key=required_raw(Env.ENVIRON, "OPENAI_API_KEY"),
         # Set but blank means the default, like unset.
@@ -93,4 +112,7 @@ def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
         or DEFAULT_OPENAI_MODEL,
         database=database_config(env),
         csrf_trusted_origins=csrf_trusted_origins(env),
+        # The HTTPS settings are on in production (DEBUG off) unless the
+        # environment says otherwise.
+        ssl_redirect=optional_bool(env, "SECURE_SSL_REDIRECT", default=not debug),
     )

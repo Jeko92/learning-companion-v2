@@ -122,7 +122,7 @@
 ## Steps
 
 ### Environment
-- [ ] 1. `SECURE_SSL_REDIRECT` resolves from the environment.
+- [x] 1. `SECURE_SSL_REDIRECT` resolves from the environment.
   - Behaviour: it defaults to `not DEBUG`, an explicit `true`/`false` wins in both directions, and blank means the default. An unknown value (`maybe`) is `ImproperlyConfigured("The SECURE_SSL_REDIRECT environment variable must be true or false")`.
   - Test: `src/config/tests/test_env.py`
   - Impl: `src/config/env.py` (`optional_bool`, `EnvSettings.ssl_redirect`)

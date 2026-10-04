@@ -272,6 +272,52 @@ class ResolveSettingsTests(SimpleTestCase):
                     "origins that start with http:// or https://",
                 )
 
+    def test_ssl_redirect_defaults_to_the_opposite_of_debug(self):
+        for debug, expected in (("False", True), ("True", False)):
+            with self.subTest(DEBUG=debug):
+                for raw in (None, "", "  "):
+                    values = {"SECRET_KEY": "x", "DEBUG": debug}
+                    if raw is not None:
+                        values["SECURE_SSL_REDIRECT"] = raw
+                    with self.subTest(SECURE_SSL_REDIRECT=raw):
+                        settings = self.resolve(environ(**values))
+
+                        self.assertIs(settings.ssl_redirect, expected)
+
+    def test_an_explicit_ssl_redirect_wins_over_the_debug_default(self):
+        cases = {
+            "True": True,
+            "true": True,
+            " yes ": True,
+            "on": True,
+            "1": True,
+            "False": False,
+            "false": False,
+            "no": False,
+            "OFF": False,
+            "0": False,
+        }
+        for debug in ("True", "False"):
+            for raw, expected in cases.items():
+                with self.subTest(DEBUG=debug, SECURE_SSL_REDIRECT=raw):
+                    settings = self.resolve(
+                        environ(SECRET_KEY="x", DEBUG=debug, SECURE_SSL_REDIRECT=raw)
+                    )
+
+                    self.assertIs(settings.ssl_redirect, expected)
+
+    def test_an_unknown_ssl_redirect_value_raises(self):
+        # A typo must never quietly turn HTTPS off.
+        for raw in ("maybe", "Ture", "2"):
+            with self.subTest(SECURE_SSL_REDIRECT=raw):
+                with self.assertRaises(ImproperlyConfigured) as raised:
+                    self.resolve(environ(SECRET_KEY="x", SECURE_SSL_REDIRECT=raw))
+
+                self.assertEqual(
+                    str(raised.exception),
+                    "The SECURE_SSL_REDIRECT environment variable must be true or false",
+                )
+
     def test_values_come_from_env_file(self):
         env_file = self.write_env_file(
             "SECRET_KEY=from-file\nDEBUG=True\nALLOWED_HOSTS=example.com\n"
