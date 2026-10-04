@@ -4,9 +4,11 @@ Not a test module (no test_ prefix), so the runner doesn't collect it. A new
 page type is added to PAGES deliberately, so the site-wide checks cover it.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from django.urls import reverse
 
 from core.tests.html import PageParser
@@ -24,6 +26,20 @@ class Page:
     name: str
     path: str
     logged_in: bool
+    # A page that isn't a plain GET: render(client) returns its response.
+    render: Callable | None = None
+    status: int = 200
+
+
+def locked_out(client):
+    """The lockout page that django-axes renders: locked out at the first
+    failed log-in here, as each failure costs a password hash and every page
+    walk renders it. accounts/tests/test_lockout.py covers the real limit."""
+    with override_settings(AXES_FAILURE_LIMIT=1):
+        return client.post(
+            reverse("accounts:login"),
+            {"username": "alice", "password": "not-the-password"},
+        )
 
 
 def build_pages():
@@ -59,6 +75,15 @@ def build_pages():
         ("resource delete", reverse("resources:delete", args=[resource.pk])),
     ]
     pages = [Page(name, path, False) for name, path in public]
+    pages.append(
+        Page(
+            "locked out",
+            reverse("accounts:login"),
+            False,
+            render=locked_out,
+            status=429,
+        )
+    )
     pages += [Page(name, path, True) for name, path in private]
     return alice, pages
 
@@ -76,8 +101,11 @@ class AllPagesMixin:
             self.client.force_login(self.alice)
         else:
             self.client.logout()
-        response = self.client.get(page.path)
-        self.assertEqual(response.status_code, 200, page.name)
+        if page.render:
+            response = page.render(self.client)
+        else:
+            response = self.client.get(page.path)
+        self.assertEqual(response.status_code, page.status, page.name)
         return response
 
     def walk(self):

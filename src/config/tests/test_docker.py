@@ -91,6 +91,40 @@ class SmokeScriptTests(SimpleTestCase):
         self.assertIn(".env.example", script)
         self.assertIn("--env-file", script)
 
+    def start_calls(self):
+        """{container name: its start line}, continuation lines joined."""
+        joined = self.SCRIPT.read_text().replace("\\\n", " ")
+        return dict(re.findall(r'start "\$ID-([\w-]+)"(.*)', joined))
+
+    def test_the_plain_http_containers_turn_the_https_settings_off(self):
+        # Its form checks use http:// and a curl cookie jar: a redirect or a
+        # Secure-only cookie would fail them.
+        script = self.SCRIPT.read_text()
+        self.assertIn(
+            "HTTP=(-e SECURE_SSL_REDIRECT=False -e SESSION_COOKIE_SECURE=False "
+            "-e CSRF_COOKIE_SECURE=False)",
+            script,
+        )
+        calls = self.start_calls()
+        self.assertEqual(
+            sorted(calls), ["env-file", "first", "https-defaults", "second"]
+        )
+        for name in ("first", "second", "env-file"):
+            with self.subTest(container=name):
+                self.assertIn('"${HTTP[@]}"', calls[name])
+
+    def test_a_container_with_the_default_https_settings_is_checked(self):
+        # Healthy (the favicon is exempt from the redirect), redirected to
+        # https://, and no HSTS header over plain HTTP.
+        script = self.SCRIPT.read_text()
+        call = self.start_calls().get("https-defaults")
+        self.assertIsNotNone(call, "no $ID-https-defaults container is started")
+        self.assertNotIn("HTTP", call)
+        cleanup = next(line for line in script.splitlines() if "docker rm -f" in line)
+        self.assertIn('"$ID-https-defaults"', cleanup)
+        self.assertIn('"301 https://', script)
+        self.assertIn("strict-transport-security", script.lower())
+
 
 DOCKERFILE = ROOT / "Dockerfile"
 ENTRYPOINT = ROOT / "docker" / "entrypoint.sh"

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{# Rendered by django-axes (AXES_LOCKOUT_TEMPLATE) with status 429, for the app's log-in and the admin's. It names no account: the same page whether the username exists or not. The wait matches AXES_COOLOFF_TIME (both pinned by accounts/tests/test_lockout.py). #}
+{% block title %}Locked out · Learning Companion{% endblock %}
+
+{% block content %}
+  <div class="mx-auto max-w-md">
+    {% include "components/_page_header.html" with heading="Locked out" %}
+    <div class="card card-border bg-base-100">
+      <div class="card-body">
+        <p>Too many failed log-in attempts. Try again in 15 minutes.</p>
+      </div>
+    </div>
+  </div>
+{% endblock %}

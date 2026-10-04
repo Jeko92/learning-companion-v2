@@ -272,6 +272,140 @@ class ResolveSettingsTests(SimpleTestCase):
                     "origins that start with http:// or https://",
                 )
 
+    def test_ssl_redirect_defaults_to_the_opposite_of_debug(self):
+        for debug, expected in (("False", True), ("True", False)):
+            with self.subTest(DEBUG=debug):
+                for raw in (None, "", "  "):
+                    values = {"SECRET_KEY": "x", "DEBUG": debug}
+                    if raw is not None:
+                        values["SECURE_SSL_REDIRECT"] = raw
+                    with self.subTest(SECURE_SSL_REDIRECT=raw):
+                        settings = self.resolve(environ(**values))
+
+                        self.assertIs(settings.ssl_redirect, expected)
+
+    def test_an_explicit_ssl_redirect_wins_over_the_debug_default(self):
+        cases = {
+            "True": True,
+            "true": True,
+            " yes ": True,
+            "on": True,
+            "1": True,
+            "False": False,
+            "false": False,
+            "no": False,
+            "OFF": False,
+            "0": False,
+        }
+        for debug in ("True", "False"):
+            for raw, expected in cases.items():
+                with self.subTest(DEBUG=debug, SECURE_SSL_REDIRECT=raw):
+                    settings = self.resolve(
+                        environ(SECRET_KEY="x", DEBUG=debug, SECURE_SSL_REDIRECT=raw)
+                    )
+
+                    self.assertIs(settings.ssl_redirect, expected)
+
+    def test_an_unknown_ssl_redirect_value_raises(self):
+        # A typo must never quietly turn HTTPS off.
+        for raw in ("maybe", "Ture", "2"):
+            with self.subTest(SECURE_SSL_REDIRECT=raw):
+                with self.assertRaises(ImproperlyConfigured) as raised:
+                    self.resolve(environ(SECRET_KEY="x", SECURE_SSL_REDIRECT=raw))
+
+                self.assertEqual(
+                    str(raised.exception),
+                    "The SECURE_SSL_REDIRECT environment variable must be true or false",
+                )
+
+    def test_secure_cookies_follow_the_same_rules_as_the_ssl_redirect(self):
+        for name, field in (
+            ("SESSION_COOKIE_SECURE", "session_cookie_secure"),
+            ("CSRF_COOKIE_SECURE", "csrf_cookie_secure"),
+        ):
+            cases = (
+                ({"DEBUG": "False"}, True),
+                ({"DEBUG": "True"}, False),
+                ({"DEBUG": "False", name: ""}, True),
+                ({"DEBUG": "True", name: " "}, False),
+                ({"DEBUG": "False", name: "false"}, False),
+                ({"DEBUG": "True", name: "yes"}, True),
+            )
+            for values, expected in cases:
+                with self.subTest(**values):
+                    settings = self.resolve(environ(SECRET_KEY="x", **values))
+
+                    self.assertIs(getattr(settings, field), expected)
+            with self.subTest(name=name, value="maybe"):
+                with self.assertRaises(ImproperlyConfigured) as raised:
+                    self.resolve(environ(SECRET_KEY="x", **{name: "maybe"}))
+
+                self.assertEqual(
+                    str(raised.exception),
+                    f"The {name} environment variable must be true or false",
+                )
+
+    def test_hsts_seconds_default_to_an_hour_unless_debug(self):
+        cases = (
+            ({"DEBUG": "False"}, 3600),
+            ({"DEBUG": "True"}, 0),
+            ({"DEBUG": "False", "SECURE_HSTS_SECONDS": ""}, 3600),
+            ({"DEBUG": "True", "SECURE_HSTS_SECONDS": "  "}, 0),
+        )
+        for values, expected in cases:
+            with self.subTest(**values):
+                settings = self.resolve(environ(SECRET_KEY="x", **values))
+
+                self.assertEqual(settings.hsts_seconds, expected)
+
+    def test_explicit_hsts_seconds_win_over_the_debug_default(self):
+        cases = (
+            ({"DEBUG": "False", "SECURE_HSTS_SECONDS": "0"}, 0),
+            ({"DEBUG": "False", "SECURE_HSTS_SECONDS": " 31536000 "}, 31536000),
+            ({"DEBUG": "True", "SECURE_HSTS_SECONDS": "60"}, 60),
+        )
+        for values, expected in cases:
+            with self.subTest(**values):
+                settings = self.resolve(environ(SECRET_KEY="x", **values))
+
+                self.assertEqual(settings.hsts_seconds, expected)
+
+    def test_hsts_seconds_that_are_not_a_whole_number_0_or_more_raise(self):
+        for raw in ("abc", "1.5", "-1", "1e3"):
+            with self.subTest(SECURE_HSTS_SECONDS=raw):
+                with self.assertRaises(ImproperlyConfigured) as raised:
+                    self.resolve(environ(SECRET_KEY="x", SECURE_HSTS_SECONDS=raw))
+
+                self.assertEqual(
+                    str(raised.exception),
+                    "The SECURE_HSTS_SECONDS environment variable must be a "
+                    "whole number of seconds, 0 or more",
+                )
+
+    def test_the_proxy_ssl_header_is_opt_in_whatever_debug_is(self):
+        cases = (
+            ({"DEBUG": "False"}, False),
+            ({"DEBUG": "True"}, False),
+            ({"DEBUG": "False", "SECURE_PROXY_SSL_HEADER": ""}, False),
+            ({"DEBUG": "False", "SECURE_PROXY_SSL_HEADER": "true"}, True),
+            ({"DEBUG": "True", "SECURE_PROXY_SSL_HEADER": "1"}, True),
+            ({"DEBUG": "False", "SECURE_PROXY_SSL_HEADER": "no"}, False),
+        )
+        for values, expected in cases:
+            with self.subTest(**values):
+                settings = self.resolve(environ(SECRET_KEY="x", **values))
+
+                self.assertIs(settings.proxy_ssl_header, expected)
+
+    def test_an_unknown_proxy_ssl_header_value_raises(self):
+        with self.assertRaises(ImproperlyConfigured) as raised:
+            self.resolve(environ(SECRET_KEY="x", SECURE_PROXY_SSL_HEADER="https"))
+
+        self.assertEqual(
+            str(raised.exception),
+            "The SECURE_PROXY_SSL_HEADER environment variable must be true or false",
+        )
+
     def test_values_come_from_env_file(self):
         env_file = self.write_env_file(
             "SECRET_KEY=from-file\nDEBUG=True\nALLOWED_HOSTS=example.com\n"
