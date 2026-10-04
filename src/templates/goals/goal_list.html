@@ -41,6 +41,18 @@
             <li data-goal class="card card-border bg-base-100 shadow-sm">
               <div class="card-body flex-row items-start justify-between gap-2 p-3">
                 <a href="{{ goal.get_absolute_url }}" class="link link-hover min-w-0 break-words font-medium">{{ goal.title }}</a>
+                {# CSS-only Move menu: works without JavaScript, by keyboard and with a screen reader. #}
+                {# A button per status; the current one is hidden (the board script re-hides after a drag). #}
+                <details class="dropdown dropdown-end shrink-0">
+                  <summary class="btn btn-ghost btn-square btn-xs" aria-label="Move “{{ goal.title }}”">{% include "components/_icon.html" with icon="arrows" icon_class="size-4" %}</summary>
+                  <form method="post" action="{% url 'goals:move' goal.pk %}" class="dropdown-content z-10 mt-1 flex w-48 flex-col gap-1 rounded-box border border-base-300 bg-base-100 p-2 shadow-md">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    {% for value, label in statuses %}
+                      <button type="submit" name="status" value="{{ value }}" class="btn btn-primary btn-soft btn-sm justify-start"{% if value == goal.status %} hidden{% endif %}>Move to {{ label }}</button>
+                    {% endfor %}
+                  </form>
+                </details>
               </div>
             </li>
           {% endfor %}

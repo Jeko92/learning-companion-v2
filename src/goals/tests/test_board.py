@@ -371,3 +371,81 @@ class BoardColumnTests(BoardTestCase):
 
         with self.assertNumQueries(4):  # session, user, goals, has_goals
             self.client.get("/goals/")
+
+
+class BoardMoveMenuTests(BoardTestCase):
+    """Every card has a CSS-only Move menu: a POST form that works without
+    JavaScript, by keyboard and with a screen reader."""
+
+    def setUp(self):
+        super().setUp()
+        self.goal = add_goal(self.alice, "Learn Django", Goal.Status.IN_PROGRESS)
+
+    def card(self, path="/goals/"):
+        (card,) = cards(columns(get_tree(self.client, path))["in-progress"])
+        return card
+
+    def test_the_menu_is_a_details_dropdown_named_after_the_goal(self):
+        (menu,) = self.card().find_all(lambda n: n.tag == "details")
+        (summary,) = menu.find_all(lambda n: n.tag == "summary")
+
+        self.assertIn("dropdown", menu.attrs["class"].split())
+        self.assertEqual(summary.attrs["aria-label"], "Move “Learn Django”")
+
+    def test_the_menu_posts_to_the_goals_move_route_with_a_token(self):
+        (form,) = self.card().find_all(lambda n: n.tag == "form")
+
+        self.assertEqual(form.attrs["method"], "post")
+        self.assertEqual(form.attrs["action"], f"/goals/{self.goal.pk}/move/")
+        inputs = {
+            i.attrs["name"]: i.attrs.get("value")
+            for i in form.find_all(lambda n: n.tag == "input")
+        }
+        self.assertTrue(inputs["csrfmiddlewaretoken"])
+
+    def test_the_menu_returns_to_the_page_it_was_used_on(self):
+        for path in ("/goals/", "/goals/?status=in-progress"):
+            with self.subTest(path=path):
+                (form,) = self.card(path).find_all(lambda n: n.tag == "form")
+                (next_input,) = [
+                    i
+                    for i in form.find_all(lambda n: n.tag == "input")
+                    if i.attrs["name"] == "next"
+                ]
+
+                self.assertEqual(next_input.attrs["type"], "hidden")
+                self.assertEqual(next_input.attrs["value"], path)
+
+    def test_one_button_per_status_with_the_current_one_hidden(self):
+        (form,) = self.card().find_all(lambda n: n.tag == "form")
+        buttons = form.find_all(lambda n: n.tag == "button")
+
+        self.assertEqual(
+            [(b.attrs["name"], b.attrs["value"], b.text()) for b in buttons],
+            [
+                ("status", "planned", "Move to Planned"),
+                ("status", "in-progress", "Move to In progress"),
+                ("status", "done", "Move to Done"),
+            ],
+        )
+        self.assertEqual(["hidden" in b.attrs for b in buttons], [False, True, False])
+        for button in buttons:
+            self.assertEqual(button.attrs["type"], "submit")
+
+    def test_the_menus_token_and_button_move_the_goal(self):
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.alice)
+        (form,) = cards(columns(get_tree(csrf_client, "/goals/"))["in-progress"])[
+            0
+        ].find_all(lambda n: n.tag == "form")
+        data = {
+            i.attrs["name"]: i.attrs["value"]
+            for i in form.find_all(lambda n: n.tag == "input")
+        }
+
+        response = csrf_client.post(form.attrs["action"], {**data, "status": "done"})
+
+        self.assertRedirects(response, "/goals/", fetch_redirect_response=False)
+        board = columns(get_tree(csrf_client, "/goals/"))
+        self.assertEqual(card_titles(board["done"]), ["Learn Django"])
+        self.assertEqual(cards(board["in-progress"]), [])
