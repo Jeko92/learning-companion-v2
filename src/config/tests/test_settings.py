@@ -18,6 +18,8 @@ PATCHED_ENVIRON = {
     "ALLOWED_HOSTS": "wiring.example, other.example",
     "OPENAI_API_KEY": "sk-wiring-test-key",
     "OPENAI_MODEL": "wiring-test-model",
+    # Never opened: reloading settings doesn't touch the live connections.
+    "DATABASE_URL": "sqlite:////wiring-test/db.sqlite3",
 }
 
 
@@ -72,6 +74,25 @@ class SettingsWiringTests(SimpleTestCase):
         self.reload_with(OPENAI_MODEL="")
 
         self.assertEqual(getattr(settings_module, "OPENAI_MODEL", None), "gpt-4.1-mini")
+
+    def test_the_database_comes_from_database_url(self):
+        default = settings_module.DATABASES["default"]
+
+        self.assertEqual(default["ENGINE"], "django.db.backends.sqlite3")
+        self.assertEqual(default["NAME"], "/wiring-test/db.sqlite3")
+
+    def test_a_blank_database_url_keeps_the_sqlite_file_in_src(self):
+        self.reload_with(DATABASE_URL="")
+
+        self.assertEqual(
+            settings_module.DATABASES,
+            {
+                "default": {
+                    "ENGINE": "django.db.backends.sqlite3",
+                    "NAME": settings_module.BASE_DIR / "db.sqlite3",
+                }
+            },
+        )
 
     def test_generated_secret_key_is_not_hardcoded(self):
         self.assertNotIn("django-insecure", SETTINGS_FILE.read_text())

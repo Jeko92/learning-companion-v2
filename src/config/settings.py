@@ -97,8 +97,10 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
+# DATABASE_URL (the container sets one on its data volume), else src/db.sqlite3.
 DATABASES = {
-    "default": {
+    "default": _env.database
+    or {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
     }
