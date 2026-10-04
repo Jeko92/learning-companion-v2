@@ -13,14 +13,14 @@ As the maintainer of Learning Companion, I want every page to require a logged-i
 - [ ] AC6 Log-in (`/accounts/login/`) stays public: an anonymous GET is 200 and a valid POST logs in (exempt through Django's own `LoginView`, pinned by a test, not by a new decorator).
 - [ ] AC7 Log-out stays public: an anonymous POST to `/accounts/logout/` still redirects to `/` with no "You have been logged out." message (the existing test keeps passing). `LogOutView` is marked `login_not_required`. GET is still 405.
 - [ ] AC8 The django-axes lockout page still renders for anonymous visitors: a locked-out POST to `/accounts/login/` and to `/admin/login/` is 429 with the lockout text (existing lockout tests keep passing).
-- [ ] AC9 Admin: an anonymous GET to `/admin/` redirects to `/accounts/login/?next=/admin/` (the app's log-in, accepted behaviour, pinned by a test). `/admin/login/` stays reachable anonymously (200).
-- [ ] AC10 Fail-closed route walker: a test resolves every URL pattern in the root URLconf (including `include()`d ones, with sample kwargs for path converters) and asserts that each view outside an explicit public allow-list (home, favicon, sign-up, log-in, log-out, admin login) is not marked `login_not_required`, and that an anonymous GET to it redirects to the log-in URL (admin routes: to the app or admin log-in). The allow-list's views are each marked public. A route that is in neither the walker's known set nor the allow-list fails the test, so a new public route has to be added deliberately.
+- [ ] AC9 Admin (Django's behaviour under the middleware, pinned by tests, no custom `AdminSite`): an anonymous GET to `/admin/` still redirects to `/admin/login/?next=/admin/` (Django sets `login_url` on the admin-site views); an anonymous GET to a model admin page such as `/admin/goals/goal/` redirects to the app's `/accounts/login/?next=/admin/goals/goal/` (accepted change; today it goes to `/admin/login/`). `/admin/login/` stays reachable anonymously (200).
+- [ ] AC10 Fail-closed route walker: a test walks every URL pattern in the root URLconf (recursing into `include()`s, admin's included) and asserts that the set of views marked `login_not_required` is exactly the public allow-list (home, favicon, sign-up, log-in, log-out, admin log-in), so a new public route fails the test until it is added to the allow-list deliberately. Every project route outside the allow-list (non-admin, path converters filled with sample values) redirects an anonymous GET to `/accounts/login/?next=<path>`.
 - [ ] AC11 The existing `LoginRequiredMixin`s on private views are kept (defence in depth), and every existing anonymous-redirect test keeps passing unchanged.
 - [ ] AC12 `CLAUDE.md` (Auth section, the favicon note, layout) and `README.md` where it applies describe the middleware, the public views and the rule "a new public view needs `@login_not_required` and an allow-list entry in the walker test".
 
 ## Out of scope
 - Removing `LoginRequiredMixin` from existing views.
-- Keeping admin's own redirect to `/admin/login/` (no custom `AdminSite`).
+- Making every admin page redirect to `/admin/login/` (no custom `AdminSite`).
 - Custom 404/500 pages; unknown paths stay 404 for anonymous visitors (the middleware only acts on resolved URLs).
 - Any change to log-in, sign-up or log-out behaviour beyond staying public.
 
@@ -29,6 +29,7 @@ Answered in the interview (2026-10-04):
 - Mixins: keep them alongside the middleware.
 - Log-out: stays public (`@login_not_required`), so an expired-session tab can still log out cleanly.
 - Admin: accept the redirect to the app's log-in for anonymous `/admin/`; `AdminSite.login` is already `login_not_required` in Django.
+  Corrected during planning (research of Django 6.1.1): the admin-site views (`/admin/`, admin logout, password change, ...) carry `login_url = admin:login`, so they keep redirecting to `/admin/login/`; only the model admin views (no `login_url`) go to the app's log-in. AC9 was amended accordingly, still with no custom `AdminSite`.
 - Guard test: walk every route against an explicit public allow-list.
 
 Constraints from the codebase:
@@ -38,4 +39,4 @@ Constraints from the codebase:
 - `GoalSessionsMixin`/`GoalResourcesMixin` check `request.user.is_authenticated` in `dispatch`; that stays harmless.
 - `core/tests/pages.py` lists the public pages (home, log in, sign up, locked out); the walker's allow-list must agree with it.
 
-Acceptance criteria approved by the user on 2026-10-04.
+Acceptance criteria approved by the user on 2026-10-04. AC9 and AC10's wording amended during planning (see Notes); confirmed with the plan.
