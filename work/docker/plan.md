@@ -108,7 +108,7 @@
 
   — test: `src/config/tests/test_docker.py` (`DockerignoreTests`) — impl: `.dockerignore` — covers: AC9
 - [x] 10. The smoke script exists, is executable and passes `bash -n`. It performs the checks AC10 lists, in the order decision 8 describes. It fails at this point if actually run, because there's no `Dockerfile` yet; that is expected, and step 11 makes it pass. — test: `src/config/tests/test_docker.py` (`SmokeScriptTests`) — impl: `scripts/docker-smoke.sh` — covers: AC10
-- [ ] 11. The `Dockerfile` and its entrypoint (decisions 4–7). The test parses the stages:
+- [x] 11. The `Dockerfile` and its entrypoint (decisions 4–7). The test parses the stages:
   - Both stages are `FROM python:3.14-slim`, and the first is `AS build`.
   - The build stage installs `requirements.txt` and runs `tailwind build` and `collectstatic --noinput`, with the dummy keys only inline on that `RUN`.
   - The final stage:
