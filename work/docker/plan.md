@@ -158,4 +158,4 @@
 
   Verified by running the smoke script end to end, with its output recorded in the commit body. — test: `src/config/tests/test_docker.py` (`SmokeScriptTests`: the script reads `.env.example`) — impl: `scripts/docker-smoke.sh`, `README.md`, `Dockerfile` (comments only), `CLAUDE.md` — covers: AC7, AC8, AC10, AC12
 - [x] 16. `.dockerignore` excludes `.env` files at any depth (`**/.env`, `**/.env.*`). — test: `src/config/tests/test_docker.py` (`DockerignoreTests.EXCLUDED`) — impl: `.dockerignore` — covers: AC9
-- [ ] 17. **Test-only:** the build stage's `RUN` runs `tailwind build` before `collectstatic`, so the collected files include the CSS. The order is asserted. — test: `src/config/tests/test_docker.py` — impl: none expected — covers: AC6
+- [x] 17. **Test-only:** the build stage's `RUN` runs `tailwind build` before `collectstatic`, so the collected files include the CSS. The order is asserted. — test: `src/config/tests/test_docker.py` — impl: none expected — covers: AC6

@@ -144,6 +144,10 @@ class DockerfileTests(SimpleTestCase):
             run for run in arguments_of(self.build, "RUN") if "tailwind build" in run
         ]
         self.assertIn("collectstatic --noinput", build_run)
+        # The CSS must exist before collectstatic gathers it.
+        self.assertLess(
+            build_run.index("tailwind build"), build_run.index("collectstatic")
+        )
         # Settings need both keys to load; dummies only for this one RUN.
         self.assertIn("SECRET_KEY=", build_run)
         self.assertIn("OPENAI_API_KEY=", build_run)
