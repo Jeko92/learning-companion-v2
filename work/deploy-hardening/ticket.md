@@ -18,7 +18,7 @@ As the operator of Learning Companion, I want the production configuration to be
 - [ ] AC9 The limit (5), the cool-off (15 minutes) and the lockout parameters (username + IP) are set in `settings.py`, and a test pins each value. Failures are stored in the database through axes' models, so every gunicorn worker sees the same counts.
 
 ### HTTPS settings from the environment
-- [ ] AC10 With `DEBUG=False` and no override, the following are on: `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE` and `SECURE_HSTS_SECONDS` (a positive default, documented). With `DEBUG=True` and no override, all of them are off (HSTS `0`).
+- [ ] AC10 With `DEBUG=False` and no override, the following are on: `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE` and `SECURE_HSTS_SECONDS` (default `3600`, documented). With `DEBUG=True` and no override, all of them are off (HSTS `0`).
 - [ ] AC11 Each of the four can be set explicitly through an env var of the same name: `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE` and `CSRF_COOKIE_SECURE` are booleans, `SECURE_HSTS_SECONDS` is a non-negative integer. An explicit value beats the DEBUG-derived default in both directions, and a blank value means the default. An invalid value (`SECURE_HSTS_SECONDS=abc` or `-1`) is an `ImproperlyConfigured` that names the variable.
 - [ ] AC12 `SECURE_PROXY_SSL_HEADER` is opt-in. When the env var `SECURE_PROXY_SSL_HEADER` is true, it is `("HTTP_X_FORWARDED_PROTO", "https")`, otherwise unset (`None`), in both DEBUG modes.
 - [ ] AC13 With the SSL redirect on, a plain-HTTP request for a page gets a 301 to the `https://` URL. `/favicon.ico` is exempt, so the container's HTTP `HEALTHCHECK` keeps working with the default settings.
@@ -67,3 +67,4 @@ As the operator of Learning Companion, I want the production configuration to be
   - `work/auth-login-logout/` (log-in throttling)
   - `work/auth-signup/review.md` (cookie and HSTS settings from env, `check --deploy`, admin throttling)
   - `work/docker/ticket.md` (secure cookies, HSTS, SSL redirect, proxy header, clean `check --deploy`)
+- **Approval:** the user approved these acceptance criteria on 2026-10-04 and set the HSTS default to `3600` seconds (raise it once HTTPS is confirmed working).
