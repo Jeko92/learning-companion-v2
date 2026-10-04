@@ -35,11 +35,12 @@ def blocks(lines, indent):
     return found
 
 
-def steps(job):
-    """Each step of a job as {key: value}, with the keys of nested mappings
-    (`with:`) flattened in."""
+def steps(block):
+    """Each step of a job's `steps:` block as {key: value}, with the keys of
+    nested mappings (`with:`) flattened in, so a step with any extra key (`if`,
+    `continue-on-error`, `env`) differs from the dict a test expects."""
     found = []
-    for line in blocks(job[1:], 2).get("steps", ["steps:"])[1:]:
+    for line in block[1:]:
         line = line.strip()
         if line.startswith("- "):
             found.append({})
@@ -63,6 +64,11 @@ class WorkflowTestCase(SimpleTestCase):
     def settings_of(self, name):
         """The job's own keys, each as its block of lines."""
         return blocks(self.job(name)[1:], 2)
+
+    def steps_of(self, name):
+        settings = self.settings_of(name)
+        self.assertIn("steps", settings, f"the {name} job has no steps")
+        return steps(settings["steps"])
 
 
 class WorkflowTriggerTests(WorkflowTestCase):
@@ -96,18 +102,21 @@ class WorkflowTriggerTests(WorkflowTestCase):
 class QualityJobTests(WorkflowTestCase):
     """The quality job runs the hooks' and reviews' gate on Python 3.14."""
 
-    COMMANDS = (
-        "ruff check .",
-        "ruff format --check .",
-        "python src/manage.py check",
-        "python src/manage.py makemigrations --check --dry-run",
-        "python src/manage.py test src",
+    GATE = (
+        ("Lint", "ruff check ."),
+        ("Formatting", "ruff format --check ."),
+        ("Django system checks", "python src/manage.py check"),
+        (
+            "Migrations match the models",
+            "python src/manage.py makemigrations --check --dry-run",
+        ),
+        ("Tests", "python src/manage.py test src"),
     )
 
     def setUp(self):
         super().setUp()
         self.settings = self.settings_of("quality")
-        self.steps = steps(self.job("quality"))
+        self.steps = self.steps_of("quality")
 
     def test_it_runs_on_ubuntu_with_a_timeout(self):
         self.assertEqual(self.settings["runs-on"], ["runs-on: ubuntu-latest"])
@@ -127,14 +136,20 @@ class QualityJobTests(WorkflowTestCase):
         )
 
     def test_it_installs_the_dev_requirements_before_the_checks(self):
-        self.assertEqual(self.steps[2]["run"], "pip install -r requirements-dev.txt")
+        self.assertEqual(
+            self.steps[2],
+            {
+                "name": "Install dependencies",
+                "run": "pip install -r requirements-dev.txt",
+            },
+        )
 
-    def test_each_gate_command_is_its_own_named_step_in_order(self):
-        gate = self.steps[3:]
-        self.assertEqual([step["run"] for step in gate], list(self.COMMANDS))
-        for step in gate:
-            with self.subTest(run=step["run"]):
-                self.assertTrue(step.get("name"), "the step has no name")
+    def test_each_gate_command_is_its_own_unconditional_named_step_in_order(self):
+        # Exact dicts: an `if: false` or `continue-on-error: true` on a gate
+        # step would let CI pass without its check.
+        self.assertEqual(
+            self.steps[3:], [{"name": name, "run": run} for name, run in self.GATE]
+        )
 
     def test_the_keys_are_dummies_in_the_job_env(self):
         # The tests never call the API, so no repository secret is needed.
@@ -161,7 +176,7 @@ class DockerSmokeJobTests(WorkflowTestCase):
 
     def test_it_checks_out_and_runs_the_smoke_script(self):
         self.assertEqual(
-            steps(self.job("docker-smoke")),
+            self.steps_of("docker-smoke"),
             [
                 CHECKOUT,
                 {"name": "Build and check the image", "run": "scripts/docker-smoke.sh"},
