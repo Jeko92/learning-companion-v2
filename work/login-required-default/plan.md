@@ -25,7 +25,7 @@
 - **Keep every `LoginRequiredMixin`** and change no existing test.
 
 ## Steps
-- [ ] 1. Home is marked public (`resolve("/").func` has `login_required` False) — test: `src/core/tests/test_home.py` — impl: `src/core/views.py` (`@login_not_required` on `home`) — covers: AC3
+- [x] 1. Home is marked public (`resolve("/").func` has `login_required` False) — test: `src/core/tests/test_home.py` — impl: `src/core/views.py` (`@login_not_required` on `home`) — covers: AC3
 - [ ] 2. The favicon is marked public (`resolve("/favicon.ico").func` has `login_required` False); also add an anonymous HEAD → 200 characterization next to the existing anonymous GET test — test: `src/core/tests/test_favicon.py` — impl: `src/core/views.py` (`@login_not_required` on `favicon`) — covers: AC4
 - [ ] 3. Sign-up is marked public (`resolve(SIGNUP_PATH).func` has `login_required` False) — test: `src/accounts/tests/test_signup.py` — impl: `src/accounts/views.py` (`login_not_required` in `SignUpView`'s `method_decorator` list) — covers: AC5
 - [ ] 4. Log-out is marked public (`resolve(LOGOUT_PATH).func` has `login_required` False) — test: `src/accounts/tests/test_logout.py` — impl: `src/accounts/views.py` (`@method_decorator(login_not_required, name="dispatch")` on `LogOutView`) — covers: AC7
