@@ -26,6 +26,8 @@ class EnvSettings:
     database: dict | None
     csrf_trusted_origins: list[str]
     ssl_redirect: bool
+    session_cookie_secure: bool
+    csrf_cookie_secure: bool
 
 
 def trimmed_list(env: django_environ.Env, name: str, default: list[str]) -> list[str]:
@@ -115,4 +117,8 @@ def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
         # The HTTPS settings are on in production (DEBUG off) unless the
         # environment says otherwise.
         ssl_redirect=optional_bool(env, "SECURE_SSL_REDIRECT", default=not debug),
+        session_cookie_secure=optional_bool(
+            env, "SESSION_COOKIE_SECURE", default=not debug
+        ),
+        csrf_cookie_secure=optional_bool(env, "CSRF_COOKIE_SECURE", default=not debug),
     )

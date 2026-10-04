@@ -127,7 +127,7 @@
   - Test: `src/config/tests/test_env.py`
   - Impl: `src/config/env.py` (`optional_bool`, `EnvSettings.ssl_redirect`)
   - Covers: AC10, AC11
-- [ ] 2. `SESSION_COOKIE_SECURE` and `CSRF_COOKIE_SECURE` resolve with the same rules, in one table-driven test.
+- [x] 2. `SESSION_COOKIE_SECURE` and `CSRF_COOKIE_SECURE` resolve with the same rules, in one table-driven test.
   - Test: `src/config/tests/test_env.py`
   - Impl: `src/config/env.py`
   - Covers: AC10, AC11

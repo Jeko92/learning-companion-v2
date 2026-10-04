@@ -318,6 +318,33 @@ class ResolveSettingsTests(SimpleTestCase):
                     "The SECURE_SSL_REDIRECT environment variable must be true or false",
                 )
 
+    def test_secure_cookies_follow_the_same_rules_as_the_ssl_redirect(self):
+        for name, field in (
+            ("SESSION_COOKIE_SECURE", "session_cookie_secure"),
+            ("CSRF_COOKIE_SECURE", "csrf_cookie_secure"),
+        ):
+            cases = (
+                ({"DEBUG": "False"}, True),
+                ({"DEBUG": "True"}, False),
+                ({"DEBUG": "False", name: ""}, True),
+                ({"DEBUG": "True", name: " "}, False),
+                ({"DEBUG": "False", name: "false"}, False),
+                ({"DEBUG": "True", name: "yes"}, True),
+            )
+            for values, expected in cases:
+                with self.subTest(**values):
+                    settings = self.resolve(environ(SECRET_KEY="x", **values))
+
+                    self.assertIs(getattr(settings, field), expected)
+            with self.subTest(name=name, value="maybe"):
+                with self.assertRaises(ImproperlyConfigured) as raised:
+                    self.resolve(environ(SECRET_KEY="x", **{name: "maybe"}))
+
+                self.assertEqual(
+                    str(raised.exception),
+                    f"The {name} environment variable must be true or false",
+                )
+
     def test_values_come_from_env_file(self):
         env_file = self.write_env_file(
             "SECRET_KEY=from-file\nDEBUG=True\nALLOWED_HOSTS=example.com\n"
