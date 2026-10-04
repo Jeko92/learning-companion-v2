@@ -1,5 +1,6 @@
 import os
 import tempfile
+import warnings
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -155,6 +156,121 @@ class ResolveSettingsTests(SimpleTestCase):
 
         self.assertEqual(from_file.openai_model, "from-file")
         self.assertEqual(from_env.openai_model, "from-env")
+
+    def test_database_is_none_when_database_url_is_unset_or_blank(self):
+        # None means settings.py keeps its own default database.
+        for raw in (None, "", "  "):
+            with self.subTest(DATABASE_URL=raw):
+                values = {} if raw is None else {"DATABASE_URL": raw}
+                settings = self.resolve(environ(SECRET_KEY="x", **values))
+
+                self.assertIsNone(settings.database)
+
+    def test_database_url_is_parsed_into_a_database_config(self):
+        cases = {
+            "sqlite:////app/data/db.sqlite3": (
+                "django.db.backends.sqlite3",
+                "/app/data/db.sqlite3",
+            ),
+            "postgres://user:pw@db:5432/companion": (
+                "django.db.backends.postgresql",
+                "companion",
+            ),
+        }
+        for raw, (engine, name) in cases.items():
+            with self.subTest(DATABASE_URL=raw):
+                settings = self.resolve(environ(SECRET_KEY="x", DATABASE_URL=raw))
+
+                self.assertEqual(settings.database["ENGINE"], engine)
+                self.assertEqual(settings.database["NAME"], name)
+
+    def test_database_url_from_environment_wins_over_env_file(self):
+        env_file = self.write_env_file("DATABASE_URL=sqlite:////from/file.sqlite3\n")
+
+        from_file = self.resolve(environ(SECRET_KEY="x"), env_file)
+        from_env = self.resolve(
+            environ(SECRET_KEY="x", DATABASE_URL="sqlite:////from/env.sqlite3"),
+            env_file,
+        )
+
+        self.assertEqual(from_file.database["NAME"], "/from/file.sqlite3")
+        self.assertEqual(from_env.database["NAME"], "/from/env.sqlite3")
+
+    def test_an_unparseable_database_url_raises_improperly_configured(self):
+        # django-environ only warns about the first three (Django would fail
+        # later, at the first query, without naming the variable), and raises
+        # a ValueError quoting part of the URL for a port it can't read, as
+        # with a password holding an unencoded "/".
+        unparseable = (
+            "not-a-url",
+            "foo://host/db",
+            "http://example.com/db",
+            "postgres://user:pw@host:abc/db",
+            "postgres://user:pa/ss@db/companion",
+        )
+        for raw in unparseable:
+            with self.subTest(DATABASE_URL=raw):
+                with warnings.catch_warnings(record=True) as caught:
+                    warnings.simplefilter("always")
+                    with self.assertRaises(ImproperlyConfigured) as raised:
+                        self.resolve(environ(SECRET_KEY="x", DATABASE_URL=raw))
+
+                # A fixed message: a URL can carry a password, so never echo it,
+                # nor chain an exception that does.
+                self.assertEqual(
+                    str(raised.exception),
+                    "The DATABASE_URL environment variable is not a valid database URL",
+                )
+                self.assertIsNone(raised.exception.__cause__)
+                self.assertTrue(raised.exception.__suppress_context__)
+                self.assertEqual(caught, [])
+
+    def test_csrf_trusted_origins_is_a_trimmed_comma_separated_list(self):
+        cases = {
+            "https://a.example, http://b.example:8000": [
+                "https://a.example",
+                "http://b.example:8000",
+            ],
+            " , https://a.example,,": ["https://a.example"],
+            "": [],
+        }
+        for raw, expected in cases.items():
+            with self.subTest(CSRF_TRUSTED_ORIGINS=raw):
+                settings = self.resolve(
+                    environ(SECRET_KEY="x", CSRF_TRUSTED_ORIGINS=raw)
+                )
+
+                self.assertEqual(settings.csrf_trusted_origins, expected)
+
+    def test_csrf_trusted_origins_defaults_to_an_empty_list(self):
+        settings = self.resolve(environ(SECRET_KEY="x"))
+
+        self.assertEqual(settings.csrf_trusted_origins, [])
+
+    def test_csrf_trusted_origins_from_environment_wins_over_env_file(self):
+        env_file = self.write_env_file("CSRF_TRUSTED_ORIGINS=https://file.example\n")
+
+        from_file = self.resolve(environ(SECRET_KEY="x"), env_file)
+        from_env = self.resolve(
+            environ(SECRET_KEY="x", CSRF_TRUSTED_ORIGINS="https://env.example"),
+            env_file,
+        )
+
+        self.assertEqual(from_file.csrf_trusted_origins, ["https://file.example"])
+        self.assertEqual(from_env.csrf_trusted_origins, ["https://env.example"])
+
+    def test_a_csrf_trusted_origin_without_http_or_https_raises(self):
+        for raw in ("example.com", "https://ok.example, ftp://files.example"):
+            with self.subTest(CSRF_TRUSTED_ORIGINS=raw):
+                with self.assertRaises(ImproperlyConfigured) as raised:
+                    self.resolve(environ(SECRET_KEY="x", CSRF_TRUSTED_ORIGINS=raw))
+
+                # A fixed message: it names the variable, never the value.
+                self.assertEqual(
+                    str(raised.exception),
+                    "The CSRF_TRUSTED_ORIGINS environment variable must list "
+                    "origins that start with http:// or https://",
+                )
 
     def test_values_come_from_env_file(self):
         env_file = self.write_env_file(
