@@ -250,13 +250,39 @@
   - Impl: `README.md`, `CLAUDE.md`
   - Covers: AC21
 
+### Review findings (review.md, 2026-10-04)
+- [ ] 20. `--parallel` workers also run without the SSL redirect (medium).
+  - Behaviour: the project runner's `parallel_test_suite` is a `ParallelTestSuite` subclass. Its worker setup (`process_setup`, run in each worker process) leaves `SECURE_SSL_REDIRECT` `False` even when it was `True`. Test it by calling the worker setup directly under `override_settings(SECURE_SSL_REDIRECT=True)`, and disable the override afterwards so the test doesn't leak.
+  - Then verify by hand that `DEBUG=False ./.venv/bin/python src/manage.py test accounts.tests.test_login accounts.tests.test_nav --parallel 2` passes. Put the output in the commit message.
+  - Test: `src/config/tests/test_runner.py`
+  - Impl: `src/config/runner.py`
+  - Covers: AC16
+- [ ] 21. The runner's teardown tolerates a setup that failed before the override was enabled (low).
+  - Behaviour: `teardown_test_environment()` on a fresh `TestRunner`, with `DiscoverRunner`'s own teardown patched out, raises nothing.
+  - Test: `src/config/tests/test_runner.py`
+  - Impl: `src/config/runner.py`
+  - Covers: AC16
+- [ ] 22. Case variants of a username share one lockout counter (low).
+  - Behaviour: 5 failed log-ins as `Alice`, `ALICE`, `alice`, `aLiCe` and `ALICe` from one IP lock out `alice`, so the right password gets 429.
+  - `AXES_USERNAME_CALLABLE` is a function in `accounts/lockout.py` that casefolds the submitted username. It is pinned.
+  - Test: `src/accounts/tests/test_lockout.py`
+  - Impl: `src/accounts/lockout.py`, `settings.py`
+  - Covers: AC2, AC3
+- [ ] 23. The favicon exemption matches exactly `favicon.ico` (info).
+  - Behaviour: `/favicon.ico%0A` is redirected like any other path when the redirect is on. The pattern is `r"^favicon\.ico\Z"`.
+  - Test: `src/core/tests/test_https.py` (`test_only_the_favicon_itself_is_exempt`)
+  - Impl: `settings.py`
+  - Covers: AC13
+- [ ] 24. Docs: `CLAUDE.md` (runner bullet: parallel workers too; Auth lockout bullet: usernames casefolded for the count; the exemption pattern), README lockout paragraph (case variants count together). No test, doc-only commit.
+  - Covers: AC21
+
 ## Coverage
 
 | AC | Steps |
 |---|---|
 | AC1 | 12 |
-| AC2 | 13 |
-| AC3 | 14 |
+| AC2 | 13, 22 |
+| AC3 | 14, 22 |
 | AC4 | 15 |
 | AC5 | 13 |
 | AC6 | 16 |
@@ -266,14 +292,14 @@
 | AC10 | 1, 2, 3, 6 |
 | AC11 | 1, 2, 3, 6 |
 | AC12 | 4, 6 |
-| AC13 | 7 |
+| AC13 | 7, 23 |
 | AC14 | 7 |
 | AC15 | 6, 10, 19 |
-| AC16 | 5 |
+| AC16 | 5, 20, 21 |
 | AC17 | 8 |
 | AC18 | 9 |
 | AC19 | 11 |
 | AC20 | 18 |
-| AC21 | 19 |
+| AC21 | 19, 24 |
 
 **Why this order:** step 5 (the test runner) comes before step 6, because wiring the redirect into the settings would otherwise turn CI red. Step 9 runs before axes is installed, and steps 12–17 keep the check clean, since axes' own checks pass once it is wired.
