@@ -16,7 +16,7 @@ One high finding (the release can block on CI that hasn't registered yet, which 
 - AC10 — covered by `ReadmeBadgeTests` (2 tests) — PASS
 - AC11 — `CLAUDE.md` (Stack, Commands, Layout, Workflow) and `.claude/rules/git.md` (ticket PRs, releases, new "Branch protection on GitHub" section), verified by reading — PASS
 
-Suite: 602 tests OK; `ruff check` and `ruff format --check` clean; `makemigrations --check --dry-run`: no changes.
+Suite: 598 tests OK; `ruff check` and `ruff format --check` clean; `makemigrations --check --dry-run`: no changes.
 
 Branch protection read-back (`scripts/branch-protection.sh show`, 2026-10-04):
 ```
