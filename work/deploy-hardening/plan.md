@@ -230,7 +230,7 @@
   - Covers: AC7
 
 ### Container, smoke script and docs
-- [ ] 18. The smoke script covers the HTTPS defaults.
+- [x] 18. The smoke script covers the HTTPS defaults.
   - Behaviour: `SmokeScriptTests` pins that the script defines the `HTTP` overrides and passes them to the HTTP containers. It also pins the default-settings container (in `cleanup` too), its `301`/`https://` check and its `Strict-Transport-Security` check.
   - Then run `scripts/docker-smoke.sh` end to end. It needs Docker and its output goes in the step's commit message.
   - Test: `src/config/tests/test_docker.py`

@@ -14,12 +14,16 @@ ID="learning-companion-smoke-$$"
 IMAGE="learning-companion:smoke-$$"
 VOLUME="$ID-data"
 KEYS=(-e SECRET_KEY=smoke-test-secret-key -e OPENAI_API_KEY=sk-smoke-dummy)
+# The checks talk plain HTTP to the container (no TLS proxy here): without
+# these, DEBUG off would redirect every request to https:// and curl wouldn't
+# send the Secure-only cookies back. The https-defaults container runs without.
+HTTP=(-e SECURE_SSL_REDIRECT=False -e SESSION_COOKIE_SECURE=False -e CSRF_COOKIE_SECURE=False)
 USERNAME="smoke"
 PASSWORD="Smoke-Test-Pass-123!"
 WORK="$(mktemp -d)"
 
 cleanup() {
-  docker rm -f "$ID-first" "$ID-second" "$ID-env-file" >/dev/null 2>&1 || true
+  docker rm -f "$ID-first" "$ID-second" "$ID-env-file" "$ID-https-defaults" >/dev/null 2>&1 || true
   docker volume rm -f "$VOLUME" >/dev/null 2>&1 || true
   docker image rm -f "$IMAGE" >/dev/null 2>&1 || true
   rm -rf "$WORK"
@@ -146,10 +150,26 @@ log_in_works_on_a_new_container() {
     --data-urlencode "password=$PASSWORD")" = "302 $BASE/dashboard/" ]
 }
 
+# With the default settings (DEBUG off), plain HTTP is redirected to https://.
+redirects_to_https() {
+  [ "$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' "$BASE/accounts/login/")" \
+    = "301 https://${BASE#http://}/accounts/login/" ]
+}
+
+# Django sends Strict-Transport-Security only over HTTPS.
+plain_http_has_no_strict_transport_security() {
+  curl -fsS -D "$WORK/headers" -o /dev/null "$BASE/favicon.ico" &&
+    ! grep -qi '^strict-transport-security' "$WORK/headers"
+}
+
+stops_the_env_file_container() {
+  docker stop --time 20 "$ID-env-file" >/dev/null
+}
+
 check "the image builds" build_image
 check "without SECRET_KEY the container exits non-zero and names it" missing_secret_key_fails
 check "the image has no .env and no Tailwind binary" image_has_no_env_file_or_tailwind_binary
-check "the container becomes healthy (migrations applied, gunicorn answering)" start "$ID-first" "${KEYS[@]}"
+check "the container becomes healthy (migrations applied, gunicorn answering)" start "$ID-first" "${KEYS[@]}" "${HTTP[@]}"
 check "the app does not run as root" runs_as_non_root
 check "GET / serves the home page" home_page_is_served
 check "GET /static/css/tailwind.css serves the built stylesheet" stylesheet_is_served
@@ -157,12 +177,18 @@ check "the stylesheet is served gzipped when accepted" stylesheet_is_served_gzip
 check "GET /favicon.ico serves the icon" favicon_is_served
 check "sign-up works through the form (CSRF and a database write)" sign_up_works
 check "docker stop shuts gunicorn down cleanly" stops_cleanly
-check "a new container on the same volume becomes healthy" start "$ID-second" "${KEYS[@]}"
+check "a new container on the same volume becomes healthy" start "$ID-second" "${KEYS[@]}" "${HTTP[@]}"
 check "the account survives: log-in works on the new container" log_in_works_on_a_new_container
 check "an env file made from .env.example is ready" env_file_from_the_example
 check "a container run with --env-file and -e DEBUG=False becomes healthy" \
-  start "$ID-env-file" --env-file "$WORK/example.env" -e DEBUG=False
+  start "$ID-env-file" --env-file "$WORK/example.env" -e DEBUG=False "${HTTP[@]}"
 check "-e DEBUG=False beats the example's DEBUG=True" debug_is_off
 check "the --env-file container uses the volume: log-in works" log_in_works_on_a_new_container
+check "the --env-file container stops" stops_the_env_file_container
+check "with the default HTTPS settings the container becomes healthy (favicon over HTTP)" \
+  start "$ID-https-defaults" "${KEYS[@]}"
+check "GET /favicon.ico is served over plain HTTP" favicon_is_served
+check "plain HTTP is redirected to https://" redirects_to_https
+check "plain HTTP responses carry no Strict-Transport-Security" plain_http_has_no_strict_transport_security
 
 echo "All smoke checks passed."
