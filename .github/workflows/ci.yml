@@ -1,0 +1,15 @@
+# The same quality gate the hooks and reviews run locally, on every push and
+# pull request. The job ids are the status check names that branch protection
+# requires (scripts/branch-protection.sh): renaming a job means updating it.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
