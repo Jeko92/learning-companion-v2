@@ -176,7 +176,7 @@
   - Test: `src/config/tests/test_env_example.py`
   - Impl: `.env.example`
   - Covers: AC15
-- [ ] 11. CI's `quality` job gets a "Deployment checks" step.
+- [x] 11. CI's `quality` job gets a "Deployment checks" step.
   - The step runs `python src/manage.py check --deploy --fail-level WARNING`, right after "Django system checks".
   - It has its own `env`: `DEBUG: "False"` and a 50+ character dummy `SECRET_KEY`, with no `secrets.`.
   - `GATE` in `test_ci.py` is extended with the step's exact flattened dict.

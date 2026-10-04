@@ -99,18 +99,31 @@ class WorkflowTriggerTests(WorkflowTestCase):
         )
 
 
+# Production-like settings for check --deploy: DEBUG off (the HTTPS settings
+# follow it) and a dummy key long enough for security.W009, which the job's own
+# dummy is not. Values keep their YAML quotes.
+DEPLOY_CHECK = {
+    "name": "Deployment checks",
+    "run": "python src/manage.py check --deploy --fail-level WARNING",
+    "env": "",
+    "DEBUG": '"False"',
+    "SECRET_KEY": "ci-deploy-check-dummy-key-0123456789-abcdefghijklmnopqrstuvwxyz",
+}
+
+
 class QualityJobTests(WorkflowTestCase):
     """The quality job runs the hooks' and reviews' gate on Python 3.14."""
 
     GATE = (
-        ("Lint", "ruff check ."),
-        ("Formatting", "ruff format --check ."),
-        ("Django system checks", "python src/manage.py check"),
-        (
-            "Migrations match the models",
-            "python src/manage.py makemigrations --check --dry-run",
-        ),
-        ("Tests", "python src/manage.py test src"),
+        {"name": "Lint", "run": "ruff check ."},
+        {"name": "Formatting", "run": "ruff format --check ."},
+        {"name": "Django system checks", "run": "python src/manage.py check"},
+        DEPLOY_CHECK,
+        {
+            "name": "Migrations match the models",
+            "run": "python src/manage.py makemigrations --check --dry-run",
+        },
+        {"name": "Tests", "run": "python src/manage.py test src"},
     )
 
     def setUp(self):
@@ -147,9 +160,13 @@ class QualityJobTests(WorkflowTestCase):
     def test_each_gate_command_is_its_own_unconditional_named_step_in_order(self):
         # Exact dicts: an `if: false` or `continue-on-error: true` on a gate
         # step would let CI pass without its check.
-        self.assertEqual(
-            self.steps[3:], [{"name": name, "run": run} for name, run in self.GATE]
-        )
+        self.assertEqual(self.steps[3:], list(self.GATE))
+
+    def test_the_deployment_check_key_is_long_enough_for_check_deploy(self):
+        # Django's security.W009: at least 50 characters, 5 of them unique.
+        key = DEPLOY_CHECK["SECRET_KEY"]
+        self.assertGreaterEqual(len(key), 50)
+        self.assertGreaterEqual(len(set(key)), 5)
 
     def test_the_keys_are_dummies_in_the_job_env(self):
         # The tests never call the API, so no repository secret is needed.
