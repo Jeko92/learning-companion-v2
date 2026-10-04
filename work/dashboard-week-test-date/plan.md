@@ -25,7 +25,7 @@ New pin: Sat Mar 16, 2030 12:00 UTC. Its week starts Mon Mar 11, 2030; the eight
 
 ## Steps
 - [x] 1. A guard test fails while the real date lies in the pinned 8-week window; `NOW` moves to Sat Mar 16, 2030 12:00 UTC and the fixture dates and "Week of …" labels of `DashboardHoursPerWeekTests` (bob's session included) and `DashboardBarTests` move with it, expected values unchanged; both classes start the `timezone.now` patch in `setUp` (before `force_login`) instead of a class decorator — test: `src/dashboard/tests/test_views.py` (new guard class, red first) — impl: `src/dashboard/tests/test_views.py` (`NOW`, fixture dates, expected labels); mutation check as above, then revert — covers: AC1, AC2, AC3, AC4
-- [ ] 2. The `minutes_per_week` comment says the date-range filter only limits the rows scanned, because the zero-fill reads only the shown Mondays (no behaviour change, suite stays green); CLAUDE.md mentions the guard test — test: none (refactor on green, full suite + `ruff check .` + `ruff format --check .`) — impl: `src/learning_sessions/models.py`, `CLAUDE.md` — covers: AC5, AC6
+- [x] 2. The `minutes_per_week` comment says the date-range filter only limits the rows scanned, because the zero-fill reads only the shown Mondays (no behaviour change, suite stays green); CLAUDE.md mentions the guard test — test: none (refactor on green, full suite + `ruff check .` + `ruff format --check .`) — impl: `src/learning_sessions/models.py`, `CLAUDE.md` — covers: AC5, AC6
 
 ## Coverage
 - AC1 → step 1
