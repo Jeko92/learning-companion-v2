@@ -1,0 +1,60 @@
+# The same quality gate the hooks and reviews run locally, on every push and
+# pull request. The job ids are the status check names that branch protection
+# requires (scripts/branch-protection.sh): renaming a job means updating it.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer run of the same ref cancels the older one, except on main and
+# develop: a cancelled required check there would read as failed.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop' }}
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Settings need both keys to load; the tests never call the API, so
+    # dummies are enough and no repository secret is used.
+    env:
+      SECRET_KEY: ci-dummy-secret-key
+      OPENAI_API_KEY: sk-dummy
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Lint
+        run: ruff check .
+      - name: Formatting
+        run: ruff format --check .
+      - name: Django system checks
+        run: python src/manage.py check
+      - name: Migrations match the models
+        run: python src/manage.py makemigrations --check --dry-run
+      - name: Tests
+        run: python src/manage.py test src
+
+  # Builds the production image, runs it and checks it end to end. Runs
+  # alongside quality (no needs), so a slow build doesn't hold up the tests.
+  docker-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Build and check the image
+        run: scripts/docker-smoke.sh

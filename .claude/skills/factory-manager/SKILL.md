@@ -38,7 +38,10 @@ Do exactly one of the following, then stop and report (step 6). Never chain two 
 3. **`done` — close-out.** Idempotent: skip any sub-step that is already true.
    1. Find the PR: `pr` from the state file, else `gh pr list --head <branch> --state all --json number,state`.
    2. If it is `OPEN`:
-      - `gh pr checks <pr>`: if checks are still running, report "waiting for checks on PR #<pr>" and stop (a loop retries later). If any check failed, report it and stop — do not merge red; a human decides whether that becomes a `fix/` ticket.
+      - `gh pr checks <pr>`. Decide by exit code and output, as `release` step 7 does: CI (`.github/workflows/ci.yml`, checks `quality` and `docker-smoke`) runs on every PR, so a PR without checks has not been picked up yet.
+        - Exit `0` (all checks passed): continue.
+        - Exit `8` (checks still pending), or exit `1` with "no checks reported" (the run hasn't registered yet): report "waiting for checks on PR #<pr>" and stop. A later call retries.
+        - Exit `1` with a failed check: report the failed checks and stop. Do not merge red; a human decides whether that becomes a `fix/` ticket.
       - `gh pr view <pr> --json mergeable`: if `CONFLICTING`, report it and stop.
       - Squash-merge into `develop`, keeping the branch: `gh pr merge <pr> --squash --subject "<type>(<ticket>): <issue title> (#<pr>)" --body "Closes #<issue>"` (`<type>` is `fix` for a `fix/` branch, otherwise `feat`).
    3. `gh issue close <issue> -R <GH_REPO> --reason completed` if it is still open, then `python3 .claude/scripts/board.py status <issue> Done`.
