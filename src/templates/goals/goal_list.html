@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Your goals · Learning Companion{% endblock %}
 
@@ -26,21 +27,57 @@
     </div>
   </nav>
   {% if goal_list %}
-  <ul class="space-y-3">
-    {% for goal in goal_list %}
-      <li class="card card-border bg-base-100">
-        <div class="card-body flex-row flex-wrap items-center justify-between gap-3 p-4">
-          <a href="{{ goal.get_absolute_url }}" class="link link-hover min-w-0 break-words font-medium">{{ goal.title }}</a>
-          {% include "components/_status_badge.html" %}
+  {% if not active_status %}
+    {# For the drag and drop script: it announces moves here and shows failed ones in the alert. #}
+    <p data-board-announce aria-live="polite" class="sr-only"></p>
+    <div data-board-error role="alert" class="alert alert-error alert-soft mb-4" hidden></div>
+  {% endif %}
+  {# One column per status ("All") or just the filtered one. The column says the status, so cards carry no badge. #}
+  <div data-board class="{% if active_status %}grid gap-4{% else %}grid gap-4 lg:grid-cols-3{% endif %}">
+    {% for status, label, goals in columns %}
+      <section data-board-column data-status="{{ status }}" aria-labelledby="column-{{ status }}-heading" class="flex flex-col gap-3 rounded-box border border-base-300 bg-base-100/60 p-3">
+        <div class="flex items-center justify-between gap-2 px-1">
+          <h2 id="column-{{ status }}-heading" class="font-semibold">{{ label }}</h2>
+          {# Literal classes per status, as in components/_status_badge.html: the colour cue moved from the cards to the count. #}
+          {% if status == "done" %}<span data-board-count class="badge badge-success">{{ goals|length }}</span>{% elif status == "in-progress" %}<span data-board-count class="badge badge-info">{{ goals|length }}</span>{% else %}<span data-board-count class="badge badge-neutral">{{ goals|length }}</span>{% endif %}
         </div>
-      </li>
+        <ul data-board-list data-status="{{ status }}" class="flex min-h-16 flex-1 flex-col gap-3">
+          <li data-board-empty class="rounded-box border border-dashed border-base-300 px-3 py-4 text-center text-sm"{% if goals %} hidden{% endif %}>No goals.</li>
+          {% for goal in goals %}
+            <li data-goal data-move-url="{% url 'goals:move' goal.pk %}" class="card card-border cursor-grab bg-base-100 shadow-sm">
+              <div class="card-body flex-row items-start justify-between gap-2 p-3">
+                <a href="{{ goal.get_absolute_url }}" class="link link-hover min-w-0 break-words font-medium">{{ goal.title }}</a>
+                {# CSS-only Move menu: works without JavaScript, by keyboard and with a screen reader. #}
+                {# A button per status; the current one is hidden (the board script re-hides after a drag). #}
+                <details class="dropdown dropdown-end shrink-0">
+                  <summary class="btn btn-ghost btn-square btn-xs" aria-label="Move “{{ goal.title }}”">{% include "components/_icon.html" with icon="arrows" icon_class="size-4" %}</summary>
+                  <form method="post" action="{% url 'goals:move' goal.pk %}" class="dropdown-content z-10 mt-1 flex w-48 flex-col gap-1 rounded-box border border-base-300 bg-base-100 p-2 shadow-md">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    {% for value, label in statuses %}
+                      <button type="submit" name="status" value="{{ value }}" class="btn btn-primary btn-soft btn-sm justify-start"{% if value == goal.status %} hidden{% endif %}>Move to {{ label }}</button>
+                    {% endfor %}
+                  </form>
+                </details>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
     {% endfor %}
-  </ul>
+  </div>
   {% elif active_status and has_goals %}
     {% include "components/_empty_state.html" with text="No goals with this status." empty_icon="flag" %}
   {% else %}
     {% url 'goals:create' as new_goal_url %}
     {% include "components/_empty_state.html" with text="No goals yet." cta_url=new_goal_url cta_label="New goal" empty_icon="flag" %}
   {% endif %}
-  {% include "components/_pagination.html" %}
+{% endblock %}
+
+{% block scripts %}
+  {# Drag and drop needs at least two columns: only the "All" tab with goals. #}
+  {% if goal_list and not active_status %}
+    <script src="{% static 'js/vendor/sortable.min.js' %}" defer></script>
+    <script src="{% static 'js/goal-board.js' %}" defer></script>
+  {% endif %}
 {% endblock %}

@@ -160,14 +160,14 @@ Follow a run with `gh run list` or `gh pr checks <pr>`.
 - `src/accounts/`: the custom user model (`accounts.User`), and sign-up, log-in and log-out under `/accounts/`, with the failed log-in lockout page
 - `src/tags/`: shared tags (case-insensitive unique names), used for focus areas and session tags, plus the comma-separated tag field both forms use
 - `src/profiles/`: each user's profile (name, cohort, focus areas), created automatically for new users, and the profile pages under `/profile/`
-- `src/goals/`: learning goals (title, description, status planned / in-progress / done), each owned by one user; listed at `/goals/`, created at `/goals/new/`, and viewed, edited or deleted at `/goals/<id>/`
+- `src/goals/`: learning goals (title, description, status planned / in-progress / done), each owned by one user; shown on a board at `/goals/` (a column per status: drag a card to another column, or use its Move menu, which works without JavaScript), created at `/goals/new/`, and viewed, edited or deleted at `/goals/<id>/`
 - `src/learning_sessions/`: learning sessions, each logged against one goal: a date (today or earlier), a duration in minutes (1 to 1,440), notes and tags; listed and created under `/goals/<id>/sessions/`, edited or deleted at `/sessions/<id>/`
 - `src/resources/`: reference material for a goal (an article, video, repo or doc): an http(s) URL, a title and a type, each URL at most once per goal
 - `src/dashboard/`: the dashboard at `/dashboard/`, where log-in lands: the user's goal count per status, with a total, and session time per tag and per week
 - `src/ai/`: the OpenAI Chat Completions service the AI features use (key and model from the environment, 30 seconds per network phase, 2 retries by default and none for the page actions, one user-safe error for any failure, plain-text or JSON-schema replies)
 - `src/templates/`: project-wide templates (`base.html` layout, pages that extend it, `accounts/`, `profiles/`, `goals/`, `learning_sessions/`, `resources/` and `dashboard/` pages), `forms/` (how every form outside the admin renders) and `components/` (shared pieces: icons, page header, status badge, tag pills, empty state, pagination, delete confirmation)
 - `src/tailwind/`: the Tailwind source stylesheet with the app's themes, and the vendored daisyUI plugin files
-- `src/assets/`: static source files (the favicons); the built `css/tailwind.css` is git-ignored
+- `src/assets/`: static source files (the favicons, the goal board's script and the vendored SortableJS); the built `css/tailwind.css` is git-ignored
 - `work/`: workflow artifacts per ticket (`ticket.md`, `plan.md`, `review.md`)
 - `Dockerfile`, `.dockerignore`, `docker/entrypoint.sh`: the production image and its start-up (migrate, then gunicorn)
 - `scripts/docker-smoke.sh`: builds and runs the image and checks it serves the app
