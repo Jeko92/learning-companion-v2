@@ -136,7 +136,7 @@
   - Test: `src/config/tests/test_env.py`
   - Impl: `src/config/env.py` (`optional_non_negative_int`, `DEFAULT_HSTS_SECONDS`)
   - Covers: AC10, AC11
-- [ ] 4. `SECURE_PROXY_SSL_HEADER` is an opt-in boolean.
+- [x] 4. `SECURE_PROXY_SSL_HEADER` is an opt-in boolean.
   - Behaviour: `False` when unset or blank in both DEBUG modes, `True` when set true, and an invalid value is an error.
   - Test: `src/config/tests/test_env.py`
   - Impl: `src/config/env.py` (`EnvSettings.proxy_ssl_header`)

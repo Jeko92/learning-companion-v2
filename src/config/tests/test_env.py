@@ -382,6 +382,30 @@ class ResolveSettingsTests(SimpleTestCase):
                     "whole number of seconds, 0 or more",
                 )
 
+    def test_the_proxy_ssl_header_is_opt_in_whatever_debug_is(self):
+        cases = (
+            ({"DEBUG": "False"}, False),
+            ({"DEBUG": "True"}, False),
+            ({"DEBUG": "False", "SECURE_PROXY_SSL_HEADER": ""}, False),
+            ({"DEBUG": "False", "SECURE_PROXY_SSL_HEADER": "true"}, True),
+            ({"DEBUG": "True", "SECURE_PROXY_SSL_HEADER": "1"}, True),
+            ({"DEBUG": "False", "SECURE_PROXY_SSL_HEADER": "no"}, False),
+        )
+        for values, expected in cases:
+            with self.subTest(**values):
+                settings = self.resolve(environ(SECRET_KEY="x", **values))
+
+                self.assertIs(settings.proxy_ssl_header, expected)
+
+    def test_an_unknown_proxy_ssl_header_value_raises(self):
+        with self.assertRaises(ImproperlyConfigured) as raised:
+            self.resolve(environ(SECRET_KEY="x", SECURE_PROXY_SSL_HEADER="https"))
+
+        self.assertEqual(
+            str(raised.exception),
+            "The SECURE_PROXY_SSL_HEADER environment variable must be true or false",
+        )
+
     def test_values_come_from_env_file(self):
         env_file = self.write_env_file(
             "SECRET_KEY=from-file\nDEBUG=True\nALLOWED_HOSTS=example.com\n"

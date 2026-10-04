@@ -33,6 +33,8 @@ class EnvSettings:
     session_cookie_secure: bool
     csrf_cookie_secure: bool
     hsts_seconds: int
+    # True behind a TLS-terminating proxy that sets X-Forwarded-Proto.
+    proxy_ssl_header: bool
 
 
 def trimmed_list(env: django_environ.Env, name: str, default: list[str]) -> list[str]:
@@ -143,4 +145,7 @@ def resolve_settings(environ: Mapping[str, str], env_file: Path) -> EnvSettings:
         hsts_seconds=optional_non_negative_int(
             env, "SECURE_HSTS_SECONDS", default=0 if debug else DEFAULT_HSTS_SECONDS
         ),
+        # Opt-in: trusting the header without a proxy that sets it would let
+        # any client claim HTTPS.
+        proxy_ssl_header=optional_bool(env, "SECURE_PROXY_SSL_HEADER", default=False),
     )
