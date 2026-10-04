@@ -1,6 +1,19 @@
 {% extends "base.html" %}
 
 {% block content %}
-  <h1 class="text-3xl font-bold">Learning Companion</h1>
-  <p class="mt-4 text-lg text-slate-600">Track your learning goals and sessions, and get AI-powered summaries and next steps.</p>
+  <div class="hero rounded-box border border-base-300 bg-base-100 py-12 sm:py-16">
+    <div class="hero-content max-w-2xl flex-col text-center">
+      <span class="text-primary">{% include "components/_icon.html" with icon="book" icon_class="size-14" %}</span>
+      <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Learning Companion</h1>
+      <p class="text-lg text-base-content/80">Track your learning goals and sessions, and get AI-powered summaries and next steps.</p>
+      <div class="mt-2 flex flex-wrap justify-center gap-3">
+        {% if user.is_authenticated %}
+          <a href="{% url 'dashboard:index' %}" class="btn btn-primary">Go to your dashboard</a>
+        {% else %}
+          <a href="{% url 'accounts:signup' %}" class="btn btn-primary">Sign up</a>
+          <a href="{% url 'accounts:login' %}" class="btn btn-outline">Log in</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
 {% endblock %}

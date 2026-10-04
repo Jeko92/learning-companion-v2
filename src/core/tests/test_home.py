@@ -7,7 +7,7 @@ from django.contrib.messages.storage import default_storage
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.template.loader import render_to_string
 from django.test import RequestFactory, TestCase
-from django.urls import URLResolver, get_resolver, resolve
+from django.urls import URLResolver, get_resolver, resolve, reverse
 
 from core import urls as core_urls
 from core import views
@@ -123,3 +123,33 @@ class HomePageTests(TestCase):
         self.assertContains(
             response, '<link rel="stylesheet" href="/static/css/tailwind.css">'
         )
+
+
+class HomeCallToActionTests(TestCase):
+    """The home page's hero points each visitor at their next step."""
+
+    def main_links(self):
+        page = PageParser()
+        page.feed(self.client.get("/").content.decode())
+        links = {}
+        for index, (tag, attrs) in enumerate(page.elements):
+            if tag == "a" and page.inside(index, lambda t, _: t == "main"):
+                links[attrs["href"]] = attrs.get("class", "").split()
+        return page.links("main"), links
+
+    def test_anonymous_visitors_are_invited_to_sign_up_or_log_in(self):
+        links, classes = self.main_links()
+
+        self.assertIn((reverse("accounts:signup"), "Sign up"), links)
+        self.assertIn((reverse("accounts:login"), "Log in"), links)
+        self.assertIn("btn-primary", classes[reverse("accounts:signup")])
+        self.assertNotIn(reverse("dashboard:index"), classes)
+
+    def test_logged_in_users_are_sent_to_their_dashboard(self):
+        self.client.force_login(get_user_model().objects.create_user("alice"))
+
+        links, classes = self.main_links()
+
+        self.assertIn((reverse("dashboard:index"), "Go to your dashboard"), links)
+        self.assertIn("btn-primary", classes[reverse("dashboard:index")])
+        self.assertNotIn(reverse("accounts:signup"), classes)
