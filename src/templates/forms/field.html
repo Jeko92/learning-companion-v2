@@ -1,0 +1,12 @@
+{# One field (StyledBoundField). Keeps Django's <id>_helptext and <id>_error ids, which its aria-describedby points to. #}
+{% if field.use_fieldset %}
+  <fieldset class="fieldset"{% if field.aria_describedby %} aria-describedby="{{ field.aria_describedby }}"{% endif %}>
+    {% if field.label %}{{ field.legend_tag }}{% endif %}
+{% else %}
+  <div class="fieldset">
+    {% if field.label %}{{ field.label_tag }}{% endif %}
+{% endif %}
+    {{ field }}
+    {% if field.help_text %}<div class="text-sm text-base-content/80"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text|safe }}</div>{% endif %}
+    {{ field.errors }}
+{% if field.use_fieldset %}</fieldset>{% else %}</div>{% endif %}

@@ -1,12 +1,13 @@
 from django import forms
 from django.db import transaction
 
+from core.forms import StyledFormMixin
 from profiles.models import Profile
 from tags.forms import TagListField, tags_as_text
 from tags.models import Tag
 
 
-class ProfileForm(forms.ModelForm):
+class ProfileForm(StyledFormMixin, forms.ModelForm):
     focus_areas = TagListField(noun="focus areas")
 
     class Meta:

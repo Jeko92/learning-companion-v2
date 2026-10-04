@@ -118,7 +118,7 @@
 - [x] 9. Each page type sets its own `<title>` ending in "· Learning Companion". Home stays "Learning Companion" and the dashboard stays the same; all titles are distinct across the fixture's pages. — test: `src/core/tests/test_layout.py` (`PageTitleTests`) — impl: `{% block title %}` in every page template — covers: AC10
 - [x] 10. `base.html` links `favicon.svg` (`type="image/svg+xml"`), `favicon.ico` (`sizes="32x32"` or `any`) and `apple-touch-icon.png`. The files exist under `src/assets/`, and the PNG is 180×180 (read from its IHDR chunk). — test: `src/core/tests/test_favicon.py` (`FaviconLinkTests`) — impl: `src/assets/favicon.svg`, `src/assets/apple-touch-icon.png`, `src/assets/favicon.ico` (generated with `sips` and a stdlib ICO packer), `src/templates/base.html` (`{% load static %}`) — covers: AC12
 - [x] 11. `GET /favicon.ico`, logged out, returns 200 with `image/x-icon`, and its body is the committed file. — test: `src/core/tests/test_favicon.py` (`FaviconRouteTests`) — impl: `src/core/views.py` (`favicon`), `src/core/urls.py` — covers: AC13
-- [ ] 12. Project-wide form rendering:
+- [x] 12. Project-wide form rendering:
   - `StyledFormMixin`, `StyledBoundField`, `forms/div.html` and `forms/field.html`;
   - `TemplatesSetting` plus `django.forms`;
   - the mixin on `SignUpForm`, `ProfileForm`, `GoalForm`, `LearningSessionForm`, `ResourceForm` and a new `LogInForm` (wired into `LogInView`).

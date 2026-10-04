@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # Django's own form templates, for the TemplatesSetting renderer below.
+    "django.forms",
     "django_tailwind_cli",
     "core",
     "accounts",
@@ -83,6 +85,11 @@ TEMPLATES = [
         },
     },
 ]
+
+# Forms render with the TEMPLATES engine, so the project's templates/forms/*
+# (used by core.forms.StyledFormMixin) are found; "django.forms" in
+# INSTALLED_APPS supplies Django's own form and widget templates.
+FORM_RENDERER = "django.forms.renderers.TemplatesSetting"
 
 WSGI_APPLICATION = "config.wsgi.application"
 

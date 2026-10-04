@@ -1,10 +1,11 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
+from core.forms import StyledFormMixin
 from resources.models import Resource
 
 
-class ResourceForm(forms.ModelForm):
+class ResourceForm(StyledFormMixin, forms.ModelForm):
     """Expects the goal already set on the instance (the view passes
     instance=Resource(goal=...))."""
 

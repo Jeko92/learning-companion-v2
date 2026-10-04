@@ -1,9 +1,10 @@
 from django import forms
 
+from core.forms import StyledFormMixin
 from goals.models import Goal
 
 
-class GoalForm(forms.ModelForm):
+class GoalForm(StyledFormMixin, forms.ModelForm):
     class Meta:
         model = Goal
         # An explicit allow-list: the owner is never form input (it comes
