@@ -22,7 +22,7 @@
    - `permissions: contents: read`.
    - `concurrency: { group: ${{ github.workflow }}-${{ github.ref }}, cancel-in-progress: true }`.
 2. **Two jobs whose ids are the check names:** `quality` and `docker-smoke`, without a `name:` key, so the status check contexts are exactly `quality` and `docker-smoke`. They don't use `needs`, so they run in parallel.
-   - **`quality`** (timeout 15 min) uses `actions/checkout@v4` and `actions/setup-python@v5` (`python-version: "3.14"`, `cache: pip`, `cache-dependency-path: requirements*.txt`), runs `pip install -r requirements-dev.txt`, then one named step per command:
+   - **`quality`** (timeout 15 min) uses `actions/checkout@v7` and `actions/setup-python@v7` (`python-version: "3.14"`, `cache: pip`, `cache-dependency-path: requirements*.txt`), runs `pip install -r requirements-dev.txt`, then one named step per command:
      - `ruff check .`
      - `ruff format --check .`
      - `python src/manage.py check`
@@ -30,7 +30,7 @@
      - `python src/manage.py test src`
      
      Job-level `env` sets `SECRET_KEY: ci-dummy-secret-key` and `OPENAI_API_KEY: sk-dummy`, never `secrets.*`.
-   - **`docker-smoke`** (timeout 20 min) uses `actions/checkout@v4` and runs `scripts/docker-smoke.sh`.
+   - **`docker-smoke`** (timeout 20 min) uses `actions/checkout@v7` and runs `scripts/docker-smoke.sh`.
 3. **The workflow test parses the jobs from the text, without YAML.** `src/config/tests/test_ci.py` splits the file into its top-level keys and its job blocks by indentation, then asserts the facts per job. Exact lines are checked only where they are the contract: the commands, the action versions, the dummy keys.
 4. **Branch protection is a committed, reviewable script.** `scripts/branch-protection.sh show|apply` holds the desired state, so it can be re-applied and is documented.
    - `main`: one `PUT` that keeps today's settings (PR required with 0 approvals, `enforce_admins: true`, no force pushes or deletions) and adds `required_status_checks: {strict: false, checks: [quality, docker-smoke]}`, bound to the GitHub Actions app (`app_id` 15368), so another app can't report a check under the same name.
@@ -42,9 +42,11 @@
 6. **`factory-manager`'s close-out reads `gh pr checks` by exit code,** worded like the `release` skill's step 7. "No checks reported" means "not registered yet: wait", because CI now runs on every PR. This is a skill text change verified by reading; no test.
 7. **`REQUIRE_CHECKS="true"`** in `.claude/hooks/config.sh`, with its comment updated. A test in `test_ci.py` reads `config.sh`, so the gate can't quietly be switched back off.
 
+   - **Action majors (changed during implementation, 2026-10-04, user's choice):** `@v7` for both actions, not the `@v4`/`@v5` first planned. Those run on Node 20, which GitHub has deprecated on its runners; `@v7` (released 2026-07-20) runs on Node 24. AC4 only asks for a major-version pin.
+
 ## Steps
 - [x] 1. The workflow runs on every push and pull request, with read-only permissions, and cancels an older run of the same ref. — test: `src/config/tests/test_ci.py` (`WorkflowTriggerTests`: the file exists, `name: CI`, `on` has `push` and `pull_request` without branch filters, `permissions: contents: read`, a `concurrency` group on workflow + ref with `cancel-in-progress: true`) — impl: `.github/workflows/ci.yml` — covers: AC1
-- [ ] 2. A `quality` job runs the full gate on Python 3.14: `actions/setup-python@v5` with `python-version: "3.14"`, pip cache keyed on `requirements*.txt`, `pip install -r requirements-dev.txt`, then five named steps running exactly the five commands in this order, with the dummy `SECRET_KEY`/`OPENAI_API_KEY` in the job's `env` and a `timeout-minutes`. — test: `src/config/tests/test_ci.py` (`QualityJobTests`) — impl: `.github/workflows/ci.yml` — covers: AC2, AC4
+- [ ] 2. A `quality` job runs the full gate on Python 3.14: `actions/setup-python@v7` with `python-version: "3.14"`, pip cache keyed on `requirements*.txt`, `pip install -r requirements-dev.txt`, then five named steps running exactly the five commands in this order, with the dummy `SECRET_KEY`/`OPENAI_API_KEY` in the job's `env` and a `timeout-minutes`. — test: `src/config/tests/test_ci.py` (`QualityJobTests`) — impl: `.github/workflows/ci.yml` — covers: AC2, AC4
 - [ ] 3. A `docker-smoke` job runs `scripts/docker-smoke.sh`, with no `needs` (so it runs in parallel) and a `timeout-minutes`. — test: `src/config/tests/test_ci.py` (`DockerSmokeJobTests`) — impl: `.github/workflows/ci.yml` — covers: AC3, AC4
 - [ ] 4. Every `uses:` pins a major version (`@v<N>`), not a branch or `@main`. The file never references `secrets.`, and the job ids are exactly `quality` and `docker-smoke` (the check names). — test: `src/config/tests/test_ci.py` (`WorkflowHygieneTests`) — impl: `.github/workflows/ci.yml` if needed — covers: AC4, AC5
 - [ ] 5. Release PRs need passing CI checks: `REQUIRE_CHECKS="true"` in `.claude/hooks/config.sh`, with the comment updated (CI exists; a release PR with no, pending or failed checks is blocked). — test: `src/config/tests/test_ci.py` (`FactoryGateTests`: `config.sh` sets `REQUIRE_CHECKS="true"`) — impl: `.claude/hooks/config.sh` — covers: AC7

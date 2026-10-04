@@ -17,7 +17,7 @@ As the person running this AI factory, I want every push and pull request checke
 
   The two required keys are dummy values set in the workflow's `env`, never repository secrets: the tests never call the API. No `.env` file is created.
 - [ ] AC3 A separate `docker-smoke` job runs `scripts/docker-smoke.sh` on every push and PR, in parallel with `quality`, and fails the workflow if any smoke check fails.
-- [ ] AC4 Each job has a timeout, and actions are pinned to a major version (`@v4`/`@v5`), not a branch.
+- [ ] AC4 Each job has a timeout, and actions are pinned to a major version (e.g. `@v7`), not a branch.
 - [ ] AC5 A Django test pins these facts by reading the workflow file: the triggers, the read-only permissions, Python 3.14, the five `quality` commands, the smoke job's script and the dummy keys (no `secrets.` reference). It uses no new dependency.
 - [ ] AC6 The workflow's first run on the ticket's PR is green for both jobs. `final-review` opens the PR, and `factory-manager` confirms the run with `gh pr checks` before the squash-merge.
 
