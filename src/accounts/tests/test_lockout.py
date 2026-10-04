@@ -1,8 +1,11 @@
 import importlib.util
 import re
+from datetime import timedelta
 
+from axes.models import AccessAttempt
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db.models import F
 from django.test import SimpleTestCase, TestCase
 
 from accounts.tests.test_login import INVALID_LOGIN, LOGIN_PATH, PASSWORD, USERNAME
@@ -119,6 +122,37 @@ class LockoutTests(LockoutTestCase):
 
 
 LOCKED_OUT = "Too many failed log-in attempts. Try again in 15 minutes."
+
+
+class CoolOffTests(LockoutTestCase):
+    def age_failures(self, **delta):
+        """Moves every recorded failure back in time, as if it were older."""
+        AccessAttempt.objects.update(
+            attempt_time=F("attempt_time") - timedelta(**delta)
+        )
+
+    def test_the_cool_off_matches_the_lockout_page(self):
+        # The page says "Try again in 15 minutes" (LOCKED_OUT).
+        self.assertEqual(
+            getattr(settings, "AXES_COOLOFF_TIME", None), timedelta(minutes=15)
+        )
+
+    def test_still_locked_out_14_minutes_after_the_last_failure(self):
+        self.fail_log_ins(5)
+        self.age_failures(minutes=14)
+
+        response = self.log_in(USERNAME, PASSWORD)
+
+        self.assertEqual(response.status_code, 429)
+        self.assert_logged_out()
+
+    def test_the_right_password_logs_in_15_minutes_after_the_last_failure(self):
+        self.fail_log_ins(5)
+        self.age_failures(minutes=15)
+
+        response = self.log_in(USERNAME, PASSWORD)
+
+        self.assertRedirects(response, "/dashboard/", fetch_redirect_response=False)
 
 
 class LockoutPageTests(LockoutTestCase):

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 import os
 import warnings
+from datetime import timedelta
 from pathlib import Path
 
 from config.env import resolve_settings
@@ -172,6 +173,10 @@ AXES_FAILURE_LIMIT = 5
 AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
 # Rendered with status 429 (django-axes' default code).
 AXES_LOCKOUT_TEMPLATE = "accounts/locked_out.html"
+# The lockout lifts 15 minutes after the last failure (an attempt while locked
+# out counts as one). The page says so: change both together. A timedelta,
+# since django-axes reads a plain number as hours.
+AXES_COOLOFF_TIME = timedelta(minutes=15)
 
 
 # Password validation

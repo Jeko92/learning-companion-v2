@@ -216,7 +216,7 @@
   - Test: `src/accounts/tests/test_lockout.py`, `src/core/tests/pages.py`
   - Impl: `src/templates/accounts/locked_out.html`, `settings.py` (`AXES_LOCKOUT_TEMPLATE`)
   - Covers: AC4, AC8
-- [ ] 16. The lockout lifts 15 minutes after the last failure.
+- [x] 16. The lockout lifts 15 minutes after the last failure.
   - Behaviour: after a lockout, with `AccessAttempt.attempt_time` shifted back 14 minutes, the correct password still gets 429. Shifted 15 minutes back from the last failure, it logs in (302 to `/dashboard/`).
   - `AXES_COOLOFF_TIME = timedelta(minutes=15)` is pinned next to the page text.
   - Test: `src/accounts/tests/test_lockout.py`
