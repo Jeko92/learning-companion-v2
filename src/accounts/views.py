@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
+from django.contrib.auth.decorators import login_not_required
 from django.shortcuts import redirect, resolve_url
 from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
@@ -10,7 +11,11 @@ from django.views.generic import CreateView
 from accounts.forms import LogInForm, SignUpForm
 
 
-@method_decorator(sensitive_post_parameters("password1", "password2"), name="dispatch")
+# On dispatch, not the class: as_view() copies only dispatch's attributes.
+@method_decorator(
+    [login_not_required, sensitive_post_parameters("password1", "password2")],
+    name="dispatch",
+)
 class SignUpView(CreateView):
     form_class = SignUpForm
     template_name = "accounts/signup.html"
@@ -50,6 +55,8 @@ class LogInView(auth_views.LoginView):
         return response
 
 
+# Public, unlike Django's LogoutView: a tab whose session expired can still log out.
+@method_decorator(login_not_required, name="dispatch")
 class LogOutView(auth_views.LogoutView):
     # POST only (Django's LogoutView answers GET with 405).
     def post(self, request, *args, **kwargs):

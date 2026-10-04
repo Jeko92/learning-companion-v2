@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
 from django.test import Client, TestCase
-from django.urls import reverse
+from django.urls import resolve, reverse
 
 from accounts.tests.test_login import UNSAFE_NEXTS
 from core.tests.html import PageParser
@@ -16,6 +16,11 @@ class LogoutTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(USERNAME, password=PASSWORD)
         self.client.force_login(self.user)
+
+    def test_logout_is_public_under_the_login_required_middleware(self):
+        # An expired-session tab can still log out. LoginRequiredMiddleware
+        # reads this attribute off the resolved view.
+        self.assertFalse(getattr(resolve(LOGOUT_PATH).func, "login_required", True))
 
     def test_post_logs_out_and_redirects_with_a_message(self):
         response = self.client.post(LOGOUT_PATH)

@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-from django.urls import URLResolver, get_resolver, reverse
+from django.urls import URLResolver, get_resolver, resolve, reverse
 
 from accounts import urls as accounts_urls
 from core.tests.html import PageParser
@@ -33,6 +33,10 @@ class SignUpPageTests(TestCase):
             and pattern.urlconf_name is accounts_urls
         ]
         self.assertEqual(includes, [("accounts/", "accounts")])
+
+    def test_signup_is_public_under_the_login_required_middleware(self):
+        # LoginRequiredMiddleware reads this attribute off the resolved view.
+        self.assertFalse(getattr(resolve(SIGNUP_PATH).func, "login_required", True))
 
     def test_signup_page_renders_the_signup_form(self):
         response = self.client.get(SIGNUP_PATH)
