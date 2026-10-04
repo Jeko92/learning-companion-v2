@@ -2,7 +2,15 @@ from django.conf import settings
 from django.test import SimpleTestCase
 
 ENV_EXAMPLE = settings.BASE_DIR.parent / ".env.example"
-VARIABLES = ["SECRET_KEY", "DEBUG", "ALLOWED_HOSTS", "OPENAI_API_KEY", "OPENAI_MODEL"]
+VARIABLES = [
+    "SECRET_KEY",
+    "DEBUG",
+    "ALLOWED_HOSTS",
+    "CSRF_TRUSTED_ORIGINS",
+    "DATABASE_URL",
+    "OPENAI_API_KEY",
+    "OPENAI_MODEL",
+]
 
 
 class EnvExampleTests(SimpleTestCase):
