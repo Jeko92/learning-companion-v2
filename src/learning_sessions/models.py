@@ -53,6 +53,8 @@ class LearningSessionQuerySet(models.QuerySet):
         newest = today - timedelta(days=today.weekday())
         mondays = [newest - timedelta(weeks=n) for n in range(weeks)]
         # order_by() clears any incoming ordering, which would split the groups.
+        # The date range only limits the rows scanned: the result below reads
+        # just the shown Mondays, so weeks outside it would be dropped anyway.
         rows = (
             self.order_by()
             .filter(date__gte=mondays[-1], date__lt=newest + timedelta(weeks=1))
