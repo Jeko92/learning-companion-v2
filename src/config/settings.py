@@ -162,6 +162,9 @@ AUTHENTICATION_BACKENDS = [
     "axes.backends.AxesStandaloneBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
+# The 5th failure is refused with the lockout page, and so is every attempt
+# after it, even with the right password.
+AXES_FAILURE_LIMIT = 5
 
 
 # Password validation

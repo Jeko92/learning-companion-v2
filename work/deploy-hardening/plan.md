@@ -193,7 +193,7 @@
   - Test: `src/accounts/tests/test_lockout.py` (`LockoutWiringTests`)
   - Impl: `requirements.txt`, `settings.py`, `accounts/views.py`
   - Covers: AC1, AC9
-- [ ] 13. The 5th failure locks out username + IP.
+- [x] 13. The 5th failure locks out username + IP.
   - Behaviour: the first 4 wrong-password POSTs for alice get 200 with the generic form error. After the 5th, a 6th POST with the **correct** password gets 429, no `_auth_user_id` in the session, and no session cookie for a logged-in user.
   - A `subTest` repeats it for a username that doesn't exist (AC5).
   - `AXES_FAILURE_LIMIT = 5` is pinned.
