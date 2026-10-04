@@ -197,20 +197,32 @@ class ResolveSettingsTests(SimpleTestCase):
         self.assertEqual(from_env.database["NAME"], "/from/env.sqlite3")
 
     def test_an_unparseable_database_url_raises_improperly_configured(self):
-        # django-environ only warns about these; Django would fail later, at
-        # the first query, without naming the variable.
-        for raw in ("not-a-url", "foo://host/db", "http://example.com/db"):
+        # django-environ only warns about the first three (Django would fail
+        # later, at the first query, without naming the variable), and raises
+        # a ValueError quoting part of the URL for a port it can't read, as
+        # with a password holding an unencoded "/".
+        unparseable = (
+            "not-a-url",
+            "foo://host/db",
+            "http://example.com/db",
+            "postgres://user:pw@host:abc/db",
+            "postgres://user:pa/ss@db/companion",
+        )
+        for raw in unparseable:
             with self.subTest(DATABASE_URL=raw):
                 with warnings.catch_warnings(record=True) as caught:
                     warnings.simplefilter("always")
                     with self.assertRaises(ImproperlyConfigured) as raised:
                         self.resolve(environ(SECRET_KEY="x", DATABASE_URL=raw))
 
-                # A fixed message: a URL can carry a password, so never echo it.
+                # A fixed message: a URL can carry a password, so never echo it,
+                # nor chain an exception that does.
                 self.assertEqual(
                     str(raised.exception),
                     "The DATABASE_URL environment variable is not a valid database URL",
                 )
+                self.assertIsNone(raised.exception.__cause__)
+                self.assertTrue(raised.exception.__suppress_context__)
                 self.assertEqual(caught, [])
 
     def test_csrf_trusted_origins_is_a_trimmed_comma_separated_list(self):

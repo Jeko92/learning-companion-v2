@@ -48,13 +48,18 @@ def database_config(env: django_environ.Env) -> dict | None:
     raw = env.ENVIRON.get("DATABASE_URL", "").strip()
     if not raw:
         return None
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        config = env.db_url_config(raw)
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            config = env.db_url_config(raw)
+    except ValueError:
+        # Its message quotes part of the URL (e.g. "as 'pa'" for a password
+        # with an unencoded "/"), so it is dropped, not chained.
+        config = {}
     if config.get("ENGINE") not in env.DB_SCHEMES.values():
         raise ImproperlyConfigured(
             "The DATABASE_URL environment variable is not a valid database URL"
-        )
+        ) from None
     return config
 
 
