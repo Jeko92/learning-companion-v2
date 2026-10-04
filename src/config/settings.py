@@ -170,6 +170,8 @@ AXES_FAILURE_LIMIT = 5
 # django-ipware the IP is REMOTE_ADDR: behind a reverse proxy every client
 # shares the proxy's, and the lockout is in effect per username.
 AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]
+# Rendered with status 429 (django-axes' default code).
+AXES_LOCKOUT_TEMPLATE = "accounts/locked_out.html"
 
 
 # Password validation

@@ -206,7 +206,7 @@
   - Test: `src/accounts/tests/test_lockout.py`
   - Impl: `settings.py`
   - Covers: AC3, AC9
-- [ ] 15. The lockout page.
+- [x] 15. The lockout page.
   - Behaviour: the 429 response uses `accounts/locked_out.html`, extending `base.html`.
     - title `Locked out · Learning Companion`, one `<h1>`
     - main text "Too many failed log-in attempts. Try again in 15 minutes."

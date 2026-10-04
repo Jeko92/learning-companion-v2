@@ -116,3 +116,50 @@ class LockoutTests(LockoutTestCase):
         response = self.log_in("bob", PASSWORD, "127.0.0.1")
 
         self.assertRedirects(response, "/dashboard/", fetch_redirect_response=False)
+
+
+LOCKED_OUT = "Too many failed log-in attempts. Try again in 15 minutes."
+
+
+class LockoutPageTests(LockoutTestCase):
+    def locked_out_page(self, response):
+        page = PageParser()
+        page.feed(response.content.decode())
+        return page
+
+    def test_the_lockout_page_says_when_to_try_again(self):
+        self.fail_log_ins(5)
+
+        response = self.log_in(USERNAME, PASSWORD)
+
+        self.assertEqual(response.status_code, 429)
+        self.assertTemplateUsed(response, "accounts/locked_out.html")
+        self.assertTemplateUsed(response, "base.html")
+        page = self.locked_out_page(response)
+        self.assertEqual(page.text("title"), "Locked out · Learning Companion")
+        self.assertEqual([tag for tag, _ in page.elements].count("h1"), 1)
+        self.assertIn(LOCKED_OUT, page.text("main"))
+
+    def test_the_lockout_page_names_no_account(self):
+        # The same page for an existing and a missing username: it neither
+        # echoes the username nor tells whether the account exists.
+        (alice,) = self.fail_log_ins(5, USERNAME, "10.0.0.1")[-1:]
+        (nobody,) = self.fail_log_ins(5, "nobody", "10.0.0.9")[-1:]
+
+        self.assertNotIn(USERNAME, alice.content.decode())
+        self.assertNotIn("nobody", nobody.content.decode())
+        self.assertEqual(
+            self.locked_out_page(alice).text("main"),
+            self.locked_out_page(nobody).text("main"),
+        )
+
+    def test_the_admin_log_in_is_locked_out_the_same_way(self):
+        for _ in range(5):
+            response = self.client.post(
+                "/admin/login/?next=/admin/",
+                {"username": USERNAME, "password": WRONG_PASSWORD, "next": "/admin/"},
+            )
+
+        self.assertEqual(response.status_code, 429)
+        self.assertTemplateUsed(response, "accounts/locked_out.html")
+        self.assertIn(LOCKED_OUT, self.locked_out_page(response).text("main"))
