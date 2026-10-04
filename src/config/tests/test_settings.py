@@ -174,6 +174,20 @@ class SettingsWiringTests(SimpleTestCase):
             },
         )
 
+    def test_mail_goes_to_the_console_only_with_debug(self):
+        # check --deploy rejects the console backend (mail.E001).
+        cases = {
+            "True": "django.core.mail.backends.console.EmailBackend",
+            "False": "django.core.mail.backends.smtp.EmailBackend",
+        }
+        for raw, backend in cases.items():
+            with self.subTest(DEBUG=raw):
+                self.reload_with(DEBUG=raw)
+
+                self.assertEqual(
+                    settings_module.MAILERS, {"default": {"BACKEND": backend}}
+                )
+
     def test_generated_secret_key_is_not_hardcoded(self):
         self.assertNotIn("django-insecure", SETTINGS_FILE.read_text())
 

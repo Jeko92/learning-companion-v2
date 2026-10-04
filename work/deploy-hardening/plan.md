@@ -163,7 +163,7 @@
   - Covers: AC13, AC14
 
 ### Email, deploy check, documentation and CI
-- [ ] 8. The email backend follows `DEBUG`: reloaded settings have the console backend with `DEBUG="True"` and SMTP with `DEBUG="False"`.
+- [x] 8. The email backend follows `DEBUG`: reloaded settings have the console backend with `DEBUG="True"` and SMTP with `DEBUG="False"`.
   - Test: `src/config/tests/test_settings.py`
   - Impl: `src/config/settings.py`
   - Covers: AC17

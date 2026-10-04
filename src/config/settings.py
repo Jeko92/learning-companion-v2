@@ -214,8 +214,12 @@ TAILWIND_CLI_SRC_CSS = "tailwind/source.css"
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
+# The console in development; SMTP otherwise (check --deploy rejects the
+# console). The app sends no email yet, so no SMTP host is configured.
 MAILERS = {
     "default": {
-        "BACKEND": "django.core.mail.backends.console.EmailBackend",
+        "BACKEND": "django.core.mail.backends.console.EmailBackend"
+        if DEBUG
+        else "django.core.mail.backends.smtp.EmailBackend",
     },
 }
