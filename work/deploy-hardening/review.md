@@ -1,6 +1,25 @@
 # Review: deploy-hardening
 
-## Verdict: FAIL
+## Verdict: PASS
+
+**Re-review (2026-10-04, e0f353b..3444e66, plan steps 20-24):** all four findings of the first review are resolved, checked by both reviewers with targeted mutations (each fix reverted → its test fails):
+- 1, medium, `--parallel` workers: `PlainHttpParallelTestSuite.process_setup`.
+- 2, low, runner teardown guard.
+- 3, low, casefolded `AXES_USERNAME_CALLABLE`.
+- 4, info, `\Z` in the favicon exemption.
+
+AC16 now holds:
+- 646 tests OK with `DEBUG` from `.env`.
+- 646 tests OK with `DEBUG=False --parallel 4`.
+
+Checks are clean: `ruff check`, `ruff format --check`, `makemigrations --check`. No high or medium findings remain.
+
+One new info finding, not fixed here (a follow-up, reported to the user):
+- [info] `src/accounts/lockout.py` — **The username reset command needs a lower-case name.** Attempts are now stored under the casefolded username, but `axes_reset_username <name>` matches the name exactly. `axes_reset_username Alice` therefore clears nothing; the operator has to pass `alice`, or use `axes_reset`. This only affects operators and can't be exploited. — Recommendation: the README should say to pass the name in lower case.
+
+Steps 21-24 were made in one batch at the user's request, with a single suite run at the end, not a red run per step. The re-review's mutations confirm each new test fails without its fix.
+
+## First review (2026-10-04): FAIL
 
 AC16 promises a test suite that passes whatever `DEBUG` is. It does not hold for `manage.py test --parallel`. The code reviewer reproduced it: `DEBUG=False … test accounts.tests.test_login accounts.tests.test_nav --parallel 2` errors in the workers, while the same command with `DEBUG=True` passes. CI and the hooks don't run `--parallel`, so they are green. But `--parallel` is a standard runner option, and the criterion is "whatever DEBUG is", so I am not passing it with this caveat. The other findings are low/info and go back with it.
 
@@ -48,4 +67,5 @@ Checked with no finding:
 - The CI file, README and `.env.example` hold dummy keys only.
 
 ## Reviewed
-commit 61c7ce6, 2026-10-04 (base d52d39d)
+first review: commit 61c7ce6, 2026-10-04 (base d52d39d)
+re-review: commit 3444e66, 2026-10-04 (base e0f353b)
