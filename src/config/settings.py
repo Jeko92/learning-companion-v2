@@ -64,6 +64,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serves STATIC_ROOT when DEBUG is off (the container); right after Security.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -160,6 +162,17 @@ STATIC_URL = "static/"
 # django-tailwind-cli builds css/tailwind.css into the first entry; the built
 # file is git-ignored, so run 'manage.py tailwind build' after checkout.
 STATICFILES_DIRS = [BASE_DIR / "assets"]
+
+# collectstatic gathers the files here (git-ignored; the Docker build runs it).
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# WhiteNoise stores a gzipped copy next to each file and serves it to clients
+# that accept it. No hashed (manifest) names, so {% static %} URLs stay as they
+# are and pages render without running collectstatic first.
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 
 # Pinned, so builds are reproducible and don't look up the latest release.
 TAILWIND_CLI_VERSION = "4.3.3"

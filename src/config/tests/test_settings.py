@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from unittest import mock
 
+from django.conf import settings
 from django.test import SimpleTestCase
 
 from config import settings as settings_module
@@ -111,3 +112,34 @@ class SettingsWiringTests(SimpleTestCase):
 
     def test_no_openai_key_is_hardcoded(self):
         self.assertNotIn("sk-", SETTINGS_FILE.read_text())
+
+
+class StaticFilesSettingsTests(SimpleTestCase):
+    """Outside runserver, WhiteNoise serves the files collectstatic gathers."""
+
+    def test_static_files_are_collected_into_a_git_ignored_directory(self):
+        self.assertEqual(settings.STATIC_ROOT, settings.BASE_DIR / "staticfiles")
+        gitignore = (settings.BASE_DIR.parent / ".gitignore").read_text().splitlines()
+        self.assertIn("staticfiles/", gitignore)
+
+    def test_whitenoise_middleware_comes_right_after_the_security_middleware(self):
+        self.assertEqual(
+            settings.MIDDLEWARE[:2],
+            [
+                "django.middleware.security.SecurityMiddleware",
+                "whitenoise.middleware.WhiteNoiseMiddleware",
+            ],
+        )
+
+    def test_static_files_are_stored_compressed_without_hashed_names(self):
+        # Hashed (manifest) names would change every {% static %} URL and need
+        # collectstatic before any page renders, also in tests.
+        self.assertEqual(
+            settings.STORAGES,
+            {
+                "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+                "staticfiles": {
+                    "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"
+                },
+            },
+        )
