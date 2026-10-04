@@ -3,7 +3,10 @@
 There is no YAML parser among the requirements, so the workflow is read as
 text: split into its top-level keys and its jobs by indentation."""
 
+import json
+import os
 import re
+import subprocess
 
 from django.conf import settings
 from django.test import SimpleTestCase
@@ -182,6 +185,87 @@ class WorkflowHygieneTests(WorkflowTestCase):
         for job in self.jobs:
             with self.subTest(job=job):
                 self.assertNotIn("name", self.settings_of(job))
+
+
+class BranchProtectionScriptTests(WorkflowTestCase):
+    """scripts/branch-protection.sh holds the protection of main and develop.
+    `desired <branch>` prints the body `apply` sends, without the network."""
+
+    SCRIPT = ROOT / "scripts" / "branch-protection.sh"
+    GITHUB_ACTIONS_APP_ID = 15368
+
+    def setUp(self):
+        super().setUp()
+        self.assertTrue(
+            self.SCRIPT.is_file(), "scripts/branch-protection.sh is missing"
+        )
+
+    def desired(self, branch):
+        result = subprocess.run(
+            [str(self.SCRIPT), "desired", branch],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return json.loads(result.stdout)
+
+    def test_the_script_is_an_executable_bash_script_that_parses(self):
+        self.assertTrue(os.access(self.SCRIPT, os.X_OK), "it is not executable")
+        self.assertTrue(self.SCRIPT.read_text().startswith("#!/usr/bin/env bash\n"))
+        result = subprocess.run(
+            ["bash", "-n", str(self.SCRIPT)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_both_branches_require_the_workflow_jobs_from_github_actions(self):
+        for branch in ("main", "develop"):
+            with self.subTest(branch=branch):
+                checks = self.desired(branch)["required_status_checks"]
+                self.assertEqual(
+                    checks["checks"],
+                    [
+                        {"context": job, "app_id": self.GITHUB_ACTIONS_APP_ID}
+                        for job in self.jobs
+                    ],
+                )
+                # A ticket PR needn't be rebased on develop before it merges.
+                self.assertIs(checks["strict"], False)
+
+    def test_main_keeps_its_pull_request_rule_and_binds_admins(self):
+        main = self.desired("main")
+        self.assertIs(main["enforce_admins"], True)
+        self.assertEqual(
+            main["required_pull_request_reviews"]["required_approving_review_count"], 0
+        )
+
+    def test_develop_lets_the_owner_push_the_release_merge_commit(self):
+        # The release skill pushes "merge main into develop" directly, so
+        # develop needs no PR and admins may bypass its required checks.
+        develop = self.desired("develop")
+        self.assertIs(develop["enforce_admins"], False)
+        self.assertIsNone(develop["required_pull_request_reviews"])
+
+    def test_neither_branch_allows_force_pushes_or_deletion(self):
+        for branch in ("main", "develop"):
+            for setting in ("allow_force_pushes", "allow_deletions"):
+                with self.subTest(branch=branch, setting=setting):
+                    self.assertIs(self.desired(branch)[setting], False)
+
+    def test_an_unknown_branch_or_command_is_refused(self):
+        for arguments in (["desired", "feature/x"], ["delete"], []):
+            with self.subTest(arguments=arguments):
+                result = subprocess.run(
+                    [str(self.SCRIPT), *arguments],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("usage:", result.stderr)
 
 
 class FactoryGateTests(SimpleTestCase):
