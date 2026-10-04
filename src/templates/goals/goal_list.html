@@ -1,40 +1,46 @@
 {% extends "base.html" %}
 
+{% block title %}Your goals · Learning Companion{% endblock %}
+
 {% block content %}
-  <h1 class="text-2xl font-bold">Your goals</h1>
-  <a href="{% url 'goals:create' %}" class="mt-4 inline-block font-medium hover:underline">New goal</a>
-  <nav aria-label="Filter by status" class="mt-6 flex gap-4 text-sm">
-    {% if active_status %}
-      <a href="{% url 'goals:list' %}" class="hover:underline">All</a>
-    {% else %}
-      <span aria-current="page" class="font-semibold">All</span>
-    {% endif %}
-    {% for value, label in statuses %}
-      {% if value == active_status %}
-        <span aria-current="page" class="font-semibold">{{ label }}</span>
+  <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+    <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Your goals</h1>
+    <a href="{% url 'goals:create' %}" class="btn btn-primary">{% include "components/_icon.html" with icon="plus" %}New goal</a>
+  </div>
+  {# Links, not ARIA tabs: each filter is its own page. The active one is a span with aria-current. #}
+  {# Inactive tabs get text-base-content: daisyUI's 50% fade is below 4.5:1 in the light theme. #}
+  <nav aria-label="Filter by status" class="mb-6 overflow-x-auto">
+    <div class="tabs tabs-box w-max">
+      {% if active_status %}
+        <a href="{% url 'goals:list' %}" class="tab text-base-content">All</a>
       {% else %}
-        <a href="{% url 'goals:list' %}?status={{ value }}" class="hover:underline">{{ label }}</a>
+        <span aria-current="page" class="tab tab-active">All</span>
       {% endif %}
-    {% endfor %}
+      {% for value, label in statuses %}
+        {% if value == active_status %}
+          <span aria-current="page" class="tab tab-active">{{ label }}</span>
+        {% else %}
+          <a href="{% url 'goals:list' %}?status={{ value }}" class="tab text-base-content">{{ label }}</a>
+        {% endif %}
+      {% endfor %}
+    </div>
   </nav>
-  <ul class="mt-6 space-y-3">
+  {% if goal_list %}
+  <ul class="space-y-3">
     {% for goal in goal_list %}
-      <li class="flex justify-between rounded border border-slate-200 bg-white px-4 py-3">
-        <a href="{{ goal.get_absolute_url }}" class="hover:underline">{{ goal.title }}</a>
-        <span class="text-sm text-slate-500">{{ goal.get_status_display }}</span>
+      <li class="card card-border bg-base-100">
+        <div class="card-body flex-row flex-wrap items-center justify-between gap-3 p-4">
+          <a href="{{ goal.get_absolute_url }}" class="link link-hover min-w-0 break-words font-medium">{{ goal.title }}</a>
+          {% include "components/_status_badge.html" %}
+        </div>
       </li>
-    {% empty %}
-      <li>{% if active_status and has_goals %}No goals with this status.{% else %}No goals yet.{% endif %}</li>
     {% endfor %}
   </ul>
-  {% if is_paginated %}
-    <nav class="mt-6 flex gap-6 text-sm" aria-label="Pages">
-      {% if page_obj.has_previous %}
-        <a href="{% querystring page=page_obj.previous_page_number %}" class="hover:underline">Previous</a>
-      {% endif %}
-      {% if page_obj.has_next %}
-        <a href="{% querystring page=page_obj.next_page_number %}" class="hover:underline">Next</a>
-      {% endif %}
-    </nav>
+  {% elif active_status and has_goals %}
+    {% include "components/_empty_state.html" with text="No goals with this status." empty_icon="flag" %}
+  {% else %}
+    {% url 'goals:create' as new_goal_url %}
+    {% include "components/_empty_state.html" with text="No goals yet." cta_url=new_goal_url cta_label="New goal" empty_icon="flag" %}
   {% endif %}
+  {% include "components/_pagination.html" %}
 {% endblock %}

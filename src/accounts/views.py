@@ -7,7 +7,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.generic import CreateView
 
-from accounts.forms import SignUpForm
+from accounts.forms import LogInForm, SignUpForm
 
 
 @method_decorator(sensitive_post_parameters("password1", "password2"), name="dispatch")
@@ -33,6 +33,7 @@ class SignUpView(CreateView):
 
 class LogInView(auth_views.LoginView):
     template_name = "accounts/login.html"
+    authentication_form = LogInForm
     # Signed-in users go to LOGIN_REDIRECT_URL, as on sign-up.
     redirect_authenticated_user = True
 

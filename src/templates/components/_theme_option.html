@@ -1,0 +1,7 @@
+{# One choice of the header's theme switch: {% include "components/_theme_option.html" with value="companion" label="Light" icon="sun" %}. #}
+{# daisyUI's theme-controller: a checked radio whose value names a theme applies it, through CSS alone. #}
+{# The radio is visually hidden; its label shows the icon, the checked state and the keyboard focus. #}
+<label title="{{ label }}" class="btn btn-sm btn-square btn-ghost join-item has-checked:bg-primary has-checked:text-primary-content has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary">
+  <input type="radio" name="theme" value="{{ value }}" aria-label="{{ label }}" class="theme-controller sr-only"{% if checked %} checked{% endif %}>
+  {% include "components/_icon.html" with icon=icon %}
+</label>

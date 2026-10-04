@@ -25,6 +25,10 @@ VOID_ELEMENTS = {
 SECTIONS = ("title", "header", "nav", "main", "footer")
 
 
+def has_class(attrs, name):
+    return name in attrs.get("class", "").split()
+
+
 def collapse(pieces):
     """Joins text pieces with a space and collapses whitespace, so template
     formatting can't change a check and text from adjacent elements isn't
@@ -45,6 +49,9 @@ class PageParser(HTMLParser):
         self.href_pieces = []
         # (tag, {attribute: value}) for every start tag, in document order.
         self.elements = []
+        # For each entry in elements, its open ancestors as (tag, attrs), outermost first.
+        self.ancestors = []
+        self.open_elements = []
         # Per section, (href, text pieces) for each element with an href in it.
         self.link_pieces = {section: [] for section in SECTIONS}
         # (depth in open_tags, text pieces) for elements with an href still open.
@@ -73,9 +80,14 @@ class PageParser(HTMLParser):
         form, whereas browsers ignore it. Fine for this project's forms."""
         return [(attrs, list(inputs)) for attrs, inputs in self.section_forms[section]]
 
+    def inside(self, index, predicate):
+        """Whether any ancestor (tag, attrs) of elements[index] matches."""
+        return any(predicate(tag, attrs) for tag, attrs in self.ancestors[index])
+
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
         self.elements.append((tag, attrs))
+        self.ancestors.append(tuple(self.open_elements))
         # <input> is void, so record it before the void-element return below.
         if tag == "input" and self.open_forms:
             self.open_forms[-1][1].append(attrs)
@@ -95,11 +107,14 @@ class PageParser(HTMLParser):
                     self.section_forms[section].append((attrs, inputs))
             self.open_forms.append((len(self.open_tags) + 1, inputs))
         self.open_tags.append((tag, "href" in attrs))
+        self.open_elements.append((tag, attrs))
 
     def handle_endtag(self, tag):
         names = [name for name, _ in self.open_tags]
         if tag in names:
-            del self.open_tags[len(names) - 1 - names[::-1].index(tag) :]
+            index = len(names) - 1 - names[::-1].index(tag)
+            del self.open_tags[index:]
+            del self.open_elements[index:]
             depth = len(self.open_tags)
             self.open_links = [(d, p) for d, p in self.open_links if d <= depth]
             self.open_forms = [(d, i) for d, i in self.open_forms if d <= depth]

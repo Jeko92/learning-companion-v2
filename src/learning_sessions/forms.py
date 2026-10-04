@@ -2,12 +2,13 @@ from django import forms
 from django.db import transaction
 from django.db.models.functions import Lower
 
+from core.forms import StyledFormMixin
 from learning_sessions.models import LearningSession
 from tags.forms import TagListField, tags_as_text
 from tags.models import Tag
 
 
-class LearningSessionForm(forms.ModelForm):
+class LearningSessionForm(StyledFormMixin, forms.ModelForm):
     tags = TagListField()
 
     class Meta:

@@ -1834,3 +1834,94 @@ class GoalNextStepsCsrfTests(NextStepsTestCase):
 
         self.assertEqual(response.status_code, 302)
         self.complete_json.assert_called_once()
+
+
+BADGE = re.compile(r'<span class="([^"]*\bbadge\b[^"]*)">\s*([^<]*?)\s*</span>')
+STATUS_BADGES = {
+    Goal.Status.PLANNED: "badge-neutral",
+    Goal.Status.IN_PROGRESS: "badge-info",
+    Goal.Status.DONE: "badge-success",
+}
+
+
+class GoalStatusBadgeTests(TestCase):
+    """A goal's status is a coloured badge that always says the status."""
+
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goals = {
+            status: Goal.objects.create(
+                owner=self.alice, title=f"G {status}", status=status
+            )
+            for status in Goal.Status.values
+        }
+        self.client.force_login(self.alice)
+
+    def badges(self, path):
+        html = self.client.get(path).content.decode()
+        return [(text, classes.split()) for classes, text in BADGE.findall(html)]
+
+    def test_each_goal_in_the_list_has_its_status_badge(self):
+        badges = self.badges(reverse("goals:list"))
+
+        for status, variant in STATUS_BADGES.items():
+            with self.subTest(status=status):
+                label = Goal.Status(status).label
+                (classes,) = [c for text, c in badges if text == label]
+                self.assertIn(variant, classes)
+
+    def test_the_goal_page_shows_its_status_badge(self):
+        for status, variant in STATUS_BADGES.items():
+            with self.subTest(status=status):
+                badges = self.badges(self.goals[status].get_absolute_url())
+                label = Goal.Status(status).label
+                (classes,) = [c for text, c in badges if text == label]
+                self.assertIn(variant, classes)
+
+    def test_every_status_has_a_badge_colour(self):
+        self.assertEqual(set(STATUS_BADGES), set(Goal.Status.values))
+
+
+class GoalDetailCardTests(TestCase):
+    """The goal page's sections are cards, each named by its own heading."""
+
+    def test_summary_next_steps_sessions_and_resources_are_labelled_cards(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        goal = Goal.objects.create(owner=alice, title="Learn Django")
+        self.client.force_login(alice)
+
+        page = get_page(self.client, goal.get_absolute_url())
+
+        sections = [a for t, a in page.elements if t == "section"]
+        self.assertEqual(
+            [a.get("aria-labelledby") for a in sections],
+            [
+                "summary-heading",
+                "next-steps-heading",
+                "sessions-heading",
+                "resources-heading",
+            ],
+        )
+        h2_ids = {a.get("id") for t, a in page.elements if t == "h2"}
+        for attrs in sections:
+            with self.subTest(section=attrs["aria-labelledby"]):
+                self.assertIn("card", attrs.get("class", "").split())
+                self.assertIn(attrs["aria-labelledby"], h2_ids)
+
+    def test_resource_titles_wrap_between_words_not_inside_them(self):
+        alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        goal = Goal.objects.create(owner=alice, title="Learn Django")
+        Resource.objects.create(
+            goal=goal, url="https://docs.djangoproject.com/", title="Django docs"
+        )
+        self.client.force_login(alice)
+
+        page = get_page(self.client, goal.get_absolute_url())
+
+        (link,) = [
+            a.get("class", "").split()
+            for t, a in page.elements
+            if t == "a" and a.get("href") == "https://docs.djangoproject.com/"
+        ]
+        self.assertIn("break-words", link)
+        self.assertNotIn("break-all", link)

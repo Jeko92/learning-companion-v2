@@ -1,13 +1,13 @@
-{% extends "base.html" %}
+{% extends "components/confirm_delete.html" %}
 
-{% block content %}
-  <h1 class="text-2xl font-bold">Delete this resource?</h1>
-  <p class="mt-2 text-slate-500">{{ object.title }} · {{ object.goal.title }}</p>
-  <p class="mt-1 break-all text-sm text-slate-500">{{ object.url }}</p>
-  <p class="mt-2 text-slate-500">This can't be undone.</p>
-  <form method="post" action="{% url 'resources:delete' object.pk %}" class="mt-6">
-    {% csrf_token %}
-    <button type="submit" class="font-medium text-red-700">Delete</button>
-  </form>
-  <a href="{{ object.goal.get_absolute_url }}" class="mt-4 inline-block hover:underline">Cancel</a>
+{% block title %}Delete resource · Learning Companion{% endblock %}
+
+{% block heading %}Delete this resource?{% endblock %}
+
+{% block details %}
+  <p class="text-base-content/80">{{ object.title }} · {{ object.goal.title }}</p>
+  <p class="break-all text-sm text-base-content/80">{{ object.url }}</p>
 {% endblock %}
+
+{% block cancel_url %}{{ object.goal.get_absolute_url }}{% endblock %}
+{% block action_url %}{% url 'resources:delete' object.pk %}{% endblock %}

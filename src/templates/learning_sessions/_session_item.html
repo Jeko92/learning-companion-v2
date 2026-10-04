@@ -1,19 +1,17 @@
 {% load session_format %}
 {# One session in a list: shared by the session list and the goal page. #}
-<li class="rounded border border-slate-200 bg-white px-4 py-3">
-  <div class="flex justify-between">
-    <span class="font-medium">{{ session.date|date:"j M Y" }} · {{ session.duration_minutes|duration }}</span>
-    <span class="flex gap-4 text-sm">
-      <a href="{% url 'learning_sessions:edit' session.pk %}" class="hover:underline">Edit</a>
-      <a href="{% url 'learning_sessions:delete' session.pk %}" class="text-red-700 hover:underline">Delete</a>
-    </span>
+<li class="card card-border bg-base-100">
+  <div class="card-body gap-2 p-4">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <span class="flex items-center gap-2 font-medium">{% include "components/_icon.html" with icon="clock" icon_class="size-4 text-base-content/70" %}{{ session.date|date:"j M Y" }} · {{ session.duration_minutes|duration }}</span>
+      <span class="flex gap-1">
+        <a href="{% url 'learning_sessions:edit' session.pk %}" class="btn btn-ghost btn-xs">Edit</a>
+        <a href="{% url 'learning_sessions:delete' session.pk %}" class="btn btn-ghost btn-xs text-error">Delete</a>
+      </span>
+    </div>
+    {% include "components/_tag_list.html" with tags=session.tags.all label="Tags" %}
+    {% if session.notes %}
+      <p class="text-sm">{{ session.notes|linebreaksbr }}</p>
+    {% endif %}
   </div>
-  {% if session.tags.all %}
-    <ul class="mt-2 flex flex-wrap gap-2 text-sm text-slate-500">
-      {% for tag in session.tags.all %}<li>{{ tag.name }}</li>{% endfor %}
-    </ul>
-  {% endif %}
-  {% if session.notes %}
-    <p class="mt-2 text-sm">{{ session.notes|linebreaksbr }}</p>
-  {% endif %}
 </li>

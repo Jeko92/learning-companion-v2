@@ -1,27 +1,27 @@
 {% extends "base.html" %}
 
+{% block title %}Sessions for {{ goal.title }} · Learning Companion{% endblock %}
+
 {% block content %}
-  <h1 class="text-2xl font-bold">Sessions</h1>
-  <p class="mt-2 text-sm text-slate-500">For {{ goal.title }}</p>
-  <div class="mt-4 flex gap-6">
-    <a href="{% url 'learning_sessions:create' goal.pk %}" class="font-medium hover:underline">Add session</a>
-    <a href="{{ goal.get_absolute_url }}" class="hover:underline">Back to goal</a>
+  <div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div class="min-w-0">
+      <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Sessions</h1>
+      <p class="mt-1 break-words text-base-content/80">For {{ goal.title }}</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <a href="{{ goal.get_absolute_url }}" class="btn btn-ghost">Back to goal</a>
+      <a href="{% url 'learning_sessions:create' goal.pk %}" class="btn btn-primary">{% include "components/_icon.html" with icon="plus" %}Add session</a>
+    </div>
   </div>
-  <ul class="mt-6 space-y-3">
-    {% for session in session_list %}
-      {% include "learning_sessions/_session_item.html" %}
-    {% empty %}
-      <li>No sessions yet.</li>
-    {% endfor %}
-  </ul>
-  {% if is_paginated %}
-    <nav class="mt-6 flex gap-6 text-sm" aria-label="Pages">
-      {% if page_obj.has_previous %}
-        <a href="{% querystring page=page_obj.previous_page_number %}" class="hover:underline">Previous</a>
-      {% endif %}
-      {% if page_obj.has_next %}
-        <a href="{% querystring page=page_obj.next_page_number %}" class="hover:underline">Next</a>
-      {% endif %}
-    </nav>
+  {% if session_list %}
+    <ul class="space-y-3">
+      {% for session in session_list %}
+        {% include "learning_sessions/_session_item.html" %}
+      {% endfor %}
+    </ul>
+  {% else %}
+    {% url 'learning_sessions:create' goal.pk as add_session_url %}
+    {% include "components/_empty_state.html" with text="No sessions yet." cta_url=add_session_url cta_label="Add session" empty_icon="clock" %}
   {% endif %}
+  {% include "components/_pagination.html" %}
 {% endblock %}
