@@ -99,6 +99,9 @@ FORM_RENDERER = "django.forms.renderers.TemplatesSetting"
 
 WSGI_APPLICATION = "config.wsgi.application"
 
+# Keeps the suite on plain HTTP whatever DEBUG is (see config/runner.py).
+TEST_RUNNER = "config.runner.TestRunner"
+
 
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases

@@ -91,7 +91,7 @@
 - **Every new variable is a commented-out example in `.env.example`** (`COMMENTED_EXAMPLES`). The file is for local `DEBUG=True` use, and blank lines would also leak through `--env-file`.
 
 ### Tests and checks
-- **A project test runner keeps the suite on plain HTTP.** `TEST_RUNNER = "config.test_runner.TestRunner"`, a `DiscoverRunner` subclass, turns `SECURE_SSL_REDIRECT` off through `override_settings` for the whole run, so the suite behaves the same whatever `DEBUG` is (AC16). This is the only setting that changes responses to plain-HTTP test-client requests: Secure cookies are still sent by the test client, and HSTS is only sent on HTTPS. Tests of the redirect turn it back on with `override_settings`.
+- **A project test runner keeps the suite on plain HTTP.** `TEST_RUNNER = "config.runner.TestRunner"`, a `DiscoverRunner` subclass, turns `SECURE_SSL_REDIRECT` off through `override_settings` for the whole run, so the suite behaves the same whatever `DEBUG` is (AC16). This is the only setting that changes responses to plain-HTTP test-client requests: Secure cookies are still sent by the test client, and HSTS is only sent on HTTPS. Tests of the redirect turn it back on with `override_settings`.
 - **`check --deploy` is tested in a subprocess.** It runs `manage.py check --deploy --fail-level WARNING` with an explicit environment: `DEBUG=False`, a long dummy key, and every new `SECURE_*` variable blank, which means the default and overrides a developer's `.env`. This exercises the real import-time settings, not overrides.
 - **Silenced checks.** `SILENCED_SYSTEM_CHECKS = ["security.W005", "security.W021"]`, with a comment (out of scope, by the user's decision).
 
@@ -143,10 +143,10 @@
   - Covers: AC12
 
 ### Test runner and settings wiring
-- [ ] 5. The suite runs on plain HTTP whatever `DEBUG` is.
+- [x] 5. The suite runs on plain HTTP whatever `DEBUG` is.
   - Behaviour: `settings.TEST_RUNNER` is the project's runner. Its `setup_test_environment()` leaves `SECURE_SSL_REDIRECT` `False` even when it was `True`, and `teardown_test_environment()` restores it. The test calls them with `DiscoverRunner`'s own setup and teardown patched out, since the real environment is already set up.
-  - Test: `src/config/tests/test_test_runner.py`
-  - Impl: `src/config/test_runner.py` (`TestRunner(DiscoverRunner)`), `settings.py` (`TEST_RUNNER`)
+  - Test: `src/config/tests/test_runner.py`
+  - Impl: `src/config/runner.py` (`TestRunner(DiscoverRunner)`), `settings.py` (`TEST_RUNNER = "config.runner.TestRunner"`). It is not `config/test_runner.py`, because that name matches the `test*.py` discovery pattern.
   - Covers: AC16
 - [ ] 6. `settings.py` assigns the HTTPS settings from `EnvSettings`.
   - Settings: `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, `SECURE_HSTS_SECONDS`, and `SECURE_PROXY_SSL_HEADER` (the tuple, or `None`).
