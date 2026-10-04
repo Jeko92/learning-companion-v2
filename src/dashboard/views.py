@@ -26,4 +26,8 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context["week_rows"] = sessions.minutes_per_week(
             timezone.localdate(), weeks=WEEKS_SHOWN
         )
+        # The bars' scale: each table's largest value, from the rows above (no
+        # query), at least 1 so an all-zero table still renders empty bars.
+        context["tag_max"] = max((m for _, m in context["tag_rows"]), default=0) or 1
+        context["week_max"] = max((m for _, m in context["week_rows"]), default=0) or 1
         return context

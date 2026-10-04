@@ -54,7 +54,10 @@
           {% for name, minutes in tag_rows %}
             <tr class="border-t border-slate-200">
               <th scope="row" class="px-4 py-2 text-left font-normal{% if name is None %} italic text-slate-500{% endif %}">{{ name|default_if_none:"Untagged" }}</th>
-              <td class="px-4 py-2 text-right tabular-nums">{{ minutes|duration }}</td>
+              <td class="px-4 py-2 text-right tabular-nums">
+                {# Decorative: the cell's text carries the number. No fallback text inside <progress>. #}
+                <div class="flex items-center justify-end gap-3"><progress class="progress progress-primary w-20 sm:w-32" value="{{ minutes }}" max="{{ tag_max }}" aria-hidden="true"></progress><span class="whitespace-nowrap">{{ minutes|duration }}</span></div>
+              </td>
             </tr>
           {% endfor %}
         </tbody>
@@ -78,7 +81,9 @@
         {% for monday, minutes in week_rows %}
           <tr class="border-t border-slate-200">
             <th scope="row" class="px-4 py-2 text-left font-normal">Week of {{ monday|date:"M j, Y" }}</th>
-            <td class="px-4 py-2 text-right tabular-nums">{{ minutes|duration }}</td>
+            <td class="px-4 py-2 text-right tabular-nums">
+              <div class="flex items-center justify-end gap-3"><progress class="progress progress-primary w-20 sm:w-32" value="{{ minutes }}" max="{{ week_max }}" aria-hidden="true"></progress><span class="whitespace-nowrap">{{ minutes|duration }}</span></div>
+            </td>
           </tr>
         {% endfor %}
       </tbody>
