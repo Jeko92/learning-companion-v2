@@ -1,9 +1,11 @@
 import re
 
+from django import forms
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
+from core.forms import StyledFormMixin
 from core.tests.html import PageParser, has_class
 from core.tests.pages import AllPagesMixin
 from goals.models import Goal
@@ -101,6 +103,64 @@ class StyledFormRenderingTests(AllPagesMixin, TestCase):
                 self.assertIn(helptext_id, [a.get("id") for _, a in elements])
 
 
+class SampleForm(StyledFormMixin, forms.Form):
+    name = forms.CharField(widget=forms.TextInput(attrs={"class": "font-mono"}))
+    kind = forms.ChoiceField(choices=[("a", "A"), ("b", "B")])
+    notes = forms.CharField(widget=forms.Textarea)
+    agree = forms.BooleanField()
+    token = forms.CharField(widget=forms.HiddenInput)
+
+
+def widget_classes(bound_field):
+    """The class list of the field's rendered control."""
+    parser = PageParser()
+    parser.feed(bound_field.as_widget())
+    ((_, attrs),) = [
+        (t, a) for t, a in parser.elements if t in ("input", "select", "textarea")
+    ]
+    return attrs.get("class", "").split()
+
+
+class StyledBoundFieldTests(SimpleTestCase):
+    """StyledBoundField adds each widget's daisyUI classes, and their error
+    variants, without dropping the widget's own class."""
+
+    def test_each_widget_gets_its_daisyui_class(self):
+        form = SampleForm()
+        self.assertEqual(widget_classes(form["kind"]), ["select", "w-full"])
+        self.assertEqual(widget_classes(form["notes"]), ["textarea", "w-full"])
+        self.assertEqual(widget_classes(form["agree"]), ["checkbox"])
+
+    def test_the_widgets_own_class_is_kept_and_comes_first(self):
+        self.assertEqual(
+            widget_classes(SampleForm()["name"]), ["font-mono", "input", "w-full"]
+        )
+
+    def test_a_hidden_input_gets_no_class(self):
+        self.assertEqual(widget_classes(SampleForm()["token"]), [])
+
+    def test_a_field_with_errors_gets_its_widgets_error_class(self):
+        form = SampleForm(data={})
+        self.assertFalse(form.is_valid())
+        expected = {
+            "name": "input-error",
+            "kind": "select-error",
+            "notes": "textarea-error",
+            "agree": "checkbox-error",
+        }
+        for name, error_class in expected.items():
+            with self.subTest(field=name):
+                self.assertIn(error_class, widget_classes(form[name]))
+        self.assertIn("font-mono", widget_classes(form["name"]))
+        self.assertEqual(widget_classes(form["token"]), [])
+
+    def test_a_valid_field_gets_no_error_class(self):
+        form = SampleForm(data={"name": "x", "kind": "a", "notes": "y", "agree": "on"})
+        form.is_valid()
+        self.assertNotIn("input-error", widget_classes(form["name"]))
+        self.assertNotIn("select-error", widget_classes(form["kind"]))
+
+
 class AdminFormsUnchangedTests(TestCase):
     """The admin keeps Django's own form rendering."""
 
@@ -110,10 +170,25 @@ class AdminFormsUnchangedTests(TestCase):
         self.client.force_login(admin)
 
     def test_admin_goal_pages_use_no_project_form_markup(self):
-        paths = (
+        self.assert_no_project_form_markup(
             reverse("admin:goals_goal_add"),
             reverse("admin:goals_goal_change", args=[self.goal.pk]),
         )
+
+    def test_admin_user_change_page_with_its_profile_inline_is_unchanged(self):
+        # The profile inline (a formset, with tag autocomplete for the focus
+        # areas) goes through the same renderer as the goal pages.
+        user = get_user_model().objects.get(username="admin")
+        response = self.client.get(
+            reverse("admin:accounts_user_change", args=[user.pk])
+        )
+        self.assertContains(response, 'name="profile-0-focus_areas"')
+        self.assertContains(response, "admin-autocomplete")
+        self.assert_no_project_form_markup(
+            reverse("admin:accounts_user_change", args=[user.pk])
+        )
+
+    def assert_no_project_form_markup(self, *paths):
         for path in paths:
             with self.subTest(path=path):
                 response = self.client.get(path)
