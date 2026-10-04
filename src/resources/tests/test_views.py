@@ -67,10 +67,13 @@ class ResourceCreatePageTests(TestCase):
         ((form, _),) = page.forms("main")
         self.assertEqual(form.get("method"), "post")
         self.assertEqual(form.get("action"), self.path)
+        # The page's own controls; the header's theme switch isn't a form field.
         names = {
             a.get("name")
-            for t, a in page.elements
-            if t in ("input", "select", "textarea") and a.get("name")
+            for i, (t, a) in enumerate(page.elements)
+            if t in ("input", "select", "textarea")
+            and a.get("name")
+            and page.inside(i, lambda tag, _: tag == "main")
         }
         self.assertEqual(names, {"csrfmiddlewaretoken", "url", "title", "type"})
 
