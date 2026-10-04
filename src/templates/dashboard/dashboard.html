@@ -4,89 +4,103 @@
 {% block title %}Dashboard · Learning Companion{% endblock %}
 
 {% block content %}
-  <h1 class="text-2xl font-bold">Dashboard</h1>
+  <h1 class="mb-6 text-2xl font-bold tracking-tight sm:text-3xl">Dashboard</h1>
 
-  <section class="mt-10" aria-labelledby="goals-by-status-heading">
-    <h2 id="goals-by-status-heading" class="text-lg font-semibold">Goals by status</h2>
-    <table class="mt-3 w-full max-w-sm overflow-hidden rounded border border-slate-200 bg-white text-sm">
-      <thead class="bg-slate-100 text-left text-slate-500">
-        <tr>
-          <th scope="col" class="px-4 py-2 font-medium">Status</th>
-          <th scope="col" class="px-4 py-2 text-right font-medium">Goals</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for value, label, count in status_rows %}
-          <tr class="border-t border-slate-200">
-            <th scope="row" class="px-4 py-2 text-left font-normal">
-              <a href="{% url 'goals:list' %}?status={{ value }}" class="font-medium hover:underline">{{ label }}</a>
-            </th>
-            <td class="px-4 py-2 text-right tabular-nums">{{ count }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-      <tfoot class="border-t border-slate-300 font-semibold">
-        <tr>
-          <th scope="row" class="px-4 py-2 text-left">
-            <a href="{% url 'goals:list' %}" class="hover:underline">Total</a>
-          </th>
-          <td class="px-4 py-2 text-right tabular-nums">{{ total_goals }}</td>
-        </tr>
-      </tfoot>
-    </table>
-    {% if not total_goals %}
-      {% url 'goals:create' as new_goal_url %}
-      <div class="mt-3">{% include "components/_empty_state.html" with text="No goals yet." cta_url=new_goal_url cta_label="Create your first goal" empty_icon="flag" %}</div>
-    {% endif %}
-  </section>
+  <div class="grid gap-6 lg:grid-cols-2">
+    <section class="card card-border bg-base-100" aria-labelledby="goals-by-status-heading">
+      <div class="card-body">
+        <h2 id="goals-by-status-heading" class="card-title text-lg">Goals by status</h2>
+        <div class="overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Status</th>
+                <th scope="col" class="text-right">Goals</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for value, label, count in status_rows %}
+                <tr>
+                  <th scope="row" class="font-normal">
+                    <a href="{% url 'goals:list' %}?status={{ value }}" class="link link-hover font-medium">{{ label }}</a>
+                  </th>
+                  <td class="text-right tabular-nums">{{ count }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row">
+                  <a href="{% url 'goals:list' %}" class="link link-hover">Total</a>
+                </th>
+                <td class="text-right tabular-nums">{{ total_goals }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {% if not total_goals %}
+          {% url 'goals:create' as new_goal_url %}
+          <div class="mt-3">{% include "components/_empty_state.html" with text="No goals yet." cta_url=new_goal_url cta_label="Create your first goal" empty_icon="flag" %}</div>
+        {% endif %}
+      </div>
+    </section>
 
-  <section class="mt-10" aria-labelledby="hours-per-tag-heading">
-    <h2 id="hours-per-tag-heading" class="text-lg font-semibold">Hours per tag</h2>
-    {% if tag_rows %}
-      <table class="mt-3 w-full max-w-sm overflow-hidden rounded border border-slate-200 bg-white text-sm">
-        <thead class="bg-slate-100 text-left text-slate-500">
-          <tr>
-            <th scope="col" class="px-4 py-2 font-medium">Tag</th>
-            <th scope="col" class="px-4 py-2 text-right font-medium">Time</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for name, minutes in tag_rows %}
-            <tr class="border-t border-slate-200">
-              <th scope="row" class="px-4 py-2 text-left font-normal{% if name is None %} italic text-slate-500{% endif %}">{{ name|default_if_none:"Untagged" }}</th>
-              <td class="px-4 py-2 text-right tabular-nums">
-                {# Decorative: the cell's text carries the number. No fallback text inside <progress>. #}
-                <div class="flex items-center justify-end gap-3"><progress class="progress progress-primary w-20 sm:w-32" value="{{ minutes }}" max="{{ tag_max }}" aria-hidden="true"></progress><span class="whitespace-nowrap">{{ minutes|duration }}</span></div>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      <p class="mt-3 text-sm text-slate-500">A session with several tags counts under each of them.</p>
-    {% else %}
-      <div class="mt-3">{% include "components/_empty_state.html" with text="No sessions logged yet." empty_icon="clock" %}</div>
-    {% endif %}
-  </section>
+    <section class="card card-border bg-base-100" aria-labelledby="hours-per-tag-heading">
+      <div class="card-body">
+        <h2 id="hours-per-tag-heading" class="card-title text-lg">Hours per tag</h2>
+        {% if tag_rows %}
+          <div class="overflow-x-auto">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th scope="col">Tag</th>
+                  <th scope="col" class="text-right">Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for name, minutes in tag_rows %}
+                  <tr>
+                    <th scope="row" class="font-normal{% if name is None %} italic text-base-content/80{% endif %}">{{ name|default_if_none:"Untagged" }}</th>
+                    <td class="text-right tabular-nums">
+                      {# Decorative: the cell's text carries the number. No fallback text inside <progress>. #}
+                      <div class="flex items-center justify-end gap-3"><progress class="progress progress-primary w-20 sm:w-32" value="{{ minutes }}" max="{{ tag_max }}" aria-hidden="true"></progress><span class="whitespace-nowrap">{{ minutes|duration }}</span></div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <p class="mt-3 text-sm text-base-content/80">A session with several tags counts under each of them.</p>
+        {% else %}
+          <div class="mt-3">{% include "components/_empty_state.html" with text="No sessions logged yet." empty_icon="clock" %}</div>
+        {% endif %}
+      </div>
+    </section>
 
-  <section class="mt-10" aria-labelledby="hours-per-week-heading">
-    <h2 id="hours-per-week-heading" class="text-lg font-semibold">Hours per week</h2>
-    <table class="mt-3 w-full max-w-sm overflow-hidden rounded border border-slate-200 bg-white text-sm">
-      <thead class="bg-slate-100 text-left text-slate-500">
-        <tr>
-          <th scope="col" class="px-4 py-2 font-medium">Week</th>
-          <th scope="col" class="px-4 py-2 text-right font-medium">Time</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for monday, minutes in week_rows %}
-          <tr class="border-t border-slate-200">
-            <th scope="row" class="px-4 py-2 text-left font-normal">Week of {{ monday|date:"M j, Y" }}</th>
-            <td class="px-4 py-2 text-right tabular-nums">
-              <div class="flex items-center justify-end gap-3"><progress class="progress progress-primary w-20 sm:w-32" value="{{ minutes }}" max="{{ week_max }}" aria-hidden="true"></progress><span class="whitespace-nowrap">{{ minutes|duration }}</span></div>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </section>
+    <section class="card card-border bg-base-100 lg:col-span-2" aria-labelledby="hours-per-week-heading">
+      <div class="card-body">
+        <h2 id="hours-per-week-heading" class="card-title text-lg">Hours per week</h2>
+        <div class="overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Week</th>
+                <th scope="col" class="text-right">Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for monday, minutes in week_rows %}
+                <tr>
+                  <th scope="row" class="font-normal">Week of {{ monday|date:"M j, Y" }}</th>
+                  <td class="text-right tabular-nums">
+                    <div class="flex items-center justify-end gap-3"><progress class="progress progress-primary w-20 sm:w-48" value="{{ minutes }}" max="{{ week_max }}" aria-hidden="true"></progress><span class="whitespace-nowrap">{{ minutes|duration }}</span></div>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
 {% endblock %}

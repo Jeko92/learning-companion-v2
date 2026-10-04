@@ -160,3 +160,23 @@ class ButtonTests(AllPagesMixin, TestCase):
                 for index, (tag, attrs) in enumerate(parser.elements):
                     if is_button(tag, attrs) and parser.inside(index, in_main):
                         self.assertTrue(has_class(attrs, wanted), attrs)
+
+
+class TableWrapperTests(AllPagesMixin, TestCase):
+    """Tables scroll inside their own box on a narrow screen, not the page."""
+
+    def test_every_table_is_a_daisyui_table_in_a_scrollable_wrapper(self):
+        tables = 0
+        for page, parser in self.walk():
+            with self.subTest(page=page.name):
+                for index, (tag, attrs) in enumerate(parser.elements):
+                    if tag == "table":
+                        tables += 1
+                        self.assertTrue(has_class(attrs, "table"), attrs)
+                        self.assertTrue(
+                            parser.inside(
+                                index, lambda t, a: has_class(a, "overflow-x-auto")
+                            )
+                        )
+        # The dashboard has three (the fixture logs a tagged session).
+        self.assertEqual(tables, 3)
