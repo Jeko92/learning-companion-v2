@@ -21,7 +21,7 @@ Issue #80, branch `feature/goals-board`. Outside the refine/plan/review skills a
 - [x] 2. Board markup: columns in status order with counts and placeholders, cards newest first, only your goals, filtered tab shows one column, no pagination (replaces the pagination tests deliberately), card badges replaced by column count badges (badge test updated deliberately) — test: `goals/tests/test_board.py`, `goals/tests/test_views.py` — impl: `templates/goals/goal_list.html`, `goals/views.py`
 - [x] 3. Move menu per card: one POST form to `goals:move` with CSRF and `next`, a "Move to <label>" button per other status — test: `goals/tests/test_board.py` — impl: `templates/goals/goal_list.html`, `components/_icon.html`
 - [x] 4. Drag and drop: vendored SortableJS pinned by version + sha256, `goal-board.js`, scripts only on the All view with goals, `board-ghost` style, Tailwind doesn't scan the vendored file — test: `goals/tests/test_board.py` — impl: `assets/js/`, `templates/base.html`, `templates/goals/goal_list.html`, `tailwind/source.css`
-- [ ] 5. Docs: CLAUDE.md (no longer "no JavaScript": the board's progressive enhancement, the move endpoint, vendored SortableJS and how to update it), README — no test change
+- [x] 5. Docs: CLAUDE.md (no longer "no JavaScript": the board's progressive enhancement, the move endpoint, vendored SortableJS and how to update it), README — no test change
 
 ## Verification
 Full suite, ruff, `makemigrations --check`, `tailwind build`, then Playwright at 360/768/1280 px in both colour schemes: drag a card between columns (persisted after reload), the Move menu with the keyboard, an error rollback.

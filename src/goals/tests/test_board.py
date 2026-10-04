@@ -15,6 +15,7 @@ from django.test import Client, SimpleTestCase, TestCase
 from django.urls import reverse
 
 from core.tests.html import VOID_ELEMENTS, collapse
+from core.tests.pages import AllPagesMixin
 from goals.models import Goal
 
 PASSWORD = "Tr4ck-Learning!"
@@ -518,13 +519,6 @@ class BoardScriptTests(BoardTestCase):
         Goal.objects.all().delete()
         self.assertEqual(scripts(get_tree(self.client, "/goals/")), [])
 
-    def test_other_pages_load_no_scripts(self):
-        goal = add_goal(self.alice, "a")
-
-        for path in ("/dashboard/", goal.get_absolute_url(), "/goals/new/"):
-            with self.subTest(path=path):
-                self.assertEqual(scripts(get_tree(self.client, path)), [])
-
     def test_each_card_knows_its_move_url(self):
         goal = add_goal(self.alice, "a")
 
@@ -544,3 +538,15 @@ class BoardScriptTests(BoardTestCase):
         self.assertEqual(error.attrs["role"], "alert")
         self.assertIn("hidden", error.attrs)
         self.assertIn("alert-error", error.attrs["class"].split())
+
+
+class NoScriptsElsewhereTests(AllPagesMixin, TestCase):
+    """Every page works without JavaScript; only the board (the goal list with
+    goals, on the All tab) loads the drag and drop scripts."""
+
+    def test_no_other_page_loads_a_script(self):
+        for page, parser in self.walk():
+            with self.subTest(page=page.name):
+                loaded = [a for t, a in parser.elements if t == "script"]
+                expected = 2 if page.name == "goal list" else 0
+                self.assertEqual(len(loaded), expected, loaded)
