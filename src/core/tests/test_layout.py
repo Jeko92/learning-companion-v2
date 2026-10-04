@@ -202,3 +202,60 @@ class FadedTextTests(AllPagesMixin, TestCase):
         # Three theads and a tfoot on the dashboard; the unfiltered goal list's
         # three status tabs (All is the active one).
         self.assertEqual(sorted(faded), ["a"] * 3 + ["tfoot"] + ["thead"] * 3)
+
+
+THEME_CHOICES = [
+    ("system", "System"),
+    ("companion", "Light"),
+    ("companion-dark", "Dark"),
+]
+
+
+class ThemeSwitchTests(AllPagesMixin, TestCase):
+    """A CSS-only theme switch in the header: daisyUI's theme-controller radios.
+    System matches no theme, so the OS preference applies until one is picked."""
+
+    def radios(self, parser):
+        return [
+            (index, attrs)
+            for index, (tag, attrs) in enumerate(parser.elements)
+            if tag == "input" and attrs.get("name") == "theme"
+        ]
+
+    def test_the_header_has_system_light_and_dark_theme_controller_radios(self):
+        for page, parser in self.walk():
+            with self.subTest(page=page.name):
+                radios = [attrs for _, attrs in self.radios(parser)]
+                self.assertEqual(
+                    [(a.get("value"), a.get("aria-label")) for a in radios],
+                    THEME_CHOICES,
+                )
+                for attrs in radios:
+                    self.assertEqual(attrs.get("type"), "radio")
+                    self.assertTrue(has_class(attrs, "theme-controller"), attrs)
+                self.assertEqual(
+                    [a["value"] for a in radios if "checked" in a], ["system"]
+                )
+
+    def test_the_switch_is_a_fieldset_called_theme_in_the_header_only(self):
+        for page, parser in self.walk():
+            with self.subTest(page=page.name):
+                radios = self.radios(parser)
+                self.assertEqual(len(radios), 3)
+                for index, _ in radios:
+                    self.assertTrue(parser.inside(index, lambda t, _: t == "header"))
+                    self.assertTrue(parser.inside(index, lambda t, _: t == "fieldset"))
+                    for outside in ("nav", "main", "form"):
+                        self.assertFalse(
+                            parser.inside(index, lambda t, _, o=outside: t == o)
+                        )
+                fieldsets = [
+                    i for i, (t, _) in enumerate(parser.elements) if t == "fieldset"
+                ]
+                (legend,) = [
+                    i
+                    for i, (t, _) in enumerate(parser.elements)
+                    if t == "legend" and parser.inside(i, lambda t, _: t == "header")
+                ]
+                self.assertIn(legend - 1, fieldsets)
+                self.assertIn("Theme", parser.text("header"))

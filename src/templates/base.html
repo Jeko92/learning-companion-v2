@@ -68,6 +68,13 @@
           <span class="text-primary">{% include "components/_icon.html" with icon="book" icon_class="size-7" %}</span>
           Learning Companion
         </a>
+        {# CSS-only, not remembered: every page load starts at System, which follows the OS. #}
+        <fieldset class="join ms-auto">
+          <legend class="sr-only">Theme</legend>
+          {% include "components/_theme_option.html" with value="system" label="System" icon="computer" checked=True %}
+          {% include "components/_theme_option.html" with value="companion" label="Light" icon="sun" %}
+          {% include "components/_theme_option.html" with value="companion-dark" label="Dark" icon="moon" %}
+        </fieldset>
       </header>
       {% if messages %}
         <div class="mx-auto mt-6 w-full max-w-4xl space-y-2 px-4">
