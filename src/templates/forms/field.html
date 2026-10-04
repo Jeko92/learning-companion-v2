@@ -8,5 +8,9 @@
 {% endif %}
     {{ field }}
     {% if field.help_text %}<div class="text-sm text-base-content/80"{% if field.auto_id %} id="{{ field.auto_id }}_helptext"{% endif %}>{{ field.help_text|safe }}</div>{% endif %}
-    {{ field.errors }}
+    {% if field.errors %}
+      <ul class="space-y-1 text-sm text-error"{% if field.auto_id %} id="{{ field.auto_id }}_error"{% endif %}>
+        {% for error in field.errors %}<li>{{ error }}</li>{% endfor %}
+      </ul>
+    {% endif %}
 {% if field.use_fieldset %}</fieldset>{% else %}</div>{% endif %}

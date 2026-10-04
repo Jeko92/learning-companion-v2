@@ -9,14 +9,16 @@ template is overridden, so it renders exactly as before.
 from django import forms
 from django.forms.widgets import Input
 
-# First match wins: CheckboxInput is an Input, so it comes before Input.
+# (widget type, classes, extra classes when the field has errors). First match
+# wins: CheckboxInput is an Input, so it comes before Input. The class names
+# are spelled out so Tailwind's source scan finds them.
 WIDGET_CLASSES = (
-    (forms.CheckboxInput, "checkbox"),
-    (forms.CheckboxSelectMultiple, "checkbox"),
-    (forms.RadioSelect, "radio"),
-    (forms.Select, "select w-full"),
-    (forms.Textarea, "textarea w-full"),
-    (Input, "input w-full"),
+    (forms.CheckboxInput, "checkbox", "checkbox-error"),
+    (forms.CheckboxSelectMultiple, "checkbox", "checkbox-error"),
+    (forms.RadioSelect, "radio", "radio-error"),
+    (forms.Select, "select w-full", "select-error"),
+    (forms.Textarea, "textarea w-full", "textarea-error"),
+    (Input, "input w-full", "input-error"),
 )
 
 
@@ -32,10 +34,16 @@ class StyledBoundField(forms.BoundField):
         widget = widget or self.field.widget
         if widget.is_hidden:
             return attrs
-        css = next((c for kind, c in WIDGET_CLASSES if isinstance(widget, kind)), "")
+        css, error_css = next(
+            ((c, e) for kind, c, e in WIDGET_CLASSES if isinstance(widget, kind)),
+            ("", ""),
+        )
         # Attrs returned here replace the widget's own class, so keep it.
         attrs["class"] = merge_classes(
-            widget.attrs.get("class"), attrs.get("class"), css
+            widget.attrs.get("class"),
+            attrs.get("class"),
+            css,
+            error_css if self.errors else "",
         )
         return attrs
 

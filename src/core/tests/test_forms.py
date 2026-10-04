@@ -1,3 +1,5 @@
+import re
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -5,6 +7,9 @@ from django.urls import reverse
 from core.tests.html import PageParser, has_class
 from core.tests.pages import AllPagesMixin
 from goals.models import Goal
+from resources.models import Resource
+
+PASSWORD = "Tr4ck-Learning!"
 
 FORM_PAGES = {
     "log in",
@@ -120,3 +125,62 @@ class AdminFormsUnchangedTests(TestCase):
                     self.assertFalse(classes & {"fieldset", "fieldset-legend"})
                     if tag in ("input", "select", "textarea"):
                         self.assertFalse(classes & DAISY_FIELD_CLASSES, attrs)
+
+
+def parse(response):
+    parser = PageParser()
+    parser.feed(response.content.decode())
+    return parser
+
+
+def alert_html(response):
+    """The inner HTML of each role="alert" block on the page."""
+    return re.findall(
+        r'<div[^>]*role="alert"[^>]*>(.*?)</div>', response.content.decode(), re.DOTALL
+    )
+
+
+class FormErrorTests(TestCase):
+    """Errors are styled, tied to their field and announced."""
+
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goal = Goal.objects.create(owner=self.alice, title="Learn Django")
+
+    def test_a_field_error_marks_the_control_and_is_linked_to_it(self):
+        self.client.force_login(self.alice)
+        response = self.client.post(reverse("goals:create"), {"title": ""})
+
+        self.assertEqual(response.status_code, 200)
+        elements = parse(response).elements
+        (title,) = [a for t, a in elements if a.get("id") == "id_title"]
+        self.assertEqual(title.get("aria-invalid"), "true")
+        self.assertIn("id_title_error", title["aria-describedby"].split())
+        self.assertTrue(has_class(title, "input-error"))
+        (error,) = [a for _, a in elements if a.get("id") == "id_title_error"]
+        self.assertTrue(has_class(error, "text-error"))
+
+    def test_a_duplicate_resource_is_an_error_alert(self):
+        url = "https://docs.djangoproject.com/"
+        Resource.objects.create(goal=self.goal, url=url, title="Django docs")
+        self.client.force_login(self.alice)
+
+        response = self.client.post(
+            reverse("resources:create", args=[self.goal.pk]),
+            {"url": url, "title": "Again", "type": "doc"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        (alert,) = alert_html(response)
+        self.assertIn("This goal already has this resource.", alert)
+        alerts = [a for _, a in parse(response).elements if a.get("role") == "alert"]
+        self.assertTrue(has_class(alerts[0], "alert-error"))
+
+    def test_wrong_log_in_details_are_an_error_alert(self):
+        response = self.client.post(
+            reverse("accounts:login"), {"username": "alice", "password": "wrong"}
+        )
+
+        self.assertEqual(response.status_code, 200)
+        (alert,) = alert_html(response)
+        self.assertIn("Please enter a correct username and password.", alert)
