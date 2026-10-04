@@ -4,8 +4,8 @@
 {% block title %}{{ goal.title }} · Learning Companion{% endblock %}
 
 {% block content %}
-  <h1 class="text-2xl font-bold">{{ goal.title }}</h1>
-  <p class="mt-2 text-sm text-slate-500">{{ goal.get_status_display }}</p>
+  <h1 class="text-2xl font-bold tracking-tight break-words sm:text-3xl">{{ goal.title }}</h1>
+  <p class="mt-2">{% include "components/_status_badge.html" %}</p>
   <div class="mt-6">
     {% if goal.description %}
       <p>{{ goal.description|linebreaksbr }}</p>

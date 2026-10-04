@@ -1,0 +1,13 @@
+{# Previous / Next for a paginated list view; {% querystring %} keeps the other query parameters (e.g. ?status=). #}
+{% if is_paginated %}
+  <nav aria-label="Pages" class="mt-6">
+    <div class="join">
+      {% if page_obj.has_previous %}
+        <a href="{% querystring page=page_obj.previous_page_number %}" class="btn join-item">Previous</a>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <a href="{% querystring page=page_obj.next_page_number %}" class="btn join-item">Next</a>
+      {% endif %}
+    </div>
+  </nav>
+{% endif %}

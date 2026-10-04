@@ -1834,3 +1834,49 @@ class GoalNextStepsCsrfTests(NextStepsTestCase):
 
         self.assertEqual(response.status_code, 302)
         self.complete_json.assert_called_once()
+
+
+BADGE = re.compile(r'<span class="([^"]*\bbadge\b[^"]*)">\s*([^<]*?)\s*</span>')
+STATUS_BADGES = {
+    Goal.Status.PLANNED: "badge-neutral",
+    Goal.Status.IN_PROGRESS: "badge-info",
+    Goal.Status.DONE: "badge-success",
+}
+
+
+class GoalStatusBadgeTests(TestCase):
+    """A goal's status is a coloured badge that always says the status."""
+
+    def setUp(self):
+        self.alice = get_user_model().objects.create_user("alice", password=PASSWORD)
+        self.goals = {
+            status: Goal.objects.create(
+                owner=self.alice, title=f"G {status}", status=status
+            )
+            for status in Goal.Status.values
+        }
+        self.client.force_login(self.alice)
+
+    def badges(self, path):
+        html = self.client.get(path).content.decode()
+        return [(text, classes.split()) for classes, text in BADGE.findall(html)]
+
+    def test_each_goal_in_the_list_has_its_status_badge(self):
+        badges = self.badges(reverse("goals:list"))
+
+        for status, variant in STATUS_BADGES.items():
+            with self.subTest(status=status):
+                label = Goal.Status(status).label
+                (classes,) = [c for text, c in badges if text == label]
+                self.assertIn(variant, classes)
+
+    def test_the_goal_page_shows_its_status_badge(self):
+        for status, variant in STATUS_BADGES.items():
+            with self.subTest(status=status):
+                badges = self.badges(self.goals[status].get_absolute_url())
+                label = Goal.Status(status).label
+                (classes,) = [c for text, c in badges if text == label]
+                self.assertIn(variant, classes)
+
+    def test_every_status_has_a_badge_colour(self):
+        self.assertEqual(set(STATUS_BADGES), set(Goal.Status.values))
