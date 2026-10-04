@@ -3,28 +3,34 @@
 {% block title %}Your profile · Learning Companion{% endblock %}
 
 {% block content %}
-  <h1 class="text-2xl font-bold">Your profile</h1>
-  <dl class="mt-6 space-y-4">
-    <div>
-      <dt class="text-sm text-slate-500">Name</dt>
-      <dd>{{ profile.name|default:"Not set" }}</dd>
+  <div class="mx-auto max-w-2xl">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <h1 class="text-2xl font-bold tracking-tight sm:text-3xl">Your profile</h1>
+      <a href="{% url 'profiles:edit' profile.pk %}" class="btn btn-primary">Edit profile</a>
     </div>
-    <div>
-      <dt class="text-sm text-slate-500">Cohort</dt>
-      <dd>{{ profile.cohort|default:"Not set" }}</dd>
+    <div class="card card-border bg-base-100">
+      <dl class="card-body gap-5">
+        <div>
+          <dt class="text-sm font-medium text-base-content/80">Name</dt>
+          <dd class="mt-1">{{ profile.name|default:"Not set" }}</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-base-content/80">Cohort</dt>
+          <dd class="mt-1">{{ profile.cohort|default:"Not set" }}</dd>
+        </div>
+        <div>
+          <dt class="text-sm font-medium text-base-content/80">Focus areas</dt>
+          <dd class="mt-2">
+            {% with focus_areas=profile.focus_areas.all %}
+              {% if focus_areas %}
+                {% include "components/_tag_list.html" with tags=focus_areas label="Focus areas" %}
+              {% else %}
+                <p>No focus areas yet.</p>
+              {% endif %}
+            {% endwith %}
+          </dd>
+        </div>
+      </dl>
     </div>
-    <div>
-      <dt class="text-sm text-slate-500">Focus areas</dt>
-      <dd>
-        <ul>
-          {% for tag in profile.focus_areas.all %}
-            <li>{{ tag.name }}</li>
-          {% empty %}
-            <li>No focus areas yet.</li>
-          {% endfor %}
-        </ul>
-      </dd>
-    </div>
-  </dl>
-  <a href="{% url 'profiles:edit' profile.pk %}" class="mt-6 inline-block font-medium hover:underline">Edit profile</a>
+  </div>
 {% endblock %}

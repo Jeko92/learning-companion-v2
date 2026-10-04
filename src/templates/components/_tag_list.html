@@ -1,0 +1,6 @@
+{# Tags as pills: {% include "components/_tag_list.html" with tags=session.tags.all label="Tags" %} (renders nothing without tags). #}
+{% if tags %}
+  <ul class="flex flex-wrap gap-2" aria-label="{{ label|default:'Tags' }}">
+    {% for tag in tags %}<li class="badge badge-soft badge-primary">{{ tag.name }}</li>{% endfor %}
+  </ul>
+{% endif %}
