@@ -155,7 +155,7 @@
   - Test: `src/config/tests/test_settings.py`
   - Impl: `src/config/settings.py`
   - Covers: AC10, AC11, AC12, AC15
-- [ ] 7. With the SSL redirect on, `/favicon.ico` is exempt.
+- [x] 7. With the SSL redirect on, `/favicon.ico` is exempt.
   - Behaviour: under `override_settings(SECURE_SSL_REDIRECT=True)`, an HTTP GET of `/accounts/login/` gets a 301 to `https://testserver/accounts/login/`, while `/favicon.ico` is a 200 over HTTP.
   - Also in this module, two tests describe what Django already does, so they pass as soon as they're written: HSTS (`override_settings(SECURE_HSTS_SECONDS=3600)`) sends exactly `max-age=3600` over HTTPS and nothing over HTTP, and `SECURE_HSTS_INCLUDE_SUBDOMAINS`/`SECURE_HSTS_PRELOAD` are `False`.
   - Test: `src/core/tests/test_https.py`

@@ -38,6 +38,10 @@ CSRF_TRUSTED_ORIGINS = _env.csrf_trusted_origins
 # plain-HTTP local run, set the first three to False).
 SECURE_SSL_REDIRECT = _env.ssl_redirect
 
+# The container's HEALTHCHECK requests the favicon over plain HTTP inside the
+# container. Matched against the path without its leading slash.
+SECURE_REDIRECT_EXEMPT = [r"^favicon\.ico$"]
+
 SESSION_COOKIE_SECURE = _env.session_cookie_secure
 
 CSRF_COOKIE_SECURE = _env.csrf_cookie_secure
