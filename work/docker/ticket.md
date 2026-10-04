@@ -7,27 +7,27 @@ As someone running Learning Companion, I want to build one container image and s
 ## Acceptance criteria
 
 ### Settings
-- [ ] AC1 `DATABASES` is read from a new optional `DATABASE_URL` variable through django-environ. The default is the SQLite file used today (`src/db.sqlite3`), so local development and the existing database don't change. A blank value also means the default. The process environment wins over `.env`. A value django-environ can't parse is an `ImproperlyConfigured` that names `DATABASE_URL`. Tested in `config/tests/test_env.py` and `test_settings.py`.
-- [ ] AC2 A new optional `CSRF_TRUSTED_ORIGINS` variable is a comma-separated list, trimmed, with empty entries dropped and empty by default. Every entry must start with `http://` or `https://`; otherwise it's an `ImproperlyConfigured` that names the variable (never the value). It is wired to `settings.CSRF_TRUSTED_ORIGINS`.
-- [ ] AC3 `.env.example` documents `DATABASE_URL` and `CSRF_TRUSTED_ORIGINS`, each with a comment above it, and `config/tests/test_env_example.py` lists them.
-- [ ] AC4 Static files are served by WhiteNoise:
+- [x] AC1 `DATABASES` is read from a new optional `DATABASE_URL` variable through django-environ. The default is the SQLite file used today (`src/db.sqlite3`), so local development and the existing database don't change. A blank value also means the default. The process environment wins over `.env`. A value django-environ can't parse is an `ImproperlyConfigured` that names `DATABASE_URL`. Tested in `config/tests/test_env.py` and `test_settings.py`.
+- [x] AC2 A new optional `CSRF_TRUSTED_ORIGINS` variable is a comma-separated list, trimmed, with empty entries dropped and empty by default. Every entry must start with `http://` or `https://`; otherwise it's an `ImproperlyConfigured` that names the variable (never the value). It is wired to `settings.CSRF_TRUSTED_ORIGINS`.
+- [x] AC3 `.env.example` documents `DATABASE_URL` and `CSRF_TRUSTED_ORIGINS`, each with a comment above it, and `config/tests/test_env_example.py` lists them.
+- [x] AC4 Static files are served by WhiteNoise:
   - `STATIC_ROOT` is set, and `collectstatic` writes there; the directory is git-ignored.
   - `whitenoise.middleware.WhiteNoiseMiddleware` comes right after `SecurityMiddleware`.
   - The `staticfiles` storage is `whitenoise.storage.CompressedStaticFilesStorage`, with no hashed names, so `{% static %}` URLs stay as they are (the pinned `/static/css/tailwind.css` link test stays green).
   - The default storage is unchanged.
-- [ ] AC5 `requirements.txt` adds `whitenoise` and `gunicorn` with version ranges, like the existing pins.
+- [x] AC5 `requirements.txt` adds `whitenoise` and `gunicorn` with version ranges, like the existing pins.
 
 ### Image
-- [ ] AC6 A multi-stage `Dockerfile` on official `python:3.14-slim` images:
+- [x] AC6 A multi-stage `Dockerfile` on official `python:3.14-slim` images:
   - **Builder stage:** downloads the pinned Tailwind binary and builds the CSS (`tailwind build`, with the vendored daisyUI files), then runs `collectstatic`.
   - **Final stage:** gets the app and the collected static files, but no Tailwind binary, no `.env` and no database. It runs as a non-root user and exposes port 8000.
   - It declares a volume for the data directory and sets `DATABASE_URL` to a SQLite file in it.
   - It has no secrets: `SECRET_KEY` and `OPENAI_API_KEY` are supplied at `docker run` (`-e` or `--env-file`).
 
   A Django test reads the `Dockerfile` and checks these facts.
-- [ ] AC7 On start, the container applies migrations (`migrate --noinput`) and then runs gunicorn on `config.wsgi` at `0.0.0.0:8000` as the main process, so `docker stop` stops it cleanly. Without `SECRET_KEY` or `OPENAI_API_KEY`, the container exits with a non-zero code and the `ImproperlyConfigured` message names the missing variable.
-- [ ] AC8 A `HEALTHCHECK` requests the public `/favicon.ico` inside the container, using Python and no extra package. `docker ps`/`docker inspect` report the container healthy once gunicorn answers.
-- [ ] AC9 `.dockerignore` keeps the following out of the build context:
+- [x] AC7 On start, the container applies migrations (`migrate --noinput`) and then runs gunicorn on `config.wsgi` at `0.0.0.0:8000` as the main process, so `docker stop` stops it cleanly. Without `SECRET_KEY` or `OPENAI_API_KEY`, the container exits with a non-zero code and the `ImproperlyConfigured` message names the missing variable.
+- [x] AC8 A `HEALTHCHECK` requests the public `/favicon.ico` inside the container, using Python and no extra package. `docker ps`/`docker inspect` report the container healthy once gunicorn answers.
+- [x] AC9 `.dockerignore` keeps the following out of the build context:
   - `.env` and `.git`;
   - `.venv` and caches;
   - local databases (`*.sqlite3*`);
@@ -38,7 +38,7 @@ As someone running Learning Companion, I want to build one container image and s
   A test checks these entries.
 
 ### Smoke check
-- [ ] AC10 A committed `scripts/docker-smoke.sh` builds the image, runs it with dummy keys and a fresh named volume, waits until it is healthy, and then checks:
+- [x] AC10 A committed `scripts/docker-smoke.sh` builds the image, runs it with dummy keys and a fresh named volume, waits until it is healthy, and then checks:
   - `GET /` is 200 and contains "Learning Companion".
   - `GET /static/css/tailwind.css` is 200 with a CSS content type and contains a daisyUI class. With `Accept-Encoding: gzip`, it is served gzip-encoded.
   - `GET /favicon.ico` is 200 with an icon type.
@@ -51,12 +51,12 @@ As someone running Learning Companion, I want to build one container image and s
   It removes everything it created (containers, volume, image tag), exits 0 only when every check passed, and prints each check's result. It runs in final-review and is meant for CI later (#21). It is not part of the hooks' test suite.
 
 ### Unchanged and documented
-- [ ] AC11 Local development is unchanged:
+- [x] AC11 Local development is unchanged:
   - `runserver` with `DEBUG=True` serves styles as before;
   - the default database is the same file;
   - the full suite is green and lint is clean, with no Docker needed to run them;
   - every existing `assertNumQueries` pin and page test is unchanged.
-- [ ] AC12 `README.md` gains a "Run with Docker" section: build, run with `--env-file` or `-e`, the port, the volume, and how to run the smoke check. `CLAUDE.md` (Stack, Commands, Layout) describes:
+- [x] AC12 `README.md` gains a "Run with Docker" section: build, run with `--env-file` or `-e`, the port, the volume, and how to run the smoke check. `CLAUDE.md` (Stack, Commands, Layout) describes:
   - the image and its two stages;
   - WhiteNoise and `STATIC_ROOT`;
   - `DATABASE_URL` and `CSRF_TRUSTED_ORIGINS`;
