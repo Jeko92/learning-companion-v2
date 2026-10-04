@@ -33,7 +33,10 @@ class DockerignoreTests(SimpleTestCase):
     """Secrets, local state and build output stay out of the build context."""
 
     EXCLUDED = (
-        ".env",
+        # .env files at any depth, as .gitignore ignores them: COPY src/ would
+        # otherwise take a nested src/.env or a .env.local into the image.
+        "**/.env",
+        "**/.env.*",
         ".git",
         ".venv",
         "**/__pycache__",
